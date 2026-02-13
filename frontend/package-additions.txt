@@ -1,0 +1,14 @@
+# Animation Libraries to Install
+
+Run these commands in the frontend directory:
+
+npm install framer-motion
+npm install react-confetti
+npm install react-countup
+npm install @mui/icons-material (if not already installed)
+
+# These will add:
+# - framer-motion: For smooth animations and transitions
+# - react-confetti: For celebration effects
+# - react-countup: For animated number counting
+# - @mui/icons-material: For more icon options

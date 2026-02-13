@@ -1,0 +1,114 @@
+{
+  "programming_languages": [
+    "Python", "JavaScript", "Java", "C++", "C#", "C", "TypeScript", "PHP", "Ruby", "Go", "Golang",
+    "Swift", "Kotlin", "Rust", "Scala", "R", "MATLAB", "Perl", "Objective-C", "Dart", "Lua",
+    "Haskell", "Elixir", "Clojure", "F#", "VB.NET", "Visual Basic", "Assembly", "COBOL", "Fortran",
+    "Julia", "Groovy", "Shell", "Bash", "PowerShell", "SQL", "PL/SQL", "T-SQL", "HTML", "CSS",
+    "SASS", "SCSS", "LESS", "XML", "JSON", "YAML", "Markdown"
+  ],
+  
+  "frameworks_libraries": [
+    "React", "Angular", "Vue.js", "Vue", "Next.js", "Nuxt.js", "Svelte", "jQuery", "Bootstrap",
+    "Tailwind CSS", "Material-UI", "MUI", "Ant Design", "Chakra UI", "Semantic UI",
+    "Node.js", "Express.js", "Express", "Nest.js", "Fastify", "Koa", "Hapi",
+    "Django", "Flask", "FastAPI", "Pyramid", "Tornado", "Bottle",
+    "Spring", "Spring Boot", "Hibernate", "Struts", "JSF", "Play Framework",
+    "Ruby on Rails", "Rails", "Sinatra",
+    ".NET", "ASP.NET", "ASP.NET Core", ".NET Core", "Entity Framework", "WPF", "WinForms",
+    "Laravel", "Symfony", "CodeIgniter", "CakePHP", "Yii", "Zend",
+    "TensorFlow", "PyTorch", "Keras", "Scikit-learn", "Pandas", "NumPy", "SciPy", "Matplotlib",
+    "Seaborn", "Plotly", "OpenCV", "NLTK", "spaCy", "Hugging Face", "Transformers",
+    "Redux", "MobX", "Vuex", "Pinia", "Recoil", "Zustand",
+    "GraphQL", "Apollo", "Relay", "Prisma", "TypeORM", "Sequelize", "Mongoose",
+    "Jest", "Mocha", "Chai", "Jasmine", "Cypress", "Selenium", "Puppeteer", "Playwright",
+    "JUnit", "TestNG", "Mockito", "pytest", "unittest", "nose", "RSpec",
+    "Webpack", "Vite", "Rollup", "Parcel", "Gulp", "Grunt", "Babel", "ESLint", "Prettier"
+  ],
+  
+  "databases": [
+    "MySQL", "PostgreSQL", "MongoDB", "Redis", "Cassandra", "Oracle", "SQL Server", "SQLite",
+    "MariaDB", "DynamoDB", "Couchbase", "CouchDB", "Neo4j", "InfluxDB", "TimescaleDB",
+    "Elasticsearch", "Solr", "Firebase", "Firestore", "Realm", "RocksDB", "LevelDB",
+    "Memcached", "Aerospike", "HBase", "Riak", "ArangoDB", "OrientDB", "RavenDB"
+  ],
+  
+  "cloud_platforms": [
+    "AWS", "Amazon Web Services", "Azure", "Microsoft Azure", "GCP", "Google Cloud Platform",
+    "Google Cloud", "Heroku", "DigitalOcean", "Linode", "Vultr", "IBM Cloud", "Oracle Cloud",
+    "Alibaba Cloud", "Cloudflare", "Vercel", "Netlify", "Railway", "Render", "Fly.io"
+  ],
+  
+  "devops_tools": [
+    "Docker", "Kubernetes", "K8s", "Jenkins", "GitLab CI", "GitHub Actions", "CircleCI",
+    "Travis CI", "Terraform", "Ansible", "Chef", "Puppet", "Vagrant", "Packer",
+    "Prometheus", "Grafana", "ELK Stack", "Elasticsearch", "Logstash", "Kibana",
+    "Datadog", "New Relic", "Splunk", "Nagios", "Zabbix", "Consul", "Vault",
+    "ArgoCD", "Flux", "Helm", "Istio", "Linkerd", "Envoy", "NGINX", "Apache",
+    "HAProxy", "Traefik", "Caddy"
+  ],
+  
+  "version_control": [
+    "Git", "GitHub", "GitLab", "Bitbucket", "SVN", "Subversion", "Mercurial", "Perforce",
+    "CVS", "Azure DevOps", "Azure Repos"
+  ],
+  
+  "mobile_development": [
+    "React Native", "Flutter", "Ionic", "Xamarin", "Cordova", "PhoneGap", "NativeScript",
+    "SwiftUI", "UIKit", "Android SDK", "Jetpack Compose", "Kotlin Multiplatform"
+  ],
+  
+  "data_science_ml": [
+    "Machine Learning", "Deep Learning", "Neural Networks", "CNN", "RNN", "LSTM", "GAN",
+    "Natural Language Processing", "NLP", "Computer Vision", "Data Analysis", "Data Mining",
+    "Big Data", "Hadoop", "Spark", "Apache Spark", "Kafka", "Apache Kafka", "Flink",
+    "Data Visualization", "Tableau", "Power BI", "Looker", "Metabase", "Superset",
+    "A/B Testing", "Statistical Analysis", "Regression", "Classification", "Clustering",
+    "Time Series", "Forecasting", "Recommendation Systems", "Reinforcement Learning"
+  ],
+  
+  "methodologies": [
+    "Agile", "Scrum", "Kanban", "Lean", "Waterfall", "DevOps", "CI/CD", "TDD", "BDD",
+    "Test-Driven Development", "Behavior-Driven Development", "Pair Programming",
+    "Code Review", "Continuous Integration", "Continuous Deployment", "Microservices",
+    "Monolithic", "Serverless", "Event-Driven", "Domain-Driven Design", "DDD",
+    "SOLID Principles", "Design Patterns", "Clean Code", "Refactoring"
+  ],
+  
+  "soft_skills": [
+    "Leadership", "Team Management", "Project Management", "Communication", "Problem Solving",
+    "Critical Thinking", "Analytical Skills", "Creativity", "Innovation", "Collaboration",
+    "Teamwork", "Time Management", "Organization", "Attention to Detail", "Adaptability",
+    "Flexibility", "Self-Motivated", "Initiative", "Mentoring", "Coaching", "Presentation",
+    "Public Speaking", "Technical Writing", "Documentation", "Stakeholder Management",
+    "Client Relations", "Customer Service", "Negotiation", "Conflict Resolution",
+    "Decision Making", "Strategic Thinking", "Planning", "Prioritization", "Multitasking"
+  ],
+  
+  "security": [
+    "Cybersecurity", "Information Security", "Network Security", "Application Security",
+    "Penetration Testing", "Ethical Hacking", "OWASP", "SSL/TLS", "Encryption", "OAuth",
+    "JWT", "SAML", "SSO", "Single Sign-On", "IAM", "Identity Management", "Firewall",
+    "VPN", "IDS", "IPS", "SIEM", "Security Auditing", "Compliance", "GDPR", "HIPAA",
+    "PCI DSS", "SOC 2", "ISO 27001"
+  ],
+  
+  "other_tools": [
+    "VS Code", "Visual Studio", "IntelliJ IDEA", "PyCharm", "WebStorm", "Eclipse", "NetBeans",
+    "Sublime Text", "Atom", "Vim", "Emacs", "Xcode", "Android Studio",
+    "Postman", "Insomnia", "Swagger", "OpenAPI", "REST API", "RESTful", "SOAP", "gRPC",
+    "WebSockets", "Socket.io", "RabbitMQ", "ActiveMQ", "ZeroMQ", "MQTT",
+    "Jira", "Confluence", "Trello", "Asana", "Monday.com", "Notion", "Slack", "Teams",
+    "Zoom", "Google Meet", "Figma", "Sketch", "Adobe XD", "Photoshop", "Illustrator",
+    "Linux", "Unix", "Ubuntu", "CentOS", "Debian", "Red Hat", "Fedora", "macOS", "Windows",
+    "Bash Scripting", "Shell Scripting", "Automation", "Scripting", "API Development",
+    "API Integration", "Third-Party APIs", "Payment Gateways", "Stripe", "PayPal",
+    "Twilio", "SendGrid", "AWS S3", "CloudFront", "Lambda", "EC2", "RDS", "DynamoDB",
+    "Azure Functions", "Azure Storage", "Google Cloud Functions", "Cloud Storage"
+  ],
+  
+  "languages_spoken": [
+    "English", "Spanish", "French", "German", "Chinese", "Mandarin", "Japanese", "Korean",
+    "Arabic", "Portuguese", "Russian", "Italian", "Dutch", "Polish", "Turkish", "Hindi",
+    "Bengali", "Vietnamese", "Thai", "Indonesian", "Malay", "Tamil", "Telugu", "Urdu"
+  ]
+}
