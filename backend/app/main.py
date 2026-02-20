@@ -212,6 +212,14 @@ from app.routes import resumes
 from app.routes import questions
 from app.routes import interview_sessions
 from app.routes import evaluations
+from app.routes import analytics
+from app.routes import achievements
+from app.routes import streaks
+from app.routes import leaderboard
+from app.routes import cache_stats
+from app.routes import resume_analysis
+from app.routes import study_plans
+from app.routes import company_coaching
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
@@ -219,6 +227,14 @@ app.include_router(resumes.router, prefix="/api/v1/resumes", tags=["resumes"])
 app.include_router(questions.router)  # Already has prefix in router definition
 app.include_router(interview_sessions.router, prefix="/api/v1/interviews", tags=["interviews"])
 app.include_router(evaluations.router, prefix="/api/v1/evaluations", tags=["evaluations"])
+app.include_router(analytics.router, prefix="/api/v1/analytics", tags=["analytics"])
+app.include_router(achievements.router, prefix="/api/v1/achievements", tags=["achievements"])
+app.include_router(streaks.router, prefix="/api/v1/streaks", tags=["streaks"])
+app.include_router(leaderboard.router, prefix="/api/v1/leaderboard", tags=["leaderboard"])
+app.include_router(cache_stats.router, prefix="/api/v1/cache", tags=["cache"])
+app.include_router(resume_analysis.router)  # Already has prefix in router definition
+app.include_router(study_plans.router, prefix="/api/v1/study-plans", tags=["study-plans"])
+app.include_router(company_coaching.router)  # Already has prefix in router definition
 
 # Mount static files for uploaded resumes
 from fastapi.staticfiles import StaticFiles

@@ -89,17 +89,29 @@ class EvaluationService:
         
         # Call AI provider (Req 18.6)
         try:
-            ai_response = self.ai_orchestrator.generate(
+            from app.services.ai.types import AIRequest
+            
+            ai_request = AIRequest(
                 prompt=prompt,
                 task_type="evaluation",
-                timeout=15
+                max_tokens=1500,
+                temperature=0.3  # Lower temperature for more consistent evaluations
             )
+            
+            ai_response = self.ai_orchestrator.generate(ai_request)
+            
+            if not ai_response.success:
+                raise ValueError(f"AI provider error: {ai_response.error}")
+            
+            # Extract content from response
+            response_content = ai_response.content
+            
         except Exception as e:
             logger.error(f"AI evaluation failed for answer {answer_id}: {e}")
             raise ValueError(f"Evaluation failed: {str(e)}")
         
         # Parse evaluation JSON (Req 18.7)
-        evaluation_data = self._parse_evaluation_response(ai_response)
+        evaluation_data = self._parse_evaluation_response(response_content)
         
         # Validate scores (Req 18.8)
         self._validate_scores(evaluation_data)

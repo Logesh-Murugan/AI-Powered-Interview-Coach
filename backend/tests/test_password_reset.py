@@ -2,50 +2,37 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.orm import Session
+import uuid
 
 from app.main import app
-from app.database import Base, get_db
+from app.database import get_db
 from app.models.user import User, AccountStatus
 from app.models.password_reset_token import PasswordResetToken
-
-# Create in-memory SQLite database for testing
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def override_get_db():
-    """Override database dependency for testing."""
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
 
 client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def setup_database():
-    """Create tables before each test and drop after."""
-    Base.metadata.create_all(bind=engine)
+def setup(db: Session):
+    """Override get_db dependency to use test database session"""
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            pass
+    
+    app.dependency_overrides[get_db] = override_get_db
     yield
-    Base.metadata.drop_all(bind=engine)
+    app.dependency_overrides.clear()
 
 
-def create_user(email="test@example.com", password="SecurePass123!", name="Test User"):
+
+
+def create_user(db, email=None, password="SecurePass123!", name="Test User"):
     """Helper function to create a user."""
+    if email is None:
+        email = f"test_{uuid.uuid4().hex[:8]}@example.com"
     client.post(
         "/api/v1/auth/register",
         json={
@@ -56,13 +43,14 @@ def create_user(email="test@example.com", password="SecurePass123!", name="Test 
     )
 
 
-def test_password_reset_request_success():
+def test_password_reset_request_success(db: Session):
     """Test successful password reset request."""
-    create_user()
+    unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    create_user(db, email=unique_email)
     
     response = client.post(
         "/api/v1/auth/password-reset-request",
-        json={"email": "test@example.com"}
+        json={"email": unique_email}
     )
     
     assert response.status_code == 200
@@ -70,7 +58,7 @@ def test_password_reset_request_success():
     assert "email exists" in data["message"].lower()
 
 
-def test_password_reset_request_nonexistent_email():
+def test_password_reset_request_nonexistent_email(db: Session):
     """Test password reset request with non-existent email."""
     response = client.post(
         "/api/v1/auth/password-reset-request",
@@ -83,45 +71,53 @@ def test_password_reset_request_nonexistent_email():
     assert "email exists" in data["message"].lower()
 
 
-def test_password_reset_request_creates_token():
+def test_password_reset_request_creates_token(db: Session):
     """Test that password reset request creates token in database."""
-    create_user()
+    unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    create_user(db, email=unique_email)
     
     client.post(
         "/api/v1/auth/password-reset-request",
-        json={"email": "test@example.com"}
+        json={"email": unique_email}
     )
     
     # Check database for token
-    db = TestingSessionLocal()
+    pass  # Using db fixture
     token_record = db.query(PasswordResetToken).first()
     assert token_record is not None
     assert token_record.is_used is False
-    db.close()
+    pass  # Using db fixture
 
 
-def test_password_reset_success():
+def test_password_reset_success(db: Session):
     """Test successful password reset."""
-    create_user()
+    unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    create_user(db, email=unique_email)
     
     # Request password reset
     client.post(
         "/api/v1/auth/password-reset-request",
-        json={"email": "test@example.com"}
+        json={"email": unique_email}
     )
     
     # Get token from database (in production, user would get this from email)
-    db = TestingSessionLocal()
-    token_record = db.query(PasswordResetToken).first()
+    pass  # Using db fixture
+    user = db.query(User).filter(User.email == unique_email).first()
+    token_record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id
+    ).order_by(PasswordResetToken.created_at.desc()).first()
     
     # Generate the actual token (we need to reverse the hash - in real scenario, token is in email)
     # For testing, we'll create a new token with known value
     import secrets
     import hashlib
+    from datetime import datetime, timedelta
     reset_token = secrets.token_urlsafe(32)
     token_record.token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+    token_record.expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+    token_record.is_used = False
     db.commit()
-    db.close()
+    pass  # Using db fixture
     
     # Reset password
     response = client.post(
@@ -137,7 +133,7 @@ def test_password_reset_success():
     assert data["message"] == "Password reset successfully"
 
 
-def test_password_reset_invalid_token():
+def test_password_reset_invalid_token(db: Session):
     """Test password reset with invalid token."""
     response = client.post(
         "/api/v1/auth/password-reset",
@@ -151,25 +147,32 @@ def test_password_reset_invalid_token():
     assert "Invalid or expired" in response.json()["detail"]
 
 
-def test_password_reset_weak_password():
+def test_password_reset_weak_password(db: Session):
     """Test password reset with weak password."""
-    create_user()
+    unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    create_user(db, email=unique_email)
     
     # Request password reset
     client.post(
         "/api/v1/auth/password-reset-request",
-        json={"email": "test@example.com"}
+        json={"email": unique_email}
     )
     
     # Get token
-    db = TestingSessionLocal()
-    token_record = db.query(PasswordResetToken).first()
+    pass  # Using db fixture
+    user = db.query(User).filter(User.email == unique_email).first()
+    token_record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id
+    ).order_by(PasswordResetToken.created_at.desc()).first()
     import secrets
     import hashlib
+    from datetime import datetime, timedelta
     reset_token = secrets.token_urlsafe(32)
     token_record.token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+    token_record.expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+    token_record.is_used = False
     db.commit()
-    db.close()
+    pass  # Using db fixture
     
     # Try to reset with weak password
     response = client.post(
@@ -183,25 +186,32 @@ def test_password_reset_weak_password():
     assert response.status_code == 422
 
 
-def test_password_reset_token_used_once():
+def test_password_reset_token_used_once(db: Session):
     """Test that password reset token can only be used once."""
-    create_user()
+    unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    create_user(db, email=unique_email)
     
     # Request password reset
     client.post(
         "/api/v1/auth/password-reset-request",
-        json={"email": "test@example.com"}
+        json={"email": unique_email}
     )
     
     # Get token
-    db = TestingSessionLocal()
-    token_record = db.query(PasswordResetToken).first()
+    pass  # Using db fixture
+    user = db.query(User).filter(User.email == unique_email).first()
+    token_record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id
+    ).order_by(PasswordResetToken.created_at.desc()).first()
     import secrets
     import hashlib
+    from datetime import datetime, timedelta
     reset_token = secrets.token_urlsafe(32)
     token_record.token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+    token_record.expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+    token_record.is_used = False
     db.commit()
-    db.close()
+    pass  # Using db fixture
     
     # Reset password first time
     response1 = client.post(
@@ -227,22 +237,23 @@ def test_password_reset_token_used_once():
     assert "Invalid or expired" in response2.json()["detail"]
 
 
-def test_password_reset_invalidates_refresh_tokens():
+def test_password_reset_invalidates_refresh_tokens(db: Session):
     """Test that password reset invalidates all refresh tokens."""
-    create_user()
+    unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    create_user(db, email=unique_email)
     
     # Update user to active and login
-    db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "test@example.com").first()
+    pass  # Using db fixture
+    user = db.query(User).filter(User.email == unique_email).first()
     user.account_status = AccountStatus.ACTIVE
     db.commit()
-    db.close()
+    pass  # Using db fixture
     
     # Login to get refresh token
     login_response = client.post(
         "/api/v1/auth/login",
         json={
-            "email": "test@example.com",
+            "email": unique_email,
             "password": "SecurePass123!"
         }
     )
@@ -252,18 +263,23 @@ def test_password_reset_invalidates_refresh_tokens():
     # Request password reset
     client.post(
         "/api/v1/auth/password-reset-request",
-        json={"email": "test@example.com"}
+        json={"email": unique_email}
     )
     
     # Get reset token
-    db = TestingSessionLocal()
-    token_record = db.query(PasswordResetToken).first()
+    pass  # Using db fixture
+    token_record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id
+    ).order_by(PasswordResetToken.created_at.desc()).first()
     import secrets
     import hashlib
+    from datetime import datetime, timedelta
     reset_token = secrets.token_urlsafe(32)
     token_record.token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+    token_record.expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+    token_record.is_used = False
     db.commit()
-    db.close()
+    pass  # Using db fixture
     
     # Reset password
     client.post(
@@ -284,32 +300,38 @@ def test_password_reset_invalidates_refresh_tokens():
     assert "revoked" in response.json()["detail"].lower()
 
 
-def test_password_reset_allows_login_with_new_password():
+def test_password_reset_allows_login_with_new_password(db: Session):
     """Test that user can login with new password after reset."""
-    create_user()
+    unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
+    create_user(db, email=unique_email)
     
     # Update user to active
-    db = TestingSessionLocal()
-    user = db.query(User).filter(User.email == "test@example.com").first()
+    pass  # Using db fixture
+    user = db.query(User).filter(User.email == unique_email).first()
     user.account_status = AccountStatus.ACTIVE
     db.commit()
-    db.close()
+    pass  # Using db fixture
     
     # Request password reset
     client.post(
         "/api/v1/auth/password-reset-request",
-        json={"email": "test@example.com"}
+        json={"email": unique_email}
     )
     
     # Get reset token
-    db = TestingSessionLocal()
-    token_record = db.query(PasswordResetToken).first()
+    pass  # Using db fixture
+    token_record = db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id
+    ).order_by(PasswordResetToken.created_at.desc()).first()
     import secrets
     import hashlib
+    from datetime import datetime, timedelta
     reset_token = secrets.token_urlsafe(32)
     token_record.token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+    token_record.expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+    token_record.is_used = False
     db.commit()
-    db.close()
+    pass  # Using db fixture
     
     # Reset password
     client.post(
@@ -324,7 +346,7 @@ def test_password_reset_allows_login_with_new_password():
     response = client.post(
         "/api/v1/auth/login",
         json={
-            "email": "test@example.com",
+            "email": unique_email,
             "password": "NewSecurePass123!"
         }
     )

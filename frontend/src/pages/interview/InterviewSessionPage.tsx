@@ -48,6 +48,7 @@ function InterviewSessionPage() {
   const [draft, setDraft] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [hasSavedDraft, setHasSavedDraft] = useState(false); // Track if we've ever saved a draft
   
   const autoSaveTimerRef = useRef<number | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
@@ -65,12 +66,20 @@ function InterviewSessionPage() {
       setQuestion(questionData);
       setTimeRemaining(questionData.time_limit_seconds);
       
-      try {
-        const draftResponse = await apiService.get(`/interviews/${sessionId}/drafts/${questionData.id}`);
-        const draftData = draftResponse.data as { draft_text: string; last_saved_at: string };
-        setAnswer(draftData.draft_text || '');
-        setDraft(draftData.draft_text || '');
-      } catch {
+      // Only fetch draft if we've saved one before (avoids unnecessary 404s)
+      if (hasSavedDraft) {
+        try {
+          const draftResponse = await apiService.get(`/interviews/${sessionId}/drafts/${questionData.id}`);
+          const draftData = draftResponse.data as { draft_text: string; last_saved_at: string };
+          setAnswer(draftData.draft_text || '');
+          setDraft(draftData.draft_text || '');
+        } catch {
+          // Draft doesn't exist - start fresh
+          setAnswer('');
+          setDraft('');
+        }
+      } else {
+        // No drafts saved yet - start fresh
         setAnswer('');
         setDraft('');
       }
@@ -79,7 +88,7 @@ function InterviewSessionPage() {
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, hasSavedDraft]);
 
   const saveDraft = useCallback(async (text: string) => {
     if (!sessionId || !question || text === draft) return;
@@ -93,6 +102,7 @@ function InterviewSessionPage() {
         { draft_text: text }
       );
       setDraft(text);
+      setHasSavedDraft(true); // Mark that we've saved at least one draft
       setSaving(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);

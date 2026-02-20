@@ -4,7 +4,9 @@
  */
 
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { ROUTES } from '../config/app.config';
+import type { RootState } from '../store/index';
 import ProtectedRoute from '../components/auth/ProtectedRoute';
 import PublicRoute from '../components/auth/PublicRoute';
 
@@ -13,6 +15,7 @@ import MainLayout from '../components/layouts/MainLayout';
 import AuthLayout from '../components/layouts/AuthLayout';
 
 // Pages
+import LandingPage from '../pages/LandingPage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import PasswordResetPage from '../pages/auth/PasswordResetPage';
@@ -26,11 +29,26 @@ import SessionHistoryPage from '../pages/interview/SessionHistoryPage';
 import ResumeListPage from '../pages/resume/ResumeListPage';
 import ResumeUploadPage from '../pages/resume/ResumeUploadPage';
 import ResumeDetailPage from '../pages/resume/ResumeDetailPage';
+// import AnalyticsPage from '../pages/analytics/AnalyticsPage'; // Temporarily disabled
 import NotFoundPage from '../pages/NotFoundPage';
+
+// Landing Page Wrapper Component
+function LandingPageWrapper() {
+  const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
+  
+  if (isAuthenticated) {
+    return <Navigate to={ROUTES.DASHBOARD} replace />;
+  }
+  
+  return <LandingPage />;
+}
 
 function AppRoutes() {
   return (
     <Routes>
+      {/* Landing Page - Root Route */}
+      <Route path="/" element={<LandingPageWrapper />} />
+
       {/* Public Routes */}
       <Route element={<PublicRoute />}>
         <Route element={<AuthLayout />}>
@@ -53,11 +71,12 @@ function AppRoutes() {
           <Route path={ROUTES.RESUMES} element={<ResumeListPage />} />
           <Route path={ROUTES.RESUME_UPLOAD} element={<ResumeUploadPage />} />
           <Route path="/resumes/:id" element={<ResumeDetailPage />} />
+          {/* Temporarily disabled - analytics component has export issue */}
+          {/* <Route path="/analytics" element={<AnalyticsPage />} /> */}
         </Route>
       </Route>
 
-      {/* Redirects */}
-      <Route path={ROUTES.HOME} element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+      {/* Not Found */}
       <Route path={ROUTES.NOT_FOUND} element={<NotFoundPage />} />
       <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND} replace />} />
     </Routes>

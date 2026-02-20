@@ -63,11 +63,12 @@ class TestResumeUpload:
         mock_file.read = AsyncMock(return_value=file_content)
         mock_file.seek = AsyncMock()
         
-        # Mock Cloudinary upload
-        with patch('app.utils.file_upload.cloudinary.uploader.upload') as mock_upload:
-            mock_upload.return_value = {
-                'secure_url': 'https://res.cloudinary.com/test/resumes/test_resume.pdf'
-            }
+        # Mock local file upload
+        with patch('app.utils.file_upload.upload_file_local') as mock_upload:
+            mock_upload.return_value = (
+                '/uploads/resumes/test_resume.pdf',
+                len(file_content)
+            )
             
             # Mock BackgroundTasks
             mock_bg_tasks = Mock()
@@ -79,7 +80,7 @@ class TestResumeUpload:
             # Assertions
             assert result.resume_id is not None
             assert result.filename == "test_resume.pdf"
-            assert result.file_url.startswith("https://")
+            assert result.file_url.startswith("/uploads/")
             assert result.status == ResumeStatus.UPLOADED.value
             assert "successfully" in result.message.lower()
     

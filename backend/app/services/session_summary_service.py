@@ -17,6 +17,8 @@ from app.models.answer import Answer
 from app.models.evaluation import Evaluation
 from app.models.session_question import SessionQuestion
 from app.models.question import Question
+from app.services.achievement_service import AchievementService
+from app.services.streak_service import StreakService
 
 logger = logging.getLogger(__name__)
 
@@ -83,8 +85,41 @@ class SessionSummaryService:
             if answer.evaluation:
                 evaluations.append(answer.evaluation)
         
+        # If no evaluations exist, generate them now
         if not evaluations:
-            raise ValueError(f"No evaluations found for session {session_id}")
+            logger.warning(f"No evaluations found for session {session_id}, attempting to generate them now")
+            
+            try:
+                from app.services.evaluation_service import EvaluationService
+                evaluation_service = EvaluationService(self.db)
+                
+                for answer in answers:
+                    try:
+                        logger.info(f"Generating evaluation for answer {answer.id}")
+                        evaluation_service.evaluate_answer(answer.id)
+                        # Refresh answer to get the evaluation
+                        self.db.refresh(answer)
+                        if answer.evaluation:
+                            evaluations.append(answer.evaluation)
+                    except Exception as e:
+                        logger.error(f"Failed to generate evaluation for answer {answer.id}: {e}")
+                        continue
+                
+                # If still no evaluations after attempting to generate them
+                if not evaluations:
+                    logger.error(f"Failed to generate any evaluations for session {session_id}")
+                    raise ValueError(
+                        f"Unable to generate evaluations for session {session_id}. "
+                        "This may be due to AI provider configuration issues. "
+                        "Please check your AI API keys and try again."
+                    )
+                    
+            except Exception as e:
+                logger.error(f"Error generating evaluations for session {session_id}: {e}")
+                raise ValueError(
+                    f"Unable to generate evaluations for session {session_id}. "
+                    f"Error: {str(e)}"
+                )
         
         logger.info(f"Found {len(evaluations)} evaluations for session {session_id}")
         
@@ -190,6 +225,25 @@ class SessionSummaryService:
         self.db.refresh(summary)
         
         logger.info(f"Session summary {summary.id} created for session {session_id}")
+        
+        # Update user's practice streak
+        try:
+            streak_service = StreakService(self.db)
+            streak_info = streak_service.update_streak(user_id)
+            logger.info(f"Streak updated for user {user_id}: {streak_info}")
+        except Exception as e:
+            logger.error(f"Error updating streak for user {user_id}: {e}")
+            # Don't fail the summary generation if streak update fails
+        
+        # Check and award achievements after session completion
+        try:
+            achievement_service = AchievementService(self.db)
+            awarded_achievements = achievement_service.check_all_achievements_for_session(user_id, session_id)
+            if awarded_achievements:
+                logger.info(f"Awarded {len(awarded_achievements)} achievements to user {user_id} for session {session_id}")
+        except Exception as e:
+            logger.error(f"Error checking achievements for session {session_id}: {e}")
+            # Don't fail the summary generation if achievement checking fails
         
         return summary.to_dict()
     

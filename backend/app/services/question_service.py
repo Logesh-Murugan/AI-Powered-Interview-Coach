@@ -79,23 +79,9 @@ class QuestionService:
             if invalid_cats:
                 raise ValueError(f"Invalid categories: {invalid_cats}")
         
-        # Step 1: Check Redis cache
-        cache_key = self._construct_cache_key(role, difficulty, question_count, categories)
-        cached_questions = self._get_from_cache(cache_key)
-        if cached_questions:
-            logger.info(f"Cache hit for {cache_key}")
-            return cached_questions
-        
-        # Step 2: Check database
-        db_questions = self._get_from_database(role, difficulty, question_count, categories)
-        if db_questions and len(db_questions) >= question_count:
-            logger.info(f"Database hit for role={role}, difficulty={difficulty}")
-            questions_data = [q.to_dict() for q in db_questions[:question_count]]
-            self._cache_questions(cache_key, questions_data)
-            return questions_data
-        
-        # Step 3: Generate with AI
-        logger.info(f"Generating questions with AI for role={role}, difficulty={difficulty}")
+        # ALWAYS generate fresh questions with AI for maximum variety
+        # Skip cache and database to ensure unique questions every time
+        logger.info(f"Generating fresh questions with AI for role={role}, difficulty={difficulty}")
         generated_questions = self._generate_with_ai(role, difficulty, question_count, categories)
         
         # Validate and store questions
@@ -110,9 +96,7 @@ class QuestionService:
         if not validated_questions:
             raise Exception("Failed to generate valid questions")
         
-        # Cache the results
-        self._cache_questions(cache_key, validated_questions)
-        
+        # Don't cache - return fresh questions each time for variety
         return validated_questions
     
     def _construct_cache_key(
@@ -158,11 +142,13 @@ class QuestionService:
         categories: Optional[List[str]]
     ) -> List[Question]:
         """
-        Get questions from database.
+        Get questions from database with randomization for variety.
         
         Requirements: 12.4, 12.5
         """
         try:
+            from sqlalchemy import func
+            
             query = self.db.query(Question).filter(
                 Question.role == role,
                 Question.difficulty == difficulty,
@@ -172,7 +158,8 @@ class QuestionService:
             if categories:
                 query = query.filter(Question.category.in_(categories))
             
-            questions = query.limit(question_count * 2).all()  # Get extra for variety
+            # Add randomization to get different questions each time
+            questions = query.order_by(func.random()).limit(question_count * 2).all()
             return questions
         except Exception as e:
             logger.error(f"Database query error: {e}")
@@ -190,12 +177,20 @@ class QuestionService:
         
         Requirements: 12.6-12.13
         """
-        # Construct prompt
+        # Construct prompt with timestamp to ensure uniqueness and prevent caching
         categories_str = ', '.join(categories) if categories else 'all categories'
         
-        prompt = f"""Generate {question_count} interview questions for a {role} position at {difficulty} difficulty level.
+        # Add timestamp and random element to make each prompt unique
+        import random
+        import time
+        uniqueness_token = f"{int(time.time())}_{random.randint(1000, 9999)}"
+        
+        prompt = f"""Generate {question_count} COMPLETELY UNIQUE and DIFFERENT interview questions for a {role} position at {difficulty} difficulty level.
+
+IMPORTANT: Generate fresh, creative questions that are different from any previous questions. Avoid common or repetitive questions.
 
 Categories: {categories_str}
+Request ID: {uniqueness_token}
 
 For each question, provide:
 1. question_text: The interview question (10-500 characters)
@@ -222,16 +217,17 @@ Example format:
   }}
 ]"""
         
-        # Create AI request
+        # Create AI request with higher temperature for more variety
         request = AIRequest(
             prompt=prompt,
             max_tokens=2000,
-            temperature=0.7,
+            temperature=0.9,  # Increased from 0.7 for more randomness
             task_type="question_generation"
         )
         
-        # Call orchestrator
-        response = self.orchestrator.generate(request)
+        # Call orchestrator WITHOUT caching to ensure fresh questions every time
+        # We explicitly disable caching for question generation to maximize variety
+        response = self.orchestrator.generate_without_cache(request)
         
         if not response.success:
             raise Exception(f"AI generation failed: {response.error}")
@@ -343,7 +339,8 @@ Example format:
         Requirements: 12.10, 12.12
         """
         try:
-            self.cache.set(cache_key, json.dumps(questions), ttl=self.CACHE_TTL_SECONDS)
+            from datetime import timedelta
+            self.cache.set(cache_key, json.dumps(questions), ttl=timedelta(seconds=self.CACHE_TTL_SECONDS))
             logger.info(f"Cached {len(questions)} questions with key {cache_key}")
         except Exception as e:
             logger.error(f"Cache storage error: {e}")

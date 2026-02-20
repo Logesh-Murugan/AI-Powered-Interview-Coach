@@ -37,6 +37,7 @@ pytest==7.4.4
 pytest-asyncio==0.23.3
 pytest-cov==4.1.0
 httpx==0.26.0
+hypothesis==6.98.3
 
 # Code Quality
 flake8==7.0.0
@@ -60,5 +61,8 @@ groq==0.4.2
 aiohttp==3.9.3
 nest-asyncio==1.6.0
 
-# AI/ML (will be added in Phase 4)
-# langchain==0.1.0
+# AI/ML & LangChain (Phase 7)
+langchain==0.2.16
+langchain-community==0.2.16
+langchain-groq==0.1.9
+langchain-core==0.2.38

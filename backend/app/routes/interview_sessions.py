@@ -6,7 +6,7 @@ API endpoints for interview session management.
 Requirements: 14.1-14.10
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -264,8 +264,8 @@ async def get_question(
 )
 async def submit_answer(
     session_id: int,
-    question_id: int,
     answer_data: AnswerSubmit,
+    question_id: int = Query(..., description="Question ID"),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -385,14 +385,19 @@ async def submit_answer(
         
         # Trigger evaluation (Req 16.7)
         # For now, call synchronously. Will be async with Celery in TASK-037
+        evaluation_triggered = False
         try:
             from app.services.evaluation_service import EvaluationService
             evaluation_service = EvaluationService(db)
             evaluation_result = evaluation_service.evaluate_answer(answer.id)
+            evaluation_triggered = True
             logger.info(f"Evaluation completed for answer {answer.id}: score={evaluation_result.get('overall_score')}")
         except Exception as e:
-            # Don't fail the answer submission if evaluation fails
+            # Log the error but don't fail the answer submission
             logger.error(f"Evaluation failed for answer {answer.id}: {e}", exc_info=True)
+            logger.warning(f"Answer {answer.id} submitted but evaluation failed. User can retry evaluation later.")
+            # Store a flag that evaluation needs to be retried
+            evaluation_triggered = False
         
         logger.info(f"Answer {answer.id} submitted successfully for session {session_id}")
         
@@ -431,8 +436,8 @@ async def submit_answer(
 )
 async def save_answer_draft(
     session_id: int,
-    question_id: int,
     draft_data: AnswerDraftSave,
+    question_id: int = Query(..., description="Question ID"),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

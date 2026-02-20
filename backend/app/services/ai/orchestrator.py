@@ -573,3 +573,51 @@ class AIOrchestrator:
             timestamp=response.timestamp,
             metadata=response.metadata
         )
+
+    def generate_without_cache(self, request: 'AIRequest') -> 'AIResponse':
+        """
+        Generate AI response WITHOUT caching (for maximum variety).
+        Use this for question generation to ensure unique questions every time.
+        
+        Args:
+            request: AIRequest object with prompt and parameters
+            
+        Returns:
+            AIResponse object
+        """
+        import asyncio
+        import nest_asyncio
+        from .types import AIRequest, AIResponse
+        
+        # Allow nested event loops
+        nest_asyncio.apply()
+        
+        # Run async call in sync context WITHOUT caching
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        response = loop.run_until_complete(
+            self.call(
+                prompt=request.prompt,
+                cache_key=None,  # No cache key = no caching
+                use_cache=False,  # Explicitly disable cache
+                max_tokens=request.max_tokens,
+                temperature=request.temperature
+            )
+        )
+        
+        # Convert ProviderResponse to AIResponse
+        return AIResponse(
+            provider_name=response.provider_name,
+            content=response.content,
+            model=response.model,
+            success=response.success,
+            error=response.error,
+            tokens_used=response.tokens_used,
+            response_time=response.response_time,
+            timestamp=response.timestamp,
+            metadata=response.metadata
+        )

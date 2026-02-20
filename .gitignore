@@ -89,6 +89,10 @@ desktop.ini
 *.bak
 *.backup
 
+# Uploaded files (user data)
+backend/uploads/
+frontend/uploads/
+
 # Documentation with sensitive data (contains API keys)
 API-KEYS-CHECKLIST.md
 MULTIPLE-API-KEYS-GUIDE.md
@@ -99,21 +103,44 @@ SESSION-2026-02-10-SUMMARY.md
 FINAL-API-CONFIGURATION.md
 backend/TASK-025-COMPLETE.md
 
-# Documentation (session-specific - optional, uncomment if you don't want to track)
-# SESSION-*.md
-# TASK-*-COMPLETE.md
-# *-SUMMARY.md
-# *-COMPLETE.md
-# *-FIX*.md
-# *-GUIDE.md
-# *-STATUS.md
+# Session and debugging documentation (not for version control)
+SESSION-*.md
+TASK-*-COMPLETE.md
+TASK-*-START.md
+TASK-*-PROGRESS.md
+TASK-*-SUMMARY.md
+*-SUMMARY.md
+*-COMPLETE.md
+*-FIX*.md
+*-GUIDE.md
+*-STATUS.md
+*-SUCCESS.md
+*-PLAN.md
+*-CHECKLIST.md
+*-EXPLANATION.md
+*-ASSESSMENT.md
+*-INSTRUCTIONS.md
+*-DIAGNOSIS.md
 
-# Test scripts (optional - uncomment if you don't want to track)
-# check-*.py
-# test-*.py
-# trigger-*.py
-# get-*.py
-# evaluate-*.py
+# Test and diagnostic scripts in root (should be in tests/)
+check-*.py
+test-*.py
+trigger-*.py
+get-*.py
+evaluate-*.py
+diagnose-*.py
+fix-*.py
+create-*.py
+clear-*.py
+check_*.py
 
-# PowerShell scripts (optional - uncomment if you don't want to track)
-# *.ps1
+# PowerShell utility scripts (local development only)
+RESTART-*.ps1
+START-*.ps1
+CHECK-*.ps1
+FIX-*.ps1
+FORCE-*.ps1
+TEST-*.ps1
+
+# Test HTML files in root
+test-*.html

@@ -84,6 +84,7 @@ class Resume(BaseModel):
     
     # Relationships
     user = relationship("User", back_populates="resumes")
+    analyses = relationship("ResumeAnalysis", back_populates="resume", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Resume(id={self.id}, user_id={self.user_id}, filename={self.filename}, status={self.status})>"

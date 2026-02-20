@@ -54,73 +54,88 @@ class InterviewSessionService:
         Returns:
             Dictionary with session details and first question
         """
-        # Step 1: Generate questions using QuestionService (Req 14.6)
-        logger.info(f"Generating {question_count} questions for role={role}, difficulty={difficulty}")
-        questions = self.question_service.generate(
-            role=role,
-            difficulty=difficulty,
-            question_count=question_count,
-            categories=categories
-        )
-        
-        if not questions or len(questions) < question_count:
-            raise Exception(f"Failed to generate {question_count} questions")
-        
-        # Step 2: Create interview session record (Req 14.7)
-        session = InterviewSession(
-            user_id=user_id,
-            role=role,
-            difficulty=difficulty,
-            status=SessionStatus.IN_PROGRESS,
-            question_count=question_count,
-            categories=categories,
-            start_time=datetime.utcnow()
-        )
-        self.db.add(session)
-        self.db.flush()  # Get session.id without committing
-        
-        logger.info(f"Created interview session {session.id} for user {user_id}")
-        
-        # Step 3: Create session_questions records (Req 14.8)
-        session_questions = []
-        for idx, question in enumerate(questions, start=1):
-            sq = SessionQuestion(
-                session_id=session.id,
-                question_id=question['id'],
-                display_order=idx,
-                status='pending'
+        try:
+            # Step 1: Generate questions using QuestionService (Req 14.6)
+            logger.info(f"Generating {question_count} questions for role={role}, difficulty={difficulty}")
+            questions = self.question_service.generate(
+                role=role,
+                difficulty=difficulty,
+                question_count=question_count,
+                categories=categories
             )
-            session_questions.append(sq)
-            self.db.add(sq)
-        
-        self.db.commit()
-        logger.info(f"Created {len(session_questions)} session questions for session {session.id}")
-        
-        # Step 4: Store session metadata in Redis (Req 14.10)
-        self._cache_session_metadata(session.id, {
-            'user_id': user_id,
-            'role': role,
-            'difficulty': difficulty,
-            'question_count': question_count,
-            'categories': categories,
-            'start_time': session.start_time.isoformat(),
-            'status': session.status.value
-        })
-        
-        # Step 5: Return session_id and first question (Req 14.9)
-        first_question = questions[0]
-        first_question['question_number'] = 1
-        
-        return {
-            'session_id': session.id,
-            'role': session.role,
-            'difficulty': session.difficulty,
-            'status': session.status.value,
-            'question_count': session.question_count,
-            'categories': session.categories,
-            'start_time': session.start_time,
-            'first_question': first_question
-        }
+            
+            if not questions or len(questions) < question_count:
+                raise Exception(f"Failed to generate {question_count} questions")
+            
+            logger.info(f"Successfully generated {len(questions)} questions")
+            
+            # Step 2: Create interview session record (Req 14.7)
+            session = InterviewSession(
+                user_id=user_id,
+                role=role,
+                difficulty=difficulty,
+                status=SessionStatus.IN_PROGRESS,
+                question_count=question_count,
+                categories=categories,
+                start_time=datetime.utcnow()
+            )
+            self.db.add(session)
+            self.db.flush()  # Get session.id without committing
+            
+            logger.info(f"Created interview session {session.id} for user {user_id}")
+            
+            # Step 3: Create session_questions records (Req 14.8)
+            session_questions = []
+            for idx, question in enumerate(questions, start=1):
+                sq = SessionQuestion(
+                    session_id=session.id,
+                    question_id=question['id'],
+                    display_order=idx,
+                    status='pending'
+                )
+                session_questions.append(sq)
+                self.db.add(sq)
+            
+            logger.info(f"Added {len(session_questions)} session_questions to database")
+            
+            # CRITICAL: Commit everything together
+            self.db.commit()
+            logger.info(f"✅ COMMITTED: Session {session.id} with {len(session_questions)} questions")
+            
+            # Step 4: Store session metadata in Redis (Req 14.10)
+            try:
+                self._cache_session_metadata(session.id, {
+                    'user_id': user_id,
+                    'role': role,
+                    'difficulty': difficulty,
+                    'question_count': question_count,
+                    'categories': categories,
+                    'start_time': session.start_time.isoformat(),
+                    'status': session.status.value
+                })
+            except Exception as cache_error:
+                # Don't fail the whole operation if caching fails
+                logger.warning(f"Failed to cache session metadata: {cache_error}")
+            
+            # Step 5: Return session_id and first question (Req 14.9)
+            first_question = questions[0]
+            first_question['question_number'] = 1
+            
+            return {
+                'session_id': session.id,
+                'role': session.role,
+                'difficulty': session.difficulty,
+                'status': session.status.value,
+                'question_count': session.question_count,
+                'categories': session.categories,
+                'start_time': session.start_time,
+                'first_question': first_question
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ ERROR creating session: {e}", exc_info=True)
+            self.db.rollback()
+            raise
     
     def get_session(self, session_id: int, user_id: int) -> Optional[InterviewSession]:
         """

@@ -65,7 +65,7 @@ async def evaluate_answer(
             )
         
         # Check if already evaluated
-        if answer.evaluation_id is not None:
+        if answer.evaluation is not None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Answer already evaluated"
@@ -132,15 +132,14 @@ async def get_evaluation(
             )
         
         # Check if evaluated
-        if answer.evaluation_id is None:
+        if answer.evaluation is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Answer not yet evaluated"
             )
         
-        # Get evaluation
-        from app.models.evaluation import Evaluation
-        evaluation = db.query(Evaluation).filter(Evaluation.id == answer.evaluation_id).first()
+        # Get evaluation from relationship
+        evaluation = answer.evaluation
         
         if not evaluation:
             raise HTTPException(

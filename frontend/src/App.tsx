@@ -7,11 +7,11 @@ import { useMemo } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import { store } from './store/index.js';
-import { useAppSelector } from './store/hooks.js';
-import { lightTheme, darkTheme } from './theme/theme.js';
-import AppRoutes from './routes/AppRoutes.js';
-import ErrorBoundary from './components/common/ErrorBoundary.js';
+import { store } from './store/index';
+import { useAppSelector } from './store/hooks';
+import { lightTheme, darkTheme } from './theme/theme';
+import AppRoutes from './routes/AppRoutes';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import './App.css';
 
 function AppContent() {

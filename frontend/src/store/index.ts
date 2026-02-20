@@ -4,11 +4,11 @@
  */
 
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './slices/authSlice.js';
-import userReducer from './slices/userSlice.js';
-import interviewReducer from './slices/interviewSlice.js';
-import resumeReducer from './slices/resumeSlice.js';
-import uiReducer from './slices/uiSlice.js';
+import authReducer from './slices/authSlice';
+import userReducer from './slices/userSlice';
+import interviewReducer from './slices/interviewSlice';
+import resumeReducer from './slices/resumeSlice';
+import uiReducer from './slices/uiSlice';
 
 export const store = configureStore({
   reducer: {

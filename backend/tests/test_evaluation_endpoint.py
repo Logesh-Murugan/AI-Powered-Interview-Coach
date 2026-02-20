@@ -58,6 +58,18 @@ class TestEvaluationEndpoints:
         db.commit()
         db.refresh(user)
         
+        # Create interview session
+        session = InterviewSession(
+            user_id=user.id,
+            role="Software Engineer",
+            difficulty="Medium",
+            status=SessionStatus.IN_PROGRESS,
+            question_count=5
+        )
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        
         # Create question
         question = Question(
             question_text="Explain REST API principles",
@@ -76,7 +88,7 @@ class TestEvaluationEndpoints:
         
         # Create answer
         answer = Answer(
-            session_id=1,
+            session_id=session.id,
             question_id=question.id,
             user_id=user.id,
             answer_text="REST APIs use stateless communication, resource-based URLs, and standard HTTP methods.",
@@ -196,6 +208,18 @@ class TestEvaluationEndpoints:
         db.refresh(user1)
         db.refresh(user2)
         
+        # Create interview session for user1
+        session = InterviewSession(
+            user_id=user1.id,
+            role="Software Engineer",
+            difficulty="Medium",
+            status=SessionStatus.IN_PROGRESS,
+            question_count=5
+        )
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        
         # Create question
         question = Question(
             question_text="Test question",
@@ -210,7 +234,7 @@ class TestEvaluationEndpoints:
         
         # Create answer for user1
         answer = Answer(
-            session_id=1,
+            session_id=session.id,
             question_id=question.id,
             user_id=user1.id,
             answer_text="Test answer",
@@ -246,6 +270,18 @@ class TestEvaluationEndpoints:
         db.commit()
         db.refresh(user)
         
+        # Create interview session
+        session = InterviewSession(
+            user_id=user.id,
+            role="Software Engineer",
+            difficulty="Medium",
+            status=SessionStatus.IN_PROGRESS,
+            question_count=5
+        )
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        
         # Create question
         question = Question(
             question_text="Test question",
@@ -260,15 +296,29 @@ class TestEvaluationEndpoints:
         
         # Create answer
         answer = Answer(
-            session_id=1,
+            session_id=session.id,
             question_id=question.id,
             user_id=user.id,
             answer_text="Test answer",
             time_taken=120,
-            submitted_at=datetime.utcnow(),
-            evaluation_id=1  # Already evaluated
+            submitted_at=datetime.utcnow()
         )
         db.add(answer)
+        db.flush()
+        
+        # Create evaluation
+        evaluation = Evaluation(
+            answer_id=answer.id,
+            content_quality=80.0,
+            clarity=85.0,
+            confidence=75.0,
+            technical_accuracy=90.0,
+            overall_score=82.0,
+            strengths=["Good answer"],
+            improvements=["Could be better"],
+            suggestions=["Practice more"]
+        )
+        db.add(evaluation)
         db.commit()
         db.refresh(answer)
         
@@ -297,6 +347,18 @@ class TestEvaluationEndpoints:
         db.commit()
         db.refresh(user)
         
+        # Create interview session
+        session = InterviewSession(
+            user_id=user.id,
+            role="Software Engineer",
+            difficulty="Medium",
+            status=SessionStatus.IN_PROGRESS,
+            question_count=5
+        )
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        
         # Create question
         question = Question(
             question_text="Test question",
@@ -311,7 +373,7 @@ class TestEvaluationEndpoints:
         
         # Create answer
         answer = Answer(
-            session_id=1,
+            session_id=session.id,
             question_id=question.id,
             user_id=user.id,
             answer_text="Test answer",
@@ -324,19 +386,16 @@ class TestEvaluationEndpoints:
         # Create evaluation
         evaluation = Evaluation(
             answer_id=answer.id,
-            content_quality_score=80.0,
-            clarity_score=85.0,
-            confidence_score=75.0,
-            technical_accuracy_score=90.0,
+            content_quality=80.0,
+            clarity=85.0,
+            confidence=75.0,
+            technical_accuracy=90.0,
             overall_score=82.0,
             strengths=["Good answer"],
             improvements=["Could be better"],
             suggestions=["Practice more"]
         )
         db.add(evaluation)
-        db.flush()
-        
-        answer.evaluation_id = evaluation.id
         db.commit()
         db.refresh(answer)
         db.refresh(evaluation)
@@ -370,6 +429,18 @@ class TestEvaluationEndpoints:
         db.commit()
         db.refresh(user)
         
+        # Create interview session
+        session = InterviewSession(
+            user_id=user.id,
+            role="Software Engineer",
+            difficulty="Medium",
+            status=SessionStatus.IN_PROGRESS,
+            question_count=5
+        )
+        db.add(session)
+        db.commit()
+        db.refresh(session)
+        
         # Create question
         question = Question(
             question_text="Test question",
@@ -384,7 +455,7 @@ class TestEvaluationEndpoints:
         
         # Create answer without evaluation
         answer = Answer(
-            session_id=1,
+            session_id=session.id,
             question_id=question.id,
             user_id=user.id,
             answer_text="Test answer",
