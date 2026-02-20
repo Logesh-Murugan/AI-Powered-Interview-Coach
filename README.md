@@ -1,260 +1,491 @@
 # InterviewMaster AI
 
-AI-powered interview preparation platform with hybrid AI architecture.
+> An intelligent AI-powered interview preparation platform that helps candidates practice and excel in technical interviews through personalized coaching, real-time feedback, and comprehensive analytics.
 
-## Project Status
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![React](https://img.shields.io/badge/React-18.2+-61DAFB.svg)](https://reactjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg)](https://fastapi.tiangolo.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-3178C6.svg)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-🚀 **Phase 3: Complete** - Full-Stack AI Interview Platform Ready
+## 🎯 Overview
 
-### Completed Features
-- ✅ Backend FastAPI application with comprehensive API
-- ✅ PostgreSQL database with complete schema
-- ✅ Redis caching layer
-- ✅ Multi-provider AI system (Groq + HuggingFace)
-- ✅ Resume upload and parsing with local storage
-- ✅ Question generation system
-- ✅ Interview session management
-- ✅ AI-powered answer evaluation
-- ✅ React frontend with Material-UI
-- ✅ Complete authentication flow
-- ✅ Dashboard and analytics
+InterviewMaster AI is a comprehensive full-stack application designed to revolutionize interview preparation. Using advanced AI models and intelligent algorithms, it provides candidates with realistic interview experiences, personalized feedback, and actionable insights to improve their performance.
 
-### Current Status
-- Full-stack application operational
-- AI interview system working end-to-end
-- Local file storage for resumes
-- Multi-provider AI with fallback
-- Ready for production deployment
+### Key Highlights
 
-## Quick Start
+- 🤖 **Multi-Provider AI Architecture** - Intelligent orchestration with Groq and HuggingFace models
+- 📊 **Advanced Analytics** - Track performance, identify strengths/weaknesses, and measure progress
+- 🎮 **Gamification** - Achievements, streaks, and leaderboards to keep users engaged
+- 🎯 **Personalized Coaching** - AI agents provide company-specific and role-specific guidance
+- 📈 **Study Plans** - Automated generation of personalized learning paths
+- 💾 **Smart Caching** - Redis-powered caching for optimal performance
+- 🔒 **Secure Authentication** - JWT-based auth with refresh tokens and password reset
+
+## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL 15+
-- Redis 7+
 
-### Backend Setup
+Ensure you have the following installed:
+- Python 3.11 or higher
+- Node.js 18 or higher
+- PostgreSQL 15 or higher
+- Redis 7 or higher
+- Git
+
+### Installation
+
+#### 1. Clone the Repository
 
 ```bash
-# Navigate to backend
+git clone https://github.com/Logesh-Murugan/AI-Powered-Interview-Coach.git
+cd AI-Powered-Interview-Coach
+```
+
+#### 2. Backend Setup
+
+```bash
+# Navigate to backend directory
 cd backend
 
-# Create virtual environment
+# Create and activate virtual environment
 python -m venv venv
-.\venv\Scripts\activate  # Windows
-source venv/bin/activate  # Unix/Mac
+
+# Windows
+.\venv\Scripts\activate
+
+# Unix/Mac
+source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Copy and configure environment
+# Create environment file
 cp .env.example .env
-# Edit .env with your database credentials and API keys
 
-# Setup database
-python setup_database.py
+# Edit .env with your configuration
+# Required: DATABASE_URL, REDIS_URL, SECRET_KEY, GROQ_API_KEY, HUGGINGFACE_API_KEY
+```
+
+#### 3. Database Setup
+
+```bash
+# Create database
+python create_database.py
 
 # Run migrations
 alembic upgrade head
 
-# Start backend server
-uvicorn app.main:app --reload
+# Verify setup
+python setup_database.py
 ```
 
-### Frontend Setup
+#### 4. Frontend Setup
 
 ```bash
-# Navigate to frontend
-cd frontend
+# Navigate to frontend directory
+cd ../frontend
 
 # Install dependencies
 npm install
 
-# Copy and configure environment
+# Create environment file
 cp .env.example .env
-# Edit .env if needed (default points to localhost:8000)
 
-# Start development server
+# Edit .env if needed (default: http://localhost:8000)
+```
+
+#### 5. Start Services
+
+**Terminal 1 - Redis:**
+```bash
+# Windows (using included Redis)
+cd redis-windows
+redis-server
+
+# Unix/Mac
+redis-server
+```
+
+**Terminal 2 - Backend:**
+```bash
+cd backend
+.\venv\Scripts\activate  # Windows
+source venv/bin/activate  # Unix/Mac
+uvicorn app.main:app --reload
+```
+
+**Terminal 3 - Frontend:**
+```bash
+cd frontend
 npm run dev
 ```
 
 ### Access the Application
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-- Health Check: http://localhost:8000/health
+
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/health
 
 ### Required API Keys
-You'll need API keys for the AI providers:
-- Groq API Key (primary): https://console.groq.com
-- HuggingFace API Key (fallback): https://huggingface.co/settings/tokens
 
-Add these to `backend/.env`:
-```
-GROQ_API_KEY=your_groq_key_here
-HUGGINGFACE_API_KEY=your_huggingface_key_here
-```
+Get your free API keys from:
+- **Groq**: https://console.groq.com (Primary AI provider)
+- **HuggingFace**: https://huggingface.co/settings/tokens (Fallback provider)
 
-## Project Structure
-
-```
-Ai_powered_interview_coach/
-├── .kiro/
-│   └── specs/
-│       └── interview-master-ai/
-│           ├── requirements.md    # 50 functional requirements
-│           ├── design.md          # Complete architecture design
-│           └── tasks.md           # 62 implementation tasks
-├── backend/                       # FastAPI backend (✅ Initialized)
-│   ├── app/
-│   │   ├── main.py               # FastAPI application
-│   │   ├── config.py             # Configuration management
-│   │   ├── logging_config.py    # Structured logging
-│   │   ├── models/               # Database models
-│   │   ├── schemas/              # Pydantic schemas
-│   │   ├── routes/               # API endpoints
-│   │   ├── services/             # Business logic
-│   │   └── utils/                # Utility functions
-│   ├── tests/                    # Test suite
-│   ├── requirements.txt          # Python dependencies
-│   └── README.md                 # Backend documentation
-└── README.md                     # This file
+Add to `backend/.env`:
+```env
+GROQ_API_KEY=your_groq_api_key_here
+HUGGINGFACE_API_KEY=your_huggingface_token_here
 ```
 
-## Technology Stack
+## 🐳 Docker Deployment
 
-### Backend
-- **Framework**: FastAPI 0.109.0
-- **Database**: PostgreSQL 15+ (Phase 2)
-- **Cache**: Redis 7+ (Phase 2)
-- **Queue**: Celery 5.3.6 (Phase 3)
-- **ORM**: SQLAlchemy 2.0.25 (Phase 2)
-- **Validation**: Pydantic 2.5.3
-- **Authentication**: JWT with bcrypt (Phase 2)
-- **Logging**: Loguru (structured JSON)
-- **Testing**: Pytest with 87% coverage
+### Using Docker Compose
 
-### AI Stack (Phase 4+)
-- **Providers**: Groq, HuggingFace (2-provider architecture)
-- **Agents**: LangChain 0.1+
-- **NLP**: spaCy 3.7+
-- **Vector DB**: ChromaDB
+```bash
+# Start all services (PostgreSQL, Redis, Backend, Frontend)
+docker-compose up -d
 
-### Frontend (Phase 1+)
-- **Framework**: React 18.2+ with Vite 5+
-- **State**: Redux Toolkit
-- **UI**: Material-UI v5 + Tailwind CSS
-- **Language**: TypeScript
+# View logs
+docker-compose logs -f
 
-## Features
+# Stop all services
+docker-compose down
 
-### ✅ Authentication & User Management
-- [x] User registration and login
-- [x] JWT authentication with refresh tokens
-- [x] Password reset flow
-- [x] User profile management
-- [x] Secure password hashing
+# Rebuild and start
+docker-compose up -d --build
+```
 
-### ✅ Resume Management
-- [x] Resume file upload (PDF/DOCX)
-- [x] Text extraction from documents
-- [x] NLP skill extraction with spaCy
-- [x] Local file storage system
-- [x] Resume parsing and analysis
+The docker-compose setup includes:
+- PostgreSQL 18 with health checks
+- Redis 7 with persistence
+- FastAPI backend with auto-reload
+- React frontend with hot module replacement
 
-### ✅ AI Integration
-- [x] Multi-provider AI orchestrator
-- [x] 2-tier fallback chain (Groq → HuggingFace)
-- [x] Circuit breaker pattern
-- [x] Question generation service
-- [x] Quota tracking and management
-- [x] Multiple API key rotation
+## 📊 Database Schema
 
-### ✅ Interview System
-- [x] Interview session creation
-- [x] Dynamic question generation
-- [x] Question display with context
-- [x] Answer submission and drafts
-- [x] AI-powered evaluation
-- [x] Session summary and analytics
+The application uses 14 database tables managed through Alembic migrations:
 
-### ✅ Frontend Application
-- [x] React with TypeScript
-- [x] Material-UI components
-- [x] Responsive design
-- [x] Dashboard with statistics
-- [x] Interview flow UI
-- [x] Evaluation display
-- [x] Session history
+- `users` - User accounts and authentication
+- `refresh_tokens` - JWT refresh token management
+- `password_reset_tokens` - Password reset functionality
+- `resumes` - Resume storage and metadata
+- `ai_provider_usage` - AI API quota tracking
+- `questions` - Interview question bank
+- `interview_sessions` - Interview session data
+- `session_questions` - Questions per session
+- `answers` - User answer submissions
+- `answer_drafts` - Draft answer storage
+- `evaluations` - AI evaluation results
+- `session_summaries` - Interview summaries
+- `user_achievements` - Achievement tracking
+- `leaderboard_entries` - Global rankings
+- `cache_metadata` - Cache performance metrics
+- `resume_analyses` - AI resume analysis results
+- `study_plans` - Personalized learning paths
+- `company_coaching_sessions` - Company-specific coaching
 
-### 🚧 Future Enhancements
-- [ ] Advanced analytics dashboard
-- [ ] Achievement badges and gamification
-- [ ] LangChain agent framework
-- [ ] Company-specific coaching
-- [ ] Docker Compose deployment
-- [ ] CI/CD pipeline
-
-## Documentation
-
-- **Requirements**: `.kiro/specs/interview-master-ai/requirements.md`
-- **Design**: `.kiro/specs/interview-master-ai/design.md`
-- **Tasks**: `.kiro/specs/interview-master-ai/tasks.md`
-- **Backend**: `backend/README.md`
-
-## Testing
+## 🧪 Testing
 
 ### Backend Tests
+
 ```bash
 cd backend
-pytest                          # Run all tests
-pytest --cov=app               # With coverage
-pytest tests/test_main.py -v  # Specific test file
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=app --cov-report=html --cov-report=term
+
+# Run specific test file
+pytest tests/test_auth.py -v
+
+# Run property-based tests
+pytest tests/property/ -v
 ```
 
-Current Coverage: **84%** (exceeds 80% requirement) ✅
+**Test Coverage**: 84%+ (exceeds 80% requirement)
 
-## Contributing
+### Frontend Tests
 
-This is a spec-driven development project. All features are defined in the requirements and design documents before implementation.
+```bash
+cd frontend
 
-### Development Workflow
-1. Review task in `.kiro/specs/interview-master-ai/tasks.md`
-2. Implement according to requirements and design
-3. Write tests (unit + property-based where applicable)
-4. Ensure 80%+ test coverage
-5. Update task status
-6. Move to next task
+# Run tests
+npm run test
 
-## License
+# Run with coverage
+npm run test:coverage
 
-Proprietary - InterviewMaster AI
+# Run tests in UI mode
+npm run test:ui
+```
 
-## Contact
+## 📚 API Documentation
 
-For questions or issues, please refer to the project documentation in `.kiro/specs/`.
+Once the backend is running, access the interactive API documentation:
 
-## Security Notes
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
 
-⚠️ **Important**: This repository contains example configuration files. Before deploying:
+### Key API Endpoints
 
-1. Never commit `.env` files with real API keys
-2. Change the `SECRET_KEY` in production
-3. Use strong database passwords
-4. Enable HTTPS in production
-5. Review and update CORS settings
-6. Implement rate limiting for production
+#### Authentication
+- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/refresh` - Refresh access token
+- `POST /api/v1/auth/logout` - User logout
 
-## Troubleshooting
+#### Interview System
+- `POST /api/v1/interview-sessions` - Create interview session
+- `GET /api/v1/interview-sessions/{id}` - Get session details
+- `GET /api/v1/interview-sessions/{id}/questions/{q_id}` - Get question
+- `POST /api/v1/answers` - Submit answer
+- `POST /api/v1/evaluations` - Request evaluation
 
-See the following guides in the repository:
-- `QUICK-START-GUIDE.md` - Complete setup instructions
-- `HOW-TO-RUN-APPLICATION.md` - Running the application
-- `WHERE-TO-CHECK-EVERYTHING.md` - Debugging guide
+#### Analytics
+- `GET /api/v1/analytics/overview` - Performance overview
+- `GET /api/v1/analytics/category-performance` - Category breakdown
+- `GET /api/v1/analytics/strengths-weaknesses` - Identify areas
+
+#### Gamification
+- `GET /api/v1/achievements` - User achievements
+- `GET /api/v1/streaks/current` - Current streak
+- `GET /api/v1/leaderboard` - Global rankings
+
+## 🔧 Configuration
+
+### Environment Variables
+
+#### Backend (.env)
+```env
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5432/interviewmaster
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# Security
+SECRET_KEY=your-secret-key-min-32-characters
+ENVIRONMENT=development
+
+# AI Providers
+GROQ_API_KEY=your_groq_api_key
+HUGGINGFACE_API_KEY=your_huggingface_token
+
+# CORS
+ALLOWED_ORIGINS=["http://localhost:5173","http://localhost:3000"]
+```
+
+#### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:8000/api/v1
+```
+
+## 🎯 Development Workflow
+
+### Spec-Driven Development
+
+This project follows a structured development approach:
+
+1. **Requirements** (`.kiro/specs/interview-master-ai/requirements.md`) - 50 functional requirements
+2. **Design** (`.kiro/specs/interview-master-ai/design.md`) - Complete architecture
+3. **Tasks** (`.kiro/specs/interview-master-ai/tasks.md`) - 62 implementation tasks
+
+### Adding New Features
+
+1. Define requirements in specs
+2. Update design document
+3. Create database migration if needed
+4. Implement backend service and routes
+5. Write comprehensive tests
+6. Implement frontend components
+7. Update documentation
+
+## 🚀 Production Deployment
+
+### Pre-Deployment Checklist
+
+- [ ] Update `SECRET_KEY` with strong random value
+- [ ] Configure production database with SSL
+- [ ] Set up Redis with persistence and backups
+- [ ] Add rate limiting for API endpoints
+- [ ] Enable HTTPS/SSL certificates
+- [ ] Configure CORS for production domains
+- [ ] Set up monitoring and logging
+- [ ] Configure backup strategy
+- [ ] Review and update security headers
+- [ ] Set up CI/CD pipeline (optional)
+
+### Recommended Hosting
+
+- **Backend**: Render, Railway, or AWS EC2
+- **Frontend**: Vercel, Netlify, or Cloudflare Pages
+- **Database**: AWS RDS, DigitalOcean, or Supabase
+- **Redis**: Redis Cloud, AWS ElastiCache, or Upstash
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Standards
+
+- Follow PEP 8 for Python code
+- Use TypeScript for all frontend code
+- Write tests for new features
+- Maintain 80%+ test coverage
+- Update documentation as needed
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Logesh Murugan**
+- GitHub: [@Logesh-Murugan](https://github.com/Logesh-Murugan)
+- Project: [AI-Powered-Interview-Coach](https://github.com/Logesh-Murugan/AI-Powered-Interview-Coach)
+
+## 🙏 Acknowledgments
+
+- FastAPI for the excellent web framework
+- React and Material-UI for frontend components
+- Groq and HuggingFace for AI model access
+- LangChain for agent framework
+- The open-source community
+
+## 📞 Support
+
+For issues, questions, or suggestions:
+- Open an issue on GitHub
+- Check existing documentation
+- Review API documentation at `/docs`
 
 ---
 
-**Last Updated**: 2026-02-13  
-**Status**: ✅ Full-Stack Application Complete  
-**Version**: 1.0.0
+**Built with ❤️ using FastAPI, React, and AI**
+
+*Last Updated: February 2026*
+
+## 🏗️ Architecture
+
+### Technology Stack
+
+#### Backend
+- **Framework**: FastAPI 0.109.0 - High-performance async API framework
+- **Database**: PostgreSQL 15+ - Robust relational database with 14 migration files
+- **Cache**: Redis 7+ - In-memory data store for high-speed caching
+- **ORM**: SQLAlchemy 2.0.25 - Python SQL toolkit and ORM
+- **Task Queue**: Celery 5.3.6 - Distributed task queue for background jobs
+- **Authentication**: JWT with bcrypt - Secure token-based authentication
+- **Validation**: Pydantic 2.5.3 - Data validation using Python type annotations
+- **Logging**: Loguru - Structured JSON logging for better observability
+- **Testing**: Pytest with 84%+ coverage - Comprehensive test suite
+
+#### AI Stack
+- **Primary Provider**: Groq (llama-3.3-70b-versatile) - Fast inference with high quality
+- **Fallback Provider**: HuggingFace (Mistral-7B-Instruct-v0.2) - Reliable backup
+- **Agent Framework**: LangChain - Building AI agents with tools
+- **NLP**: spaCy 3.7+ - Advanced natural language processing
+- **Pattern**: Circuit Breaker - Automatic failover and recovery
+
+#### Frontend
+- **Framework**: React 18.2+ with Vite 5+ - Modern, fast development experience
+- **Language**: TypeScript 5.9+ - Type-safe JavaScript
+- **State Management**: Redux Toolkit - Predictable state container
+- **UI Library**: Material-UI v5 - Comprehensive React component library
+- **Styling**: Emotion + Tailwind CSS - Flexible styling solutions
+- **Animations**: Framer Motion - Production-ready motion library
+- **Charts**: Recharts - Composable charting library
+- **Forms**: React Hook Form + Yup - Performant form validation
+
+### Project Structure
+
+```
+InterviewMaster-AI/
+├── backend/                    # FastAPI Backend
+│   ├── app/
+│   │   ├── main.py            # Application entry point
+│   │   ├── config.py          # Configuration management
+│   │   ├── database.py        # Database connection
+│   │   ├── models/            # SQLAlchemy models (14 models)
+│   │   ├── schemas/           # Pydantic schemas
+│   │   ├── routes/            # API endpoints (15 route files)
+│   │   ├── services/          # Business logic
+│   │   │   ├── ai/           # AI provider orchestration
+│   │   │   └── agents/       # LangChain AI agents
+│   │   ├── tasks/            # Celery background tasks
+│   │   ├── middleware/       # Custom middleware
+│   │   └── utils/            # Utility functions
+│   ├── alembic/              # Database migrations (14 files)
+│   ├── tests/                # Test suite (50+ test files)
+│   └── requirements.txt      # Python dependencies
+│
+├── frontend/                  # React Frontend
+│   ├── src/
+│   │   ├── pages/            # Page components
+│   │   │   ├── auth/        # Authentication pages
+│   │   │   ├── dashboard/   # Dashboard
+│   │   │   ├── interview/   # Interview flow
+│   │   │   ├── resume/      # Resume management
+│   │   │   └── analytics/   # Analytics dashboard
+│   │   ├── components/       # Reusable components
+│   │   │   ├── landing/     # Landing page sections
+│   │   │   ├── analytics/   # Analytics components
+│   │   │   └── animations/  # Animation components
+│   │   ├── services/         # API service layer
+│   │   ├── store/           # Redux store
+│   │   ├── routes/          # Route configuration
+│   │   └── utils/           # Utility functions
+│   └── package.json         # Node dependencies
+│
+├── .github/                  # GitHub configuration
+├── .kiro/                    # Project specifications
+│   └── specs/
+│       └── interview-master-ai/
+│           ├── requirements.md  # 50 functional requirements
+│           ├── design.md        # Architecture design
+│           └── tasks.md         # 62 implementation tasks
+├── docker-compose.yml        # Docker orchestration
+└── README.md                # This file
+```
+
+## ✨ Features
+
+### Core Interview System
+- **Dynamic Question Generation** - AI-generated questions tailored to role, difficulty, and experience level
+- **Real-time Interview Sessions** - Interactive interview experience with timer and draft saving
+- **AI-Powered Evaluation** - Comprehensive answer analysis with detailed feedback and scoring
+- **Session History** - Track all past interviews with complete transcripts and evaluations
+
+### Advanced Features
+- **Resume Analysis** - AI-powered resume parsing and skill extraction using NLP
+- **Analytics Dashboard** - Visualize performance trends, category strengths, and improvement areas
+- **Achievement System** - Unlock badges and milestones as you progress
+- **Streak Tracking** - Maintain daily practice streaks for consistent improvement
+- **Global Leaderboard** - Compete with other users and track rankings
+- **Study Plan Generator** - AI creates personalized learning paths based on your performance
+- **Company Coaching** - Get company-specific interview preparation and insights
+- **Performance Comparison** - Compare your performance against benchmarks
+
+### Technical Features
+- **Multi-Provider AI** - Intelligent failover between Groq and HuggingFace models
+- **Circuit Breaker Pattern** - Automatic recovery from AI provider failures
+- **Quota Management** - Smart tracking and rotation of API keys
+- **Redis Caching** - High-performance caching for questions and sessions
+- **Cache Monitoring** - Real-time cache hit rates and performance metrics
+- **Property-Based Testing** - Comprehensive test coverage with hypothesis testing
+- **Modern UI/UX** - Responsive design with animations and smooth transitions
+- **Landing Page** - Professional marketing page with features showcase
+
+
