@@ -288,23 +288,14 @@ VITE_API_URL=http://localhost:8000/api/v1
 
 ## 🎯 Development Workflow
 
-### Spec-Driven Development
-
-This project follows a structured development approach:
-
-1. **Requirements** (`.kiro/specs/interview-master-ai/requirements.md`) - 50 functional requirements
-2. **Design** (`.kiro/specs/interview-master-ai/design.md`) - Complete architecture
-3. **Tasks** (`.kiro/specs/interview-master-ai/tasks.md`) - 62 implementation tasks
-
 ### Adding New Features
 
-1. Define requirements in specs
-2. Update design document
-3. Create database migration if needed
-4. Implement backend service and routes
-5. Write comprehensive tests
-6. Implement frontend components
-7. Update documentation
+1. Plan feature requirements and design
+2. Create database migration if needed
+3. Implement backend service and routes
+4. Write comprehensive tests
+5. Implement frontend components
+6. Update documentation
 
 ## 🚀 Production Deployment
 
@@ -450,12 +441,6 @@ InterviewMaster-AI/
 │   └── package.json         # Node dependencies
 │
 ├── .github/                  # GitHub configuration
-├── .kiro/                    # Project specifications
-│   └── specs/
-│       └── interview-master-ai/
-│           ├── requirements.md  # 50 functional requirements
-│           ├── design.md        # Architecture design
-│           └── tasks.md         # 62 implementation tasks
 ├── docker-compose.yml        # Docker orchestration
 └── README.md                # This file
 ```
