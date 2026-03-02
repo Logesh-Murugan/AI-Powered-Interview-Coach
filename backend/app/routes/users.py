@@ -69,7 +69,7 @@ async def get_current_user_profile(
     Profile data is cached for performance.
     """
     # Get user profile
-    user = UserService.get_user_profile(db, current_user["user_id"])
+    user = UserService.get_user_profile(db, current_user.id)
     
     # Convert to response model
     return UserProfileResponse(
@@ -167,7 +167,7 @@ async def update_current_user_profile(
     Cache is invalidated after update for consistency.
     """
     # Update user profile
-    user = UserService.update_user_profile(db, current_user["user_id"], profile_data)
+    user = UserService.update_user_profile(db, current_user.id, profile_data)
     
     # Convert to response model
     return UserProfileResponse(

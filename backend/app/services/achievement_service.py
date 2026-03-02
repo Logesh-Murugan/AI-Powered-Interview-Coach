@@ -108,13 +108,13 @@ class AchievementService:
                 user_id=user_id,
                 achievement_type=achievement_type,
                 earned_at=datetime.utcnow(),
-                achievement_metadata=metadata
+                achievement_data=metadata
             )
             self.db.add(achievement)
             
             user = self.db.query(User).filter(User.id == user_id).first()
             if user:
-                user.total_achievements_count = str(int(user.total_achievements_count or 0) + 1)
+                user.total_achievements_count = (user.total_achievements_count or 0) + 1
             
             self.db.commit()
             self.db.refresh(achievement)
@@ -128,6 +128,7 @@ class AchievementService:
             self.db.rollback()
             logger.error(f"Error awarding achievement {achievement_type} to user {user_id}: {e}")
             raise
+
     
     def check_first_interview(self, user_id: int) -> Optional[UserAchievement]:
         """Check and award First_Interview achievement."""

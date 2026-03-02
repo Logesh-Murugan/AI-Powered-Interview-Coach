@@ -4,6 +4,7 @@
  */
 
 import apiService from './api.service';
+import { logError } from '../utils/errorMessages';
 
 export interface Resume {
   id: number;
@@ -58,43 +59,63 @@ export const resumeService = {
    * Upload resume file
    */
   async uploadResume(file: File): Promise<ResumeUploadResponse> {
-    const formData = new FormData();
-    formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    const response = await apiService.post<ResumeUploadResponse>(
-      '/resumes/upload',
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
+      const response = await apiService.post<ResumeUploadResponse>(
+        '/resumes/upload',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
 
-    return response.data;
+      return response.data;
+    } catch (error) {
+      logError(error, 'resumeService.uploadResume');
+      throw error;
+    }
   },
 
   /**
    * Get all user resumes
    */
   async getResumes(): Promise<ResumeListResponse> {
-    const response = await apiService.get<ResumeListResponse>('/resumes');
-    return response.data;
+    try {
+      const response = await apiService.get<ResumeListResponse>('/resumes');
+      return response.data;
+    } catch (error) {
+      logError(error, 'resumeService.getResumes');
+      throw error;
+    }
   },
 
   /**
    * Get resume by ID
    */
   async getResumeById(id: number): Promise<Resume> {
-    const response = await apiService.get<Resume>(`/resumes/${id}`);
-    return response.data;
+    try {
+      const response = await apiService.get<Resume>(`/resumes/${id}`);
+      return response.data;
+    } catch (error) {
+      logError(error, 'resumeService.getResumeById');
+      throw error;
+    }
   },
 
   /**
    * Delete resume
    */
   async deleteResume(id: number): Promise<void> {
-    await apiService.delete(`/resumes/${id}`);
+    try {
+      await apiService.delete(`/resumes/${id}`);
+    } catch (error) {
+      logError(error, 'resumeService.deleteResume');
+      throw error;
+    }
   },
 };
 

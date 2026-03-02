@@ -110,23 +110,29 @@ function RecentSessions({ sessions, loading }: RecentSessionsProps) {
                     primary={
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Typography variant="body1">{session.role}</Typography>
-                        <Chip
-                          label={session.difficulty}
-                          size="small"
-                          variant="outlined"
-                        />
+                        {session.difficulty && (
+                          <Chip
+                            label={session.difficulty}
+                            size="small"
+                            variant="outlined"
+                          />
+                        )}
                       </Stack>
                     }
                     secondary={
                       <Stack direction="row" spacing={2} alignItems="center" sx={{ mt: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">
-                          {format(new Date(session.start_time), 'MMM dd, yyyy')}
-                        </Typography>
-                        <Chip
-                          label={getStatusLabel(session.status)}
-                          size="small"
-                          color={getStatusColor(session.status)}
-                        />
+                        {session.start_time && (
+                          <Typography variant="caption" color="text.secondary">
+                            {format(new Date(session.start_time), 'MMM dd, yyyy')}
+                          </Typography>
+                        )}
+                        {session.status && (
+                          <Chip
+                            label={getStatusLabel(session.status)}
+                            size="small"
+                            color={getStatusColor(session.status)}
+                          />
+                        )}
                         {session.overall_score !== undefined && (
                           <Chip
                             label={`${session.overall_score.toFixed(0)}%`}

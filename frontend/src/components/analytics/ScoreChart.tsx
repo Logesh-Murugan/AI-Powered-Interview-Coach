@@ -12,7 +12,7 @@ import {
   Area,
   ComposedChart,
 } from 'recharts';
-import { ScoreOverTime } from '../../services/analyticsService';
+import { type ScoreOverTime } from '../../services/analyticsService';
 import { TrendingUp } from '@mui/icons-material';
 
 interface Props {

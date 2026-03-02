@@ -19,6 +19,7 @@ import LandingPage from '../pages/LandingPage';
 import LoginPage from '../pages/auth/LoginPage';
 import RegisterPage from '../pages/auth/RegisterPage';
 import PasswordResetPage from '../pages/auth/PasswordResetPage';
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import ProfilePage from '../pages/profile/ProfilePage';
 import InterviewStartPage from '../pages/interview/InterviewStartPage';
@@ -29,7 +30,17 @@ import SessionHistoryPage from '../pages/interview/SessionHistoryPage';
 import ResumeListPage from '../pages/resume/ResumeListPage';
 import ResumeUploadPage from '../pages/resume/ResumeUploadPage';
 import ResumeDetailPage from '../pages/resume/ResumeDetailPage';
-// import AnalyticsPage from '../pages/analytics/AnalyticsPage'; // Temporarily disabled
+import AnalyticsPage from '../pages/analytics/AnalyticsPage';
+import LeaderboardPage from '../pages/leaderboard/LeaderboardPage';
+import AchievementsPage from '../pages/achievements/AchievementsPage';
+import StreakPage from '../pages/streaks/StreakPage';
+import SettingsPage from '../pages/settings/SettingsPage';
+// Lazy load AI pages to prevent cache issues
+import { lazy } from 'react';
+const ResumeAnalysisPage = lazy(() => import('../pages/ai/ResumeAnalysisPage'));
+const StudyPlansPage = lazy(() => import('../pages/ai/StudyPlansPage'));
+const CompanyCoachingPage = lazy(() => import('../pages/ai/CompanyCoachingPage'));
+const CacheStatsPage = lazy(() => import('../pages/admin/CacheStatsPage'));
 import NotFoundPage from '../pages/NotFoundPage';
 
 // Landing Page Wrapper Component
@@ -55,6 +66,7 @@ function AppRoutes() {
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
           <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
           <Route path={ROUTES.PASSWORD_RESET} element={<PasswordResetPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
       </Route>
 
@@ -63,6 +75,7 @@ function AppRoutes() {
         <Route element={<MainLayout />}>
           <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path={ROUTES.INTERVIEWS} element={<InterviewStartPage />} />
           <Route path={ROUTES.INTERVIEW_SESSION} element={<InterviewSessionPage />} />
           <Route path="/interviews/:id/summary" element={<InterviewSummaryPage />} />
@@ -71,8 +84,14 @@ function AppRoutes() {
           <Route path={ROUTES.RESUMES} element={<ResumeListPage />} />
           <Route path={ROUTES.RESUME_UPLOAD} element={<ResumeUploadPage />} />
           <Route path="/resumes/:id" element={<ResumeDetailPage />} />
-          {/* Temporarily disabled - analytics component has export issue */}
-          {/* <Route path="/analytics" element={<AnalyticsPage />} /> */}
+          <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/leaderboard" element={<LeaderboardPage />} />
+          <Route path="/achievements" element={<AchievementsPage />} />
+          <Route path="/streaks" element={<StreakPage />} />
+          <Route path="/ai/resume-analysis/:resumeId" element={<ResumeAnalysisPage />} />
+          <Route path="/ai/study-plans" element={<StudyPlansPage />} />
+          <Route path="/ai/company-coaching" element={<CompanyCoachingPage />} />
+          <Route path="/admin/cache-stats" element={<CacheStatsPage />} />
         </Route>
       </Route>
 

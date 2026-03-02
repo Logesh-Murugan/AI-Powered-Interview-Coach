@@ -66,6 +66,7 @@ class TestAnalyticsService:
             role="Software Engineer",
             difficulty="Medium",
             status="completed",
+            question_count=1,
             start_time=datetime.utcnow() - timedelta(hours=1),
             end_time=datetime.utcnow()
         )
@@ -77,6 +78,7 @@ class TestAnalyticsService:
             question_text="Test question",
             category="Technical",
             difficulty="Medium",
+            role="Software Engineer",
             expected_answer_points=["Point 1", "Point 2"],
             time_limit_seconds=300
         )
@@ -96,7 +98,8 @@ class TestAnalyticsService:
         # Create answer
         answer = Answer(
             session_id=session.id,
-            session_question_id=session_question.id,
+            question_id=question.id,
+            user_id=user.id,
             answer_text="Test answer",
             time_taken=180,  # 3 minutes
             submitted_at=datetime.utcnow()
@@ -201,6 +204,7 @@ class TestAnalyticsService:
                 role="Software Engineer",
                 difficulty="Medium",
                 status="completed",
+                question_count=1,
                 start_time=datetime.utcnow() - timedelta(days=10-i, hours=1),
                 end_time=datetime.utcnow() - timedelta(days=10-i)
             )
@@ -212,6 +216,7 @@ class TestAnalyticsService:
                 question_text=f"Question {i+1}",
                 category="Technical",
                 difficulty="Medium",
+                role="Software Engineer",
                 expected_answer_points=["Point 1"],
                 time_limit_seconds=300
             )
@@ -231,7 +236,8 @@ class TestAnalyticsService:
             # Create answer
             answer = Answer(
                 session_id=session.id,
-                session_question_id=session_question.id,
+                question_id=question.id,
+                user_id=user.id,
                 answer_text=f"Answer {i+1}",
                 time_taken=180,
                 submitted_at=datetime.utcnow() - timedelta(days=10-i)
@@ -287,6 +293,7 @@ class TestAnalyticsService:
             role="Software Engineer",
             difficulty="Medium",
             status="completed",
+            question_count=4,
             start_time=datetime.utcnow() - timedelta(hours=1),
             end_time=datetime.utcnow()
         )
@@ -306,6 +313,7 @@ class TestAnalyticsService:
                 question_text=f"{category} question",
                 category=category,
                 difficulty="Medium",
+                role="Software Engineer",
                 expected_answer_points=["Point 1"],
                 time_limit_seconds=300
             )
@@ -323,7 +331,8 @@ class TestAnalyticsService:
             
             answer = Answer(
                 session_id=session.id,
-                session_question_id=session_question.id,
+                question_id=question.id,
+                user_id=user.id,
                 answer_text=f"{category} answer",
                 time_taken=180,
                 submitted_at=datetime.utcnow()

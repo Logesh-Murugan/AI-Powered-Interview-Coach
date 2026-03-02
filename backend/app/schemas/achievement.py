@@ -44,7 +44,7 @@ class UserAchievementResponse(BaseModel):
     user_id: int
     achievement_type: AchievementType
     earned_at: datetime
-    achievement_metadata: Optional[Dict] = None
+    metadata: Optional[Dict] = None
     
     class Config:
         from_attributes = True
@@ -54,7 +54,7 @@ class UserAchievementResponse(BaseModel):
                 "user_id": 123,
                 "achievement_type": "First_Interview",
                 "earned_at": "2026-02-14T10:30:00Z",
-                "achievement_metadata": None
+                "metadata": None
             }
         }
 

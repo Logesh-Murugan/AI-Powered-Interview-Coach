@@ -18,7 +18,6 @@ import {
   Card,
   CardContent,
   Alert,
-  CircularProgress,
   Divider,
   Stack,
   List,
@@ -29,6 +28,8 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorAlert from '../../components/common/ErrorAlert';
 import {
   Timeline,
   TimelineItem,
@@ -54,21 +55,34 @@ import {
 } from '@mui/icons-material';
 import { resumeService, type Resume } from '../../services/resumeService';
 import { format } from 'date-fns';
+import { useAppDispatch, useAppSelector } from '../../store';
+import { analyzeResume, fetchAnalysis } from '../../store/slices/resumeAnalysisSlice';
+import ResumeAnalysisCard from '../../components/ai/ResumeAnalysisCard';
 
 function ResumeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  
   const [resume, setResume] = useState<Resume | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // Redux state for resume analysis
+  const { currentAnalysis, isLoading: analysisLoading, isGenerating, error: analysisError } = useAppSelector(
+    (state) => state.resumeAnalysis
+  );
+  const userProfile = useAppSelector((state) => state.auth.user);
+
   useEffect(() => {
     if (id) {
       loadResume(parseInt(id));
+      // Fetch analysis on mount
+      dispatch(fetchAnalysis(parseInt(id)));
     }
-  }, [id]);
+  }, [id, dispatch]);
 
   const loadResume = async (resumeId: number) => {
     setLoading(true);
@@ -96,6 +110,34 @@ function ResumeDetailPage() {
       setError(err.message || 'Failed to delete resume');
       setDeleting(false);
     }
+  };
+
+  // Handle generate analysis
+  const handleGenerateAnalysis = () => {
+    if (!resume) return;
+    
+    const targetRole = userProfile?.target_role || 'Software Engineer';
+    dispatch(analyzeResume({ 
+      resumeId: resume.id, 
+      request: { target_role: targetRole } 
+    }));
+  };
+
+  // Handle regenerate analysis
+  const handleRegenerateAnalysis = () => {
+    if (!resume) return;
+    
+    const targetRole = userProfile?.target_role || 'Software Engineer';
+    dispatch(analyzeResume({ 
+      resumeId: resume.id, 
+      request: { target_role: targetRole, force_refresh: true } 
+    }));
+  };
+
+  // Handle view full analysis
+  const handleViewFullAnalysis = () => {
+    if (!resume) return;
+    navigate(`/ai/resume-analysis/${resume.id}`);
   };
 
   const getStatusIcon = (status: string) => {
@@ -140,10 +182,7 @@ function ResumeDetailPage() {
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="body1" sx={{ mt: 2 }}>
-          Loading resume details...
-        </Typography>
+        <LoadingSpinner variant="fullPage" text="Loading resume details..." />
       </Container>
     );
   }
@@ -151,7 +190,10 @@ function ResumeDetailPage() {
   if (error || !resume) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">{error || 'Resume not found'}</Alert>
+        <ErrorAlert
+          message={error || 'Resume not found'}
+          onRetry={() => id && loadResume(parseInt(id))}
+        />
         <Button
           variant="contained"
           startIcon={<ArrowBack />}
@@ -276,6 +318,19 @@ function ResumeDetailPage() {
           )}
         </Grid>
       )}
+
+      {/* AI Resume Analysis Section */}
+      <Box sx={{ mb: 4 }}>
+        <ResumeAnalysisCard
+          analysis={currentAnalysis}
+          isLoading={analysisLoading}
+          isGenerating={isGenerating}
+          error={analysisError}
+          onGenerate={handleGenerateAnalysis}
+          onRegenerate={handleRegenerateAnalysis}
+          onViewDetails={handleViewFullAnalysis}
+        />
+      </Box>
 
       {/* Skills Section */}
       {resume.skills && Object.keys(resume.skills).length > 0 && (

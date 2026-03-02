@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { resumeService } from '../../services/resumeService';
+import ErrorAlert from '../../components/common/ErrorAlert';
 import FadeIn from '../../components/animations/FadeIn';
 import ScaleButton from '../../components/animations/ScaleButton';
 import SuccessConfetti from '../../components/animations/SuccessConfetti';
@@ -141,9 +142,11 @@ function ResumeUploadPage() {
           </Typography>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
+          <ErrorAlert
+            message={error}
+            onRetry={() => file && handleUpload()}
+            onDismiss={() => setError(null)}
+          />
         )}
 
         {success && (

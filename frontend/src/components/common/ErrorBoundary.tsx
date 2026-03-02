@@ -33,10 +33,11 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // Log error to error reporting service
-    if (import.meta.env.DEV) {
-      console.error('Error caught by boundary:', error, errorInfo);
-    }
+    // Log error to console for debugging (COMP-5.10)
+    console.error('Unhandled error:', error, errorInfo);
+    
+    // TODO: Log to error tracking service in production
+    // Example: errorTrackingService.logError(error, errorInfo);
   }
 
   handleReset = (): void => {

@@ -140,6 +140,70 @@ GROQ_API_KEY=your_groq_api_key_here
 HUGGINGFACE_API_KEY=your_huggingface_token_here
 ```
 
+### Email Service Setup (Optional)
+
+The platform supports email notifications for password resets and welcome messages. Configure your SMTP provider:
+
+#### Gmail Setup (Recommended for Development)
+
+1. Enable 2-Factor Authentication on your Google account
+2. Generate an App Password:
+   - Go to https://myaccount.google.com/apppasswords
+   - Select "Mail" and your device
+   - Copy the 16-character password
+3. Add to `backend/.env`:
+```env
+EMAIL_ENABLED=True
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-16-char-app-password
+EMAIL_FROM_ADDRESS=your-email@gmail.com
+EMAIL_FROM_NAME=InterviewMaster AI
+FRONTEND_URL=http://localhost:3000
+```
+
+#### SendGrid Setup (Recommended for Production)
+
+1. Sign up at https://sendgrid.com (Free tier: 100 emails/day)
+2. Create an API key with "Mail Send" permissions
+3. Add to `backend/.env`:
+```env
+EMAIL_ENABLED=True
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USERNAME=apikey
+SMTP_PASSWORD=your-sendgrid-api-key
+EMAIL_FROM_ADDRESS=noreply@yourdomain.com
+EMAIL_FROM_NAME=InterviewMaster AI
+FRONTEND_URL=https://yourdomain.com
+```
+
+#### AWS SES Setup (Enterprise)
+
+1. Set up AWS SES and verify your domain
+2. Create SMTP credentials in SES console
+3. Add to `backend/.env`:
+```env
+EMAIL_ENABLED=True
+SMTP_HOST=email-smtp.us-east-1.amazonaws.com
+SMTP_PORT=587
+SMTP_USERNAME=your-ses-smtp-username
+SMTP_PASSWORD=your-ses-smtp-password
+EMAIL_FROM_ADDRESS=noreply@yourdomain.com
+EMAIL_FROM_NAME=InterviewMaster AI
+FRONTEND_URL=https://yourdomain.com
+```
+
+#### Disable Email (Development)
+
+To run without email configuration:
+```env
+EMAIL_ENABLED=False
+```
+
+Password reset tokens will be logged to console instead of emailed.
+
 ## 🐳 Docker Deployment
 
 ### Using Docker Compose

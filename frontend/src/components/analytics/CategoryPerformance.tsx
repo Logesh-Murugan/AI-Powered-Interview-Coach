@@ -13,7 +13,7 @@ import {
   TrendingFlat,
   Category as CategoryIcon,
 } from '@mui/icons-material';
-import { CategoryPerformance as CategoryPerformanceType } from '../../services/analyticsService';
+import { type CategoryPerformance as CategoryPerformanceType } from '../../services/analyticsService';
 
 interface Props {
   categories: CategoryPerformanceType[];
@@ -31,7 +31,7 @@ const CategoryPerformance: React.FC<Props> = ({ categories }) => {
       case 'stable':
         return <TrendingFlat fontSize="small" sx={{ color: 'text.secondary' }} />;
       default:
-        return null;
+        return undefined;
     }
   };
 
@@ -86,7 +86,7 @@ const CategoryPerformance: React.FC<Props> = ({ categories }) => {
       </Box>
 
       <Box>
-        {sortedCategories.map((category, index) => (
+        {sortedCategories.map((category) => (
           <Box key={category.category} mb={3}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
               <Box display="flex" alignItems="center" gap={1}>

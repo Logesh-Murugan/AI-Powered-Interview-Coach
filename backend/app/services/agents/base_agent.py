@@ -15,7 +15,14 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 from abc import ABC, abstractmethod
 
-from langchain.agents import AgentExecutor as LangChainAgentExecutor, create_react_agent
+try:
+    # Try new langchain API (v0.2+)
+    from langchain.agents import AgentExecutor, create_react_agent
+except ImportError:
+    # Fallback to langgraph for newer versions
+    from langgraph.prebuilt import create_react_agent
+    AgentExecutor = None
+
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_core.tools import Tool
@@ -63,7 +70,7 @@ class BaseAgent(ABC):
         self.tools: List[Tool] = []
         
         # Agent executor (created when needed)
-        self.agent_executor: Optional[LangChainAgentExecutor] = None
+        self.agent_executor: Optional[AgentExecutor] = None
         
         # Reasoning steps (logged during execution)
         self.reasoning_steps: List[Dict[str, Any]] = []
@@ -123,23 +130,32 @@ class BaseAgent(ABC):
         # Get prompt template
         prompt = self._get_prompt_template()
         
-        # Create ReAct agent
-        agent = create_react_agent(
-            llm=self.llm,
-            tools=self.tools,
-            prompt=prompt
-        )
-        
-        # Create agent executor with timeout and iteration limits
-        self.agent_executor = LangChainAgentExecutor(
-            agent=agent,
-            tools=self.tools,
-            max_iterations=self.max_iterations,
-            max_execution_time=self.max_execution_time,
-            verbose=self.verbose,
-            handle_parsing_errors=True,
-            return_intermediate_steps=True  # For reasoning logging
-        )
+        # Use langgraph for newer versions
+        if AgentExecutor is None:
+            # New API using langgraph
+            self.agent_executor = create_react_agent(
+                model=self.llm,
+                tools=self.tools,
+            )
+        else:
+            # Old API using langchain.agents
+            # Create ReAct agent
+            agent = create_react_agent(
+                llm=self.llm,
+                tools=self.tools,
+                prompt=prompt
+            )
+            
+            # Create agent executor with timeout and iteration limits
+            self.agent_executor = AgentExecutor(
+                agent=agent,
+                tools=self.tools,
+                max_iterations=self.max_iterations,
+                max_execution_time=self.max_execution_time,
+                verbose=self.verbose,
+                handle_parsing_errors=True,
+                return_intermediate_steps=True  # For reasoning logging
+            )
         
         logger.info(
             f"Agent initialized with {len(self.tools)} tools, "
@@ -170,13 +186,20 @@ class BaseAgent(ABC):
         start_time = datetime.utcnow()
         
         try:
-            # Execute agent
-            result = self.agent_executor.invoke(input_data)
+            # Execute agent (works with both old and new API)
+            if AgentExecutor is None:
+                # New langgraph API
+                result = self.agent_executor.invoke(input_data)
+                output = result.get('messages', [])[-1].content if result.get('messages') else ''
+                intermediate_steps = []
+            else:
+                # Old langchain API
+                result = self.agent_executor.invoke(input_data)
+                output = result.get('output', '')
+                intermediate_steps = result.get('intermediate_steps', [])
             
             # Extract reasoning steps
-            self.reasoning_steps = self._extract_reasoning_steps(
-                result.get('intermediate_steps', [])
-            )
+            self.reasoning_steps = self._extract_reasoning_steps(intermediate_steps)
             
             # Calculate execution time
             execution_time_ms = int(
@@ -190,7 +213,7 @@ class BaseAgent(ABC):
             )
             
             return {
-                'output': result.get('output', ''),
+                'output': output,
                 'reasoning_steps': self.reasoning_steps,
                 'execution_time_ms': execution_time_ms,
                 'status': 'success'

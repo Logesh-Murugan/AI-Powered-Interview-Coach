@@ -44,7 +44,7 @@ async def list_interview_sessions(
     - List of interview sessions ordered by creation date (newest first)
     """
     try:
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         logger.info(f"Listing interview sessions for user {user_id}")
         
@@ -111,7 +111,7 @@ async def create_interview_session(
     """
     try:
         # Validate user is authenticated (Req 14.1)
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         logger.info(f"Creating interview session for user {user_id}: role={session_data.role}, difficulty={session_data.difficulty}")
         
@@ -192,7 +192,7 @@ async def get_question(
     Response time target: < 200ms
     """
     try:
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         logger.info(f"Retrieving question {question_number} for session {session_id}, user {user_id}")
         
@@ -285,7 +285,7 @@ async def submit_answer(
     Response time target: < 300ms
     """
     try:
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         logger.info(f"Submitting answer for session {session_id}, question {question_id}, user {user_id}")
         
@@ -315,12 +315,49 @@ async def submit_answer(
                 detail="Question not found in this session"
             )
         
-        # Check if already answered
+        # Check if already answered - return existing answer instead of error (idempotency)
         if session_question.answer_id is not None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Question already answered"
-            )
+            logger.info(f"Question {question_id} already answered with answer_id {session_question.answer_id}")
+            
+            # Fetch the existing answer
+            from app.models.answer import Answer
+            existing_answer = db.query(Answer).filter(Answer.id == session_question.answer_id).first()
+            
+            if existing_answer:
+                # Check if all questions are answered
+                total_questions = db.query(SessionQuestion).filter(
+                    SessionQuestion.session_id == session_id
+                ).count()
+                
+                answered_questions = db.query(SessionQuestion).filter(
+                    SessionQuestion.session_id == session_id,
+                    SessionQuestion.status == 'answered'
+                ).count()
+                
+                all_questions_answered = (answered_questions == total_questions)
+                session_completed = (session.status == SessionStatus.COMPLETED)
+                
+                # Return the existing answer (idempotent response)
+                response = AnswerResponse(
+                    answer_id=existing_answer.id,
+                    session_id=session_id,
+                    question_id=question_id,
+                    time_taken=existing_answer.time_taken,
+                    submitted_at=existing_answer.submitted_at,
+                    status='submitted',
+                    all_questions_answered=all_questions_answered,
+                    session_completed=session_completed
+                )
+                
+                logger.info(f"Returning existing answer {existing_answer.id} (idempotent)")
+                return response
+            else:
+                # This shouldn't happen, but handle it gracefully
+                logger.error(f"session_question.answer_id={session_question.answer_id} but answer not found")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Data inconsistency detected"
+                )
         
         # Calculate time_taken (Req 16.4)
         from datetime import datetime
@@ -456,7 +493,7 @@ async def save_answer_draft(
     Response time target: < 200ms
     """
     try:
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         logger.info(f"Saving draft for session {session_id}, question {question_id}, user {user_id}")
         
@@ -563,7 +600,7 @@ async def get_answer_draft(
     Response time target: < 200ms
     """
     try:
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         logger.info(f"Retrieving draft for session {session_id}, question {question_id}, user {user_id}")
         
@@ -637,7 +674,7 @@ async def delete_answer_draft(
     - 204 No Content on success
     """
     try:
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         logger.info(f"Deleting draft for session {session_id}, question {question_id}, user {user_id}")
         
@@ -708,7 +745,7 @@ async def get_session_summary(
     - 400: Session not completed
     """
     try:
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         logger.info(f"Generating summary for session {session_id}, user {user_id}")
         

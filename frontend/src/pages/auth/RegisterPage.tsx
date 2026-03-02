@@ -15,8 +15,8 @@ import {
   Typography,
   Link,
   Alert,
-  CircularProgress,
 } from '@mui/material';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { register as registerUser, clearError } from '../../store/slices/authSlice';
 import { ROUTES } from '../../config/app.config';
@@ -206,7 +206,7 @@ function RegisterPage() {
               disabled={isLoading}
               sx={{ mt: 3, mb: 2 }}
             >
-              {isLoading ? <CircularProgress size={24} /> : 'Sign Up'}
+              {isLoading ? <LoadingSpinner size="small" /> : 'Sign Up'}
             </Button>
           </ScaleButton>
         </FadeIn>

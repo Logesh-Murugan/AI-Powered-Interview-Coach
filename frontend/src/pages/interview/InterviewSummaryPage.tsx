@@ -19,10 +19,11 @@ import {
   Chip,
   Stack,
   Alert,
-  CircularProgress,
   Divider,
   LinearProgress,
 } from '@mui/material';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorAlert from '../../components/common/ErrorAlert';
 import {
   TrendingUp,
   TrendingDown,
@@ -114,10 +115,7 @@ function InterviewSummaryPage() {
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
-        <CircularProgress />
-        <Typography variant="body1" sx={{ mt: 2 }}>
-          Generating your performance summary...
-        </Typography>
+        <LoadingSpinner variant="fullPage" size="large" text="Generating your performance summary..." />
       </Container>
     );
   }
@@ -125,7 +123,10 @@ function InterviewSummaryPage() {
   if (error || !summary) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">{error || 'Failed to load summary'}</Alert>
+        <ErrorAlert
+          message={error || 'Failed to load summary'}
+          onRetry={() => sessionId && navigate(`/interviews/${sessionId}/summary`)}
+        />
         <Button
           variant="contained"
           onClick={() => navigate('/dashboard')}

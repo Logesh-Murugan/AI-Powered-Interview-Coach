@@ -7,8 +7,10 @@ import { Button, Grid, Paper, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-import BarChartIcon from '@mui/icons-material/BarChart';
 import HistoryIcon from '@mui/icons-material/History';
+import BarChartIcon from '@mui/icons-material/BarChart';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 
 function QuickActions() {
   const navigate = useNavigate();
@@ -36,11 +38,32 @@ function QuickActions() {
       onClick: () => navigate('/interviews/history'),
     },
     {
+      label: 'View Resumes',
+      icon: <UploadFileIcon />,
+      color: 'info' as const,
+      variant: 'outlined' as const,
+      onClick: () => navigate('/resumes'),
+    },
+    {
       label: 'Analytics',
       icon: <BarChartIcon />,
-      color: 'primary' as const,
+      color: 'success' as const,
       variant: 'outlined' as const,
-      onClick: () => navigate('/dashboard'),
+      onClick: () => navigate('/analytics'),
+    },
+    {
+      label: 'Leaderboard',
+      icon: <TrendingUpIcon />,
+      color: 'warning' as const,
+      variant: 'outlined' as const,
+      onClick: () => navigate('/leaderboard'),
+    },
+    {
+      label: 'Achievements',
+      icon: <EmojiEventsIcon />,
+      color: 'secondary' as const,
+      variant: 'outlined' as const,
+      onClick: () => navigate('/achievements'),
     },
   ];
 

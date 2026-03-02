@@ -1,3 +1,10 @@
+/**
+ * Interview Start Page
+ * Create a new interview session with customizable parameters
+ * 
+ * Requirements: 14.1-14.10
+ */
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { SelectChangeEvent } from '@mui/material';
@@ -15,10 +22,13 @@ import {
   Chip,
   OutlinedInput,
   Alert,
-  CircularProgress,
 } from '@mui/material';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorAlert from '../../components/common/ErrorAlert';
 import { PlayArrow } from '@mui/icons-material';
 import apiService from '../../services/api.service';
+import FadeIn from '../../components/animations/FadeIn';
+import ScaleButton from '../../components/animations/ScaleButton';
 
 const ROLES = [
   'Software Engineer',
@@ -72,6 +82,7 @@ function InterviewStartPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation
     if (!formData.role) {
       setError('Please select a target role');
       return;
@@ -81,13 +92,33 @@ function InterviewStartPage() {
     setError(null);
 
     try {
+      console.log('Creating interview session with data:', formData);
       const response = await apiService.post('/interviews', formData);
+      console.log('Interview session created:', response.data);
+      
       const responseData = response.data as { session_id: number };
       const { session_id } = responseData;
       
-      navigate('/interviews/' + session_id + '/session');
+      // Navigate to interview session page
+      navigate(`/interviews/${session_id}/session`);
     } catch (err: any) {
-      setError(err.message || 'Failed to create interview session');
+      console.error('Error creating interview session:', err);
+      
+      // Extract detailed error message
+      let errorMessage = 'Failed to create interview session';
+      
+      if (err.details) {
+        console.error('Error details:', err.details);
+        if (err.details.detail) {
+          errorMessage = err.details.detail;
+        }
+      }
+      
+      if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -95,100 +126,116 @@ function InterviewStartPage() {
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <Paper elevation={3} sx={{ p: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          Start Interview Practice
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-          Customize your interview session to match your preparation needs
-        </Typography>
+      <FadeIn delay={0.1}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Typography variant="h4" gutterBottom>
+            Start Interview Practice
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+            Customize your interview session to match your preparation needs
+          </Typography>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
+          <ErrorAlert
+            message={error}
+            onRetry={handleSubmit}
+            onDismiss={() => setError(null)}
+          />
         )}
 
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-          <TextField
-            select
-            fullWidth
-            label="Target Role"
-            value={formData.role}
-            onChange={(e) => handleChange('role', e.target.value)}
-            required
-            sx={{ mb: 3 }}
-          >
-            {ROLES.map((role) => (
-              <MenuItem key={role} value={role}>
-                {role}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <TextField
-            select
-            fullWidth
-            label="Difficulty Level"
-            value={formData.difficulty}
-            onChange={(e) => handleChange('difficulty', e.target.value)}
-            required
-            sx={{ mb: 3 }}
-          >
-            {DIFFICULTIES.map((difficulty) => (
-              <MenuItem key={difficulty} value={difficulty}>
-                {difficulty}
-              </MenuItem>
-            ))}
-          </TextField>
-
-          <TextField
-            type="number"
-            fullWidth
-            label="Number of Questions"
-            value={formData.question_count}
-            onChange={(e) => handleChange('question_count', parseInt(e.target.value))}
-            required
-            slotProps={{ htmlInput: { min: 1, max: 20 } }}
-            helperText="Choose between 1 and 20 questions"
-            sx={{ mb: 3 }}
-          />
-
-          <FormControl fullWidth sx={{ mb: 3 }}>
-            <InputLabel>Question Categories (Optional)</InputLabel>
-            <Select
-              multiple
-              value={formData.categories || []}
-              onChange={handleCategoryChange}
-              input={<OutlinedInput label="Question Categories (Optional)" />}
-              renderValue={(selected) => (
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                  {selected.map((value) => (
-                    <Chip key={value} label={value} size="small" />
-                  ))}
-                </Box>
-              )}
+          <FadeIn delay={0.2}>
+            <TextField
+              select
+              fullWidth
+              label="Target Role"
+              value={formData.role}
+              onChange={(e) => handleChange('role', e.target.value)}
+              required
+              sx={{ mb: 3 }}
             >
-              {CATEGORIES.map((category) => (
-                <MenuItem key={category} value={category}>
-                  {category.replace('_', ' ')}
+              {ROLES.map((role) => (
+                <MenuItem key={role} value={role}>
+                  {role}
                 </MenuItem>
               ))}
-            </Select>
-          </FormControl>
+            </TextField>
+          </FadeIn>
 
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            fullWidth
-            disabled={loading}
-            startIcon={loading ? <CircularProgress size={20} /> : <PlayArrow />}
-          >
-            {loading ? 'Creating Session...' : 'Start Interview'}
-          </Button>
+          <FadeIn delay={0.3}>
+            <TextField
+              select
+              fullWidth
+              label="Difficulty Level"
+              value={formData.difficulty}
+              onChange={(e) => handleChange('difficulty', e.target.value)}
+              required
+              sx={{ mb: 3 }}
+            >
+              {DIFFICULTIES.map((difficulty) => (
+                <MenuItem key={difficulty} value={difficulty}>
+                  {difficulty}
+                </MenuItem>
+              ))}
+            </TextField>
+          </FadeIn>
+
+          <FadeIn delay={0.4}>
+            <TextField
+              type="number"
+              fullWidth
+              label="Number of Questions"
+              value={formData.question_count}
+              onChange={(e) => handleChange('question_count', parseInt(e.target.value))}
+              required
+              slotProps={{ htmlInput: { min: 1, max: 20 } }}
+              helperText="Choose between 1 and 20 questions"
+              sx={{ mb: 3 }}
+            />
+          </FadeIn>
+
+          <FadeIn delay={0.5}>
+            <FormControl fullWidth sx={{ mb: 3 }}>
+              <InputLabel>Question Categories (Optional)</InputLabel>
+              <Select
+                multiple
+                value={formData.categories || []}
+                onChange={handleCategoryChange}
+                input={<OutlinedInput label="Question Categories (Optional)" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                    {selected.map((value) => (
+                      <Chip key={value} label={value} size="small" />
+                    ))}
+                  </Box>
+                )}
+              >
+                {CATEGORIES.map((category) => (
+                  <MenuItem key={category} value={category}>
+                    {category.replace('_', ' ')}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </FadeIn>
+
+          <FadeIn delay={0.6}>
+            <ScaleButton fullWidth>
+              <Button
+                type="submit"
+                variant="contained"
+                size="large"
+                fullWidth
+                disabled={loading}
+                startIcon={loading ? <LoadingSpinner size="small" /> : <PlayArrow />}
+              >
+                {loading ? 'Creating Session...' : 'Start Interview'}
+              </Button>
+            </ScaleButton>
+          </FadeIn>
         </Box>
       </Paper>
+      </FadeIn>
     </Container>
   );
 }

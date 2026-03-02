@@ -16,7 +16,7 @@ import {
   EmojiEvents,
   TrendingDown,
 } from '@mui/icons-material';
-import { CategoryPerformance } from '../../services/analyticsService';
+import { type CategoryPerformance } from '../../services/analyticsService';
 
 interface Props {
   strengths: string[];
@@ -42,7 +42,7 @@ const StrengthsWeaknesses: React.FC<Props> = ({
 
       <Grid container spacing={3} sx={{ mt: 1 }}>
         {/* Strengths */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Box
             sx={{
               p: 2,
@@ -61,7 +61,7 @@ const StrengthsWeaknesses: React.FC<Props> = ({
 
             {strengths.length > 0 ? (
               <List dense>
-                {strengths.map((strength, index) => {
+                {strengths.map((strength) => {
                   const score = getCategoryScore(strength);
                   return (
                     <ListItem key={strength} sx={{ px: 0 }}>
@@ -101,7 +101,7 @@ const StrengthsWeaknesses: React.FC<Props> = ({
         </Grid>
 
         {/* Weaknesses */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Box
             sx={{
               p: 2,
@@ -120,7 +120,7 @@ const StrengthsWeaknesses: React.FC<Props> = ({
 
             {weaknesses.length > 0 ? (
               <List dense>
-                {weaknesses.map((weakness, index) => {
+                {weaknesses.map((weakness) => {
                   const score = getCategoryScore(weakness);
                   return (
                     <ListItem key={weakness} sx={{ px: 0 }}>

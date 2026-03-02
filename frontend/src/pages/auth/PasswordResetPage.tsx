@@ -15,8 +15,8 @@ import {
   Typography,
   Link,
   Alert,
-  CircularProgress,
 } from '@mui/material';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { apiService } from '../../services/api.service';
 import { API_ENDPOINTS } from '../../config/api.config';
 import { ROUTES } from '../../config/app.config';
@@ -201,7 +201,7 @@ function PasswordResetPage() {
             disabled={isLoading || !!success}
             sx={{ mt: 3, mb: 2 }}
           >
-            {isLoading ? <CircularProgress size={24} /> : 'Reset Password'}
+            {isLoading ? <LoadingSpinner size="small" /> : 'Reset Password'}
           </Button>
 
           <Box sx={{ textAlign: 'center' }}>
@@ -266,7 +266,7 @@ function PasswordResetPage() {
           disabled={isLoading || !!success}
           sx={{ mt: 3, mb: 2 }}
         >
-          {isLoading ? <CircularProgress size={24} /> : 'Send Reset Link'}
+          {isLoading ? <LoadingSpinner size="small" /> : 'Send Reset Link'}
         </Button>
 
         <Box sx={{ textAlign: 'center' }}>

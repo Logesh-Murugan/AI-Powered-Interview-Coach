@@ -16,12 +16,13 @@ import {
   Button,
   LinearProgress,
   Alert,
-  CircularProgress,
   Chip,
   Stack,
   Fade,
 } from '@mui/material';
-import { Send, Timer, NavigateNext, CheckCircle, Save } from '@mui/icons-material';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorAlert from '../../components/common/ErrorAlert';
+import { Send, Timer, NavigateNext, NavigateBefore, CheckCircle, Save } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import apiService from '../../services/api.service';
 import FadeIn from '../../components/animations/FadeIn';
@@ -35,11 +36,18 @@ interface Question {
   question_number: number;
 }
 
+interface SessionInfo {
+  question_count: number;
+  role: string;
+  difficulty: string;
+}
+
 function InterviewSessionPage() {
   const { id: sessionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
   const [question, setQuestion] = useState<Question | null>(null);
+  const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
   const [answer, setAnswer] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -49,15 +57,28 @@ function InterviewSessionPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [hasSavedDraft, setHasSavedDraft] = useState(false); // Track if we've ever saved a draft
+  const [hasSubmitted, setHasSubmitted] = useState(false); // Prevent duplicate submissions
   
   const autoSaveTimerRef = useRef<number | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
+
+  const loadSessionInfo = useCallback(async () => {
+    if (!sessionId) return;
+    
+    try {
+      const response = await apiService.get(`/interviews/${sessionId}`);
+      setSessionInfo(response.data as SessionInfo);
+    } catch (err) {
+      console.error('Failed to load session info:', err);
+    }
+  }, [sessionId]);
 
   const loadQuestion = useCallback(async (questionNumber: number) => {
     if (!sessionId) return;
     
     setLoading(true);
     setError(null);
+    setHasSubmitted(false); // Reset submission flag for new question
     
     try {
       const response = await apiService.get(`/interviews/${sessionId}/questions/${questionNumber}`);
@@ -125,8 +146,29 @@ function InterviewSessionPage() {
     }, 30000);
   };
 
+  const handleNavigateQuestion = async (direction: 'prev' | 'next') => {
+    if (!question) return;
+    
+    // Save current draft before navigating
+    if (answer && answer !== draft) {
+      await saveDraft(answer);
+    }
+    
+    const newQuestionNumber = direction === 'next' 
+      ? question.question_number + 1 
+      : question.question_number - 1;
+    
+    loadQuestion(newQuestionNumber);
+  };
+
   const handleSubmit = async () => {
     if (!sessionId || !question) return;
+    
+    // Prevent duplicate submissions
+    if (hasSubmitted || submitting) {
+      console.log('Submission already in progress, ignoring duplicate click');
+      return;
+    }
     
     if (answer.length < 10) {
       setError('Answer must be at least 10 characters');
@@ -139,6 +181,7 @@ function InterviewSessionPage() {
     }
     
     setSubmitting(true);
+    setHasSubmitted(true); // Mark as submitted immediately
     setError(null);
     
     try {
@@ -158,12 +201,23 @@ function InterviewSessionPage() {
         clearTimeout(autoSaveTimerRef.current);
       }
       
+      // Delete draft after successful submission
+      try {
+        await apiService.delete(`/interviews/${sessionId}/drafts/${question.id}`);
+        setDraft(''); // Clear local draft state
+      } catch (err) {
+        console.error('Failed to delete draft:', err);
+        // Don't fail the submission if draft deletion fails
+      }
+      
       if (session_completed || all_questions_answered) {
         navigate(`/interviews/${sessionId}/summary`);
       } else {
         loadQuestion(question.question_number + 1);
       }
     } catch (err: any) {
+      // Only reset hasSubmitted on error so user can retry
+      setHasSubmitted(false);
       setError(err.message || 'Failed to submit answer');
     } finally {
       setSubmitting(false);
@@ -185,8 +239,34 @@ function InterviewSessionPage() {
   }, [timeRemaining]);
 
   useEffect(() => {
+    loadSessionInfo();
     loadQuestion(1);
-  }, [loadQuestion]);
+  }, [loadSessionInfo, loadQuestion]);
+
+  // Save draft on navigation/page unload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (answer && answer !== draft && !hasSubmitted) {
+        // Save draft synchronously before unload
+        saveDraft(answer);
+        
+        // Show warning if there are unsaved changes
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Save draft when component unmounts (navigation within app)
+      if (answer && answer !== draft && !hasSubmitted) {
+        saveDraft(answer);
+      }
+    };
+  }, [answer, draft, hasSubmitted, saveDraft]);
 
   useEffect(() => {
     return () => {
@@ -218,10 +298,7 @@ function InterviewSessionPage() {
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
-        <CircularProgress size={60} />
-        <Typography variant="body1" sx={{ mt: 2 }}>
-          Loading question...
-        </Typography>
+        <LoadingSpinner variant="fullPage" size="large" text="Loading question..." />
       </Container>
     );
   }
@@ -229,7 +306,10 @@ function InterviewSessionPage() {
   if (!question) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error">Failed to load question</Alert>
+        <ErrorAlert
+          message={error || 'Failed to load question'}
+          onRetry={() => loadQuestion(1)}
+        />
       </Container>
     );
   }
@@ -245,13 +325,18 @@ function InterviewSessionPage() {
             <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
               <Box sx={{ flex: 1 }}>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Question {question.question_number}
+                  Question {question.question_number}{sessionInfo ? ` of ${sessionInfo.question_count}` : ''}
                 </Typography>
+                <LinearProgress
+                  variant="determinate"
+                  value={sessionInfo ? (question.question_number / sessionInfo.question_count) * 100 : 0}
+                  sx={{ height: 8, borderRadius: 4, mb: 1 }}
+                />
                 <LinearProgress
                   variant="determinate"
                   value={timeProgress}
                   color={getTimerColor()}
-                  sx={{ height: 8, borderRadius: 4 }}
+                  sx={{ height: 6, borderRadius: 3 }}
                 />
               </Box>
               <Chip
@@ -332,9 +417,13 @@ function InterviewSessionPage() {
           
           {error && (
             <Fade in={!!error}>
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {error}
-              </Alert>
+              <Box sx={{ mb: 2 }}>
+                <ErrorAlert
+                  message={error}
+                  onRetry={handleSubmit}
+                  onDismiss={() => setError(null)}
+                />
+              </Box>
             </Fade>
           )}
           
@@ -350,25 +439,64 @@ function InterviewSessionPage() {
           />
           
           <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
-            <Typography variant="caption" color="text.secondary">
-              {answer.length} / 5000 characters
-            </Typography>
-            
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
+            <Stack direction="row" spacing={1} alignItems="center">
               <Button
-                variant="contained"
-                size="large"
-                onClick={handleSubmit}
-                disabled={submitting || answer.length < 10}
-                startIcon={submitting ? <CircularProgress size={20} /> : <Send />}
+                variant="outlined"
+                size="small"
+                onClick={() => handleNavigateQuestion('prev')}
+                disabled={!question || question.question_number <= 1 || submitting}
+                startIcon={<NavigateBefore />}
+              >
+                Previous
+              </Button>
+              
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleNavigateQuestion('next')}
+                disabled={!question || !sessionInfo || question.question_number >= sessionInfo.question_count || submitting}
                 endIcon={<NavigateNext />}
               >
-                {submitting ? 'Submitting...' : 'Submit Answer'}
+                Next
               </Button>
-            </motion.div>
+              
+              <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                {answer.length} / 5000 characters
+              </Typography>
+            </Stack>
+            
+            <Stack direction="row" spacing={2}>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  variant="outlined"
+                  size="large"
+                  onClick={() => saveDraft(answer)}
+                  disabled={saving || answer === draft || answer.length === 0}
+                  startIcon={<Save />}
+                >
+                  Save Draft
+                </Button>
+              </motion.div>
+              
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button
+                  variant="contained"
+                  size="large"
+                  onClick={handleSubmit}
+                  disabled={submitting || hasSubmitted || answer.length < 10}
+                  startIcon={submitting ? <LoadingSpinner size="small" /> : <Send />}
+                  endIcon={<NavigateNext />}
+                >
+                  {submitting ? 'Submitting...' : hasSubmitted ? 'Submitted' : 'Submit Answer'}
+                </Button>
+              </motion.div>
+            </Stack>
           </Stack>
         </Paper>
       </FadeIn>

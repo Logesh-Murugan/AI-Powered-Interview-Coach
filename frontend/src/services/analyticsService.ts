@@ -1,4 +1,5 @@
 import apiService from './api.service';
+import { logError } from '../utils/errorMessages';
 
 export interface ScoreOverTime {
   week: string;
@@ -77,16 +78,26 @@ class AnalyticsService {
    * Get analytics overview for current user
    */
   async getAnalyticsOverview(): Promise<AnalyticsOverview> {
-    const response = await apiService.get<AnalyticsOverview>('/analytics/overview');
-    return response.data;
+    try {
+      const response = await apiService.get<AnalyticsOverview>('/analytics/overview');
+      return response.data;
+    } catch (error) {
+      logError(error, 'analyticsService.getAnalyticsOverview');
+      throw error;
+    }
   }
 
   /**
    * Get performance comparison for current user
    */
   async getPerformanceComparison(): Promise<PerformanceComparison> {
-    const response = await apiService.get<PerformanceComparison>('/analytics/comparison');
-    return response.data;
+    try {
+      const response = await apiService.get<PerformanceComparison>('/analytics/comparison');
+      return response.data;
+    } catch (error) {
+      logError(error, 'analyticsService.getPerformanceComparison');
+      throw error;
+    }
   }
 }
 

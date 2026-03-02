@@ -69,7 +69,7 @@ async def get_user_achievements(
                     user_id=a.user_id,
                     achievement_type=a.achievement_type,
                     earned_at=a.earned_at,
-                    achievement_metadata=a.achievement_metadata
+                    metadata=a.achievement_data
                 )
                 for a in achievements
             ],

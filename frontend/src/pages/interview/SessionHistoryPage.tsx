@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -21,14 +21,20 @@ import {
   TextField,
   MenuItem,
   Grid,
-  CircularProgress,
-  Alert,
   IconButton,
   Tooltip,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorAlert from '../../components/common/ErrorAlert';
+import EmptyState from '../../components/common/EmptyState';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import SearchOffIcon from '@mui/icons-material/SearchOff';
+import DownloadIcon from '@mui/icons-material/Download';
 import { getInterviewSessions } from '../../services/interviewService';
+import api from '../../services/api.service';
 
 interface Session {
   id: number;
@@ -39,24 +45,30 @@ interface Session {
   start_time: string;
   end_time?: string;
   created_at: string;
+  overall_session_score?: number;
 }
 
 function SessionHistoryPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [filteredSessions, setFilteredSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   
   // Pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
-  // Filters
-  const [searchRole, setSearchRole] = useState('');
-  const [filterDifficulty, setFilterDifficulty] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [sortBy, setSortBy] = useState<'date' | 'score'>('date');
+  // Filters - Initialize from URL query parameters
+  const [searchRole, setSearchRole] = useState(searchParams.get('role') || '');
+  const [filterDifficulty, setFilterDifficulty] = useState(searchParams.get('difficulty') || 'all');
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || 'all');
+  const [filterDateRange, setFilterDateRange] = useState(searchParams.get('dateRange') || 'all');
+  const [filterScoreRange, setFilterScoreRange] = useState(searchParams.get('scoreRange') || 'all');
+  const [sortBy, setSortBy] = useState<'date' | 'score'>((searchParams.get('sortBy') as 'date' | 'score') || 'date');
 
   useEffect(() => {
     loadSessions();
@@ -64,7 +76,20 @@ function SessionHistoryPage() {
 
   useEffect(() => {
     applyFilters();
-  }, [sessions, searchRole, filterDifficulty, filterStatus, sortBy]);
+  }, [sessions, searchRole, filterDifficulty, filterStatus, filterDateRange, filterScoreRange, sortBy]);
+
+  // Update URL query parameters when filters change
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (searchRole) params.role = searchRole;
+    if (filterDifficulty !== 'all') params.difficulty = filterDifficulty;
+    if (filterStatus !== 'all') params.status = filterStatus;
+    if (filterDateRange !== 'all') params.dateRange = filterDateRange;
+    if (filterScoreRange !== 'all') params.scoreRange = filterScoreRange;
+    if (sortBy !== 'date') params.sortBy = sortBy;
+    
+    setSearchParams(params);
+  }, [searchRole, filterDifficulty, filterStatus, filterDateRange, filterScoreRange, sortBy, setSearchParams]);
 
   const loadSessions = async () => {
     try {
@@ -101,11 +126,49 @@ function SessionHistoryPage() {
       filtered = filtered.filter(s => s.status === filterStatus);
     }
 
+    // Filter by date range
+    if (filterDateRange !== 'all') {
+      const now = new Date();
+      const daysAgo = filterDateRange === '7days' ? 7 : filterDateRange === '30days' ? 30 : 90;
+      const cutoffDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+      
+      filtered = filtered.filter(s => new Date(s.start_time) >= cutoffDate);
+    }
+
+    // Filter by score range
+    if (filterScoreRange !== 'all' && filterScoreRange !== 'no_score') {
+      filtered = filtered.filter(s => {
+        if (!s.overall_session_score) return false;
+        
+        const score = s.overall_session_score;
+        switch (filterScoreRange) {
+          case '0-60':
+            return score < 60;
+          case '60-75':
+            return score >= 60 && score < 75;
+          case '75-85':
+            return score >= 75 && score < 85;
+          case '85-100':
+            return score >= 85;
+          default:
+            return true;
+        }
+      });
+    } else if (filterScoreRange === 'no_score') {
+      filtered = filtered.filter(s => !s.overall_session_score);
+    }
+
     // Sort
     if (sortBy === 'date') {
       filtered.sort((a, b) => 
         new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
       );
+    } else if (sortBy === 'score') {
+      filtered.sort((a, b) => {
+        const scoreA = a.overall_session_score || 0;
+        const scoreB = b.overall_session_score || 0;
+        return scoreB - scoreA;
+      });
     }
 
     setFilteredSessions(filtered);
@@ -123,6 +186,43 @@ function SessionHistoryPage() {
 
   const handleViewSummary = (sessionId: number) => {
     navigate(`/interviews/${sessionId}/summary`);
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      setExportError(null);
+
+      // Call export endpoint
+      const response = await api.get('/export/sessions', {
+        responseType: 'blob', // Important for file download
+      });
+
+      // Create blob from response
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Generate filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      link.download = `interview_sessions_${date}.csv`;
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Error exporting sessions:', err);
+      setExportError(err.response?.data?.detail || 'Failed to export session history');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'default' => {
@@ -175,28 +275,45 @@ function SessionHistoryPage() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <CircularProgress />
-      </Box>
+      <LoadingSpinner variant="fullPage" text="Loading session history..." />
     );
   }
 
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Session History
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          View and analyze your past interview sessions
-        </Typography>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Session History
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            View and analyze your past interview sessions
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          startIcon={exporting ? <CircularProgress size={20} color="inherit" /> : <DownloadIcon />}
+          onClick={handleExportCSV}
+          disabled={exporting || sessions.length === 0}
+        >
+          {exporting ? 'Exporting...' : 'Export to CSV'}
+        </Button>
       </Box>
 
       {/* Error Alert */}
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
+        <ErrorAlert
+          message={error}
+          onRetry={loadSessions}
+          onDismiss={() => setError(null)}
+        />
+      )}
+
+      {/* Export Error Alert */}
+      {exportError && (
+        <Alert severity="error" onClose={() => setExportError(null)} sx={{ mb: 3 }}>
+          {exportError}
         </Alert>
       )}
 
@@ -252,12 +369,45 @@ function SessionHistoryPage() {
             <TextField
               fullWidth
               select
+              label="Date Range"
+              value={filterDateRange}
+              onChange={(e) => setFilterDateRange(e.target.value)}
+              size="small"
+            >
+              <MenuItem value="all">All Time</MenuItem>
+              <MenuItem value="7days">Last 7 Days</MenuItem>
+              <MenuItem value="30days">Last 30 Days</MenuItem>
+              <MenuItem value="90days">Last 90 Days</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <TextField
+              fullWidth
+              select
+              label="Score Range"
+              value={filterScoreRange}
+              onChange={(e) => setFilterScoreRange(e.target.value)}
+              size="small"
+            >
+              <MenuItem value="all">All Scores</MenuItem>
+              <MenuItem value="85-100">85-100 (Excellent)</MenuItem>
+              <MenuItem value="75-85">75-85 (Good)</MenuItem>
+              <MenuItem value="60-75">60-75 (Fair)</MenuItem>
+              <MenuItem value="0-60">Below 60 (Needs Work)</MenuItem>
+              <MenuItem value="no_score">No Score</MenuItem>
+            </TextField>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <TextField
+              fullWidth
+              select
               label="Sort By"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'date' | 'score')}
               size="small"
             >
               <MenuItem value="date">Date (Newest First)</MenuItem>
+              <MenuItem value="score">Score (Highest First)</MenuItem>
             </TextField>
           </Grid>
         </Grid>
@@ -273,6 +423,7 @@ function SessionHistoryPage() {
                 <TableCell>Difficulty</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Questions</TableCell>
+                <TableCell>Score</TableCell>
                 <TableCell>Date</TableCell>
                 <TableCell>Duration</TableCell>
                 <TableCell align="right">Actions</TableCell>
@@ -281,10 +432,25 @@ function SessionHistoryPage() {
             <TableBody>
               {filteredSessions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
-                    <Typography variant="body1" color="text.secondary">
-                      No sessions found
-                    </Typography>
+                  <TableCell colSpan={8} sx={{ p: 0, border: 'none' }}>
+                    <EmptyState
+                      message="No results found"
+                      icon={<SearchOffIcon sx={{ fontSize: 60 }} />}
+                      action={
+                        <Button
+                          variant="outlined"
+                          onClick={() => {
+                            setSearchRole('');
+                            setFilterDifficulty('all');
+                            setFilterStatus('all');
+                            setFilterDateRange('all');
+                            setFilterScoreRange('all');
+                          }}
+                        >
+                          Clear Filters
+                        </Button>
+                      }
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -312,6 +478,29 @@ function SessionHistoryPage() {
                         />
                       </TableCell>
                       <TableCell>{session.question_count}</TableCell>
+                      <TableCell>
+                        {session.overall_session_score !== undefined ? (
+                          <Typography
+                            variant="body2"
+                            fontWeight="medium"
+                            color={
+                              session.overall_session_score >= 85
+                                ? 'success.main'
+                                : session.overall_session_score >= 75
+                                ? 'info.main'
+                                : session.overall_session_score >= 60
+                                ? 'warning.main'
+                                : 'error.main'
+                            }
+                          >
+                            {session.overall_session_score.toFixed(1)}
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            N/A
+                          </Typography>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Typography variant="body2">
                           {formatDate(session.start_time)}

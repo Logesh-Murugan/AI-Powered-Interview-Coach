@@ -8,14 +8,12 @@ import {
   CardContent,
   Chip,
   LinearProgress,
-  Divider,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
 import {
-  CompareArrows,
   EmojiEvents,
   TrendingUp,
   People,
@@ -23,7 +21,7 @@ import {
   CheckCircle,
   BarChart,
 } from '@mui/icons-material';
-import { PerformanceComparison } from '../../services/analyticsService';
+import { type PerformanceComparison } from '../../services/analyticsService';
 
 interface Props {
   comparison: PerformanceComparison;
@@ -104,7 +102,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
 
       <Grid container spacing={3}>
         {/* Your Performance */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card elevation={2}>
             <CardContent>
               <Box display="flex" alignItems="center" mb={2}>
@@ -149,7 +147,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
         </Grid>
 
         {/* Cohort Statistics */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card elevation={2}>
             <CardContent>
               <Box display="flex" alignItems="center" mb={2}>
@@ -170,7 +168,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
               </Box>
 
               <Grid container spacing={2}>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="caption" color="text.secondary">
                     Average
                   </Typography>
@@ -178,7 +176,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
                     {comparison.cohort_stats.cohort_average_score.toFixed(1)}
                   </Typography>
                 </Grid>
-                <Grid item xs={6}>
+                <Grid size={{ xs: 6 }}>
                   <Typography variant="caption" color="text.secondary">
                     Median
                   </Typography>
@@ -192,7 +190,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
         </Grid>
 
         {/* Score Distribution */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper elevation={2} sx={{ p: 3 }}>
             <Box display="flex" alignItems="center" mb={3}>
               <BarChart sx={{ mr: 1, color: 'primary.main' }} />
@@ -207,7 +205,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
                 const percentage = (count / total) * 100;
                 
                 return (
-                  <Grid item xs={12} sm={6} md={2.4} key={range}>
+                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }} key={range}>
                     <Box>
                       <Typography variant="caption" color="text.secondary">
                         {range}
@@ -236,7 +234,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
         </Grid>
 
         {/* Top Performer Habits */}
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper elevation={2} sx={{ p: 3 }}>
             <Box display="flex" alignItems="center" mb={3}>
               <EmojiEvents sx={{ mr: 1, color: 'warning.main' }} />
@@ -246,7 +244,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
             </Box>
 
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="caption" color="text.secondary">
@@ -259,7 +257,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="caption" color="text.secondary">
@@ -272,7 +270,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="caption" color="text.secondary">
@@ -285,7 +283,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
                 </Card>
               </Grid>
 
-              <Grid item xs={12} sm={6} md={3}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                 <Card variant="outlined">
                   <CardContent>
                     <Typography variant="caption" color="text.secondary">
@@ -321,7 +319,7 @@ const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
 
         {/* Improvement Suggestions */}
         {comparison.improvement_suggestions.length > 0 && (
-          <Grid item xs={12}>
+          <Grid size={{ xs: 12 }}>
             <Paper elevation={2} sx={{ p: 3, bgcolor: 'info.light' }}>
               <Box display="flex" alignItems="center" mb={2}>
                 <TrendingUp sx={{ mr: 1, color: 'info.dark' }} />

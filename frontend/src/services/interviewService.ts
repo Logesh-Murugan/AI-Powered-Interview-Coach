@@ -4,6 +4,7 @@
  */
 
 import api from './api.service';
+import { logError } from '../utils/errorMessages';
 
 export interface InterviewSession {
   id: number;
@@ -75,8 +76,13 @@ export interface SessionSummary {
 export const createInterviewSession = async (
   data: InterviewSessionCreate
 ): Promise<InterviewSessionResponse> => {
-  const response = await api.post<InterviewSessionResponse>('/interviews', data);
-  return response.data;
+  try {
+    const response = await api.post<InterviewSessionResponse>('/interviews', data);
+    return response.data;
+  } catch (error) {
+    logError(error, 'interviewService.createInterviewSession');
+    throw error;
+  }
 };
 
 /**
@@ -89,6 +95,7 @@ export const getInterviewSessions = async (): Promise<InterviewSession[]> => {
     const response = await api.get<InterviewSession[]>('/interviews');
     return response.data;
   } catch (error) {
+    logError(error, 'interviewService.getInterviewSessions');
     console.warn('Interview sessions endpoint not available yet');
     return [];
   }
@@ -98,16 +105,26 @@ export const getInterviewSessions = async (): Promise<InterviewSession[]> => {
  * Get session summary
  */
 export const getSessionSummary = async (sessionId: number): Promise<SessionSummary> => {
-  const response = await api.get<SessionSummary>(`/interviews/${sessionId}/summary`);
-  return response.data;
+  try {
+    const response = await api.get<SessionSummary>(`/interviews/${sessionId}/summary`);
+    return response.data;
+  } catch (error) {
+    logError(error, 'interviewService.getSessionSummary');
+    throw error;
+  }
 };
 
 /**
  * Get question for session
  */
 export const getQuestion = async (sessionId: number, questionNumber: number) => {
-  const response = await api.get(`/interviews/${sessionId}/questions/${questionNumber}`);
-  return response.data;
+  try {
+    const response = await api.get(`/interviews/${sessionId}/questions/${questionNumber}`);
+    return response.data;
+  } catch (error) {
+    logError(error, 'interviewService.getQuestion');
+    throw error;
+  }
 };
 
 /**
@@ -118,11 +135,16 @@ export const submitAnswer = async (
   questionId: number,
   answerText: string
 ) => {
-  const response = await api.post(
-    `/interviews/${sessionId}/answers?question_id=${questionId}`,
-    { answer_text: answerText }
-  );
-  return response.data;
+  try {
+    const response = await api.post(
+      `/interviews/${sessionId}/answers?question_id=${questionId}`,
+      { answer_text: answerText }
+    );
+    return response.data;
+  } catch (error) {
+    logError(error, 'interviewService.submitAnswer');
+    throw error;
+  }
 };
 
 /**
@@ -133,19 +155,29 @@ export const saveAnswerDraft = async (
   questionId: number,
   draftText: string
 ) => {
-  const response = await api.post(
-    `/interviews/${sessionId}/drafts?question_id=${questionId}`,
-    { draft_text: draftText }
-  );
-  return response.data;
+  try {
+    const response = await api.post(
+      `/interviews/${sessionId}/drafts?question_id=${questionId}`,
+      { draft_text: draftText }
+    );
+    return response.data;
+  } catch (error) {
+    logError(error, 'interviewService.saveAnswerDraft');
+    throw error;
+  }
 };
 
 /**
  * Get answer draft
  */
 export const getAnswerDraft = async (sessionId: number, questionId: number) => {
-  const response = await api.get(`/interviews/${sessionId}/drafts/${questionId}`);
-  return response.data;
+  try {
+    const response = await api.get(`/interviews/${sessionId}/drafts/${questionId}`);
+    return response.data;
+  } catch (error) {
+    logError(error, 'interviewService.getAnswerDraft');
+    throw error;
+  }
 };
 
 export default {

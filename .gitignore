@@ -1,42 +1,184 @@
-# Environment Variables (CRITICAL - Contains API Keys)
+# ============================================
+# KIRO DEVELOPMENT FILES (PERSONAL IDE)
+# ============================================
+.kiro/
+.kiro-dev-files/
+**/*.kiro.md
+**/spec-*.md
+
+# ============================================
+# PERSONAL DEVELOPMENT DOCUMENTATION
+# ============================================
+# Task tracking and completion files
+TASK-*.md
+*-COMPLETE.md
+*-PROGRESS.md
+*-START.md
+*-SUMMARY.md
+*-STATUS.md
+*-FIX.md
+*-FIXES.md
+*-FIXED.md
+
+# Personal guides and documentation
+*-GUIDE.md
+*-CHECKLIST.md
+*-PLAN.md
+*-EXPLANATION.md
+*-ASSESSMENT.md
+*-INSTRUCTIONS.md
+*-DIAGNOSIS.md
+*-TROUBLESHOOTING.md
+*-DEBUG.md
+*-SOLUTION.md
+*-ANALYSIS.md
+*-REPORT.md
+
+# Specific personal files
+ALL_FIXES_APPLIED.md
+ALL_ISSUES_FIXED_SUMMARY.md
+APPLICATION_FULLY_WORKING.md
+APPLICATION_STARTED_SUCCESS.md
+BACKEND_FRONTEND_INTEGRATION_REPORT.md
+CODEBASE-INTEGRATION-COMPLETE.md
+COMPLETE_FIX_SUMMARY.md
+FINAL_FIX_SUMMARY.md
+FINAL_STATUS.md
+FINAL-INTEGRATION-STATUS.md
+FIXES_COMPLETE_SUMMARY.md
+FIXES_SUMMARY.md
+FRONTEND_FEATURES_CONNECTED.md
+HOW_TO_TEST_FEATURES.md
+INSTALL_REDIS.md
+MILESTONE_2_PRESENTATION_DOCUMENT.md
+MISSING_FEATURES_ANALYSIS.md
+PHASE-*-*.md
+PROFILE_AND_ACHIEVEMENTS_STATUS.md
+QUICK_ACCESS_GUIDE.md
+README_FIXES.md
+START_APPLICATION.md
+TEST_ALL_FEATURES.md
+TEST_ANSWER_SUBMISSION.md
+TEST_ERRORS_FIXED_SUMMARY.md
+TEST_FIXES_COMPLETE.md
+TEST_FIXES_PROGRESS.md
+TEST_FIXES_SUMMARY.md
+TEAM_LEADER_DEMO_GUIDE.md
+
+# Backend personal docs
+backend/*-COMPLETE.md
+backend/*-SUMMARY.md
+backend/*-GUIDE.md
+backend/*-STATUS.md
+backend/TASK-*.md
+backend/PHASE-*.md
+backend/QUICK-REFERENCE.md
+backend/POSTGRES-INSTALLATION-GUIDE.md
+backend/POSTGRESQL-SETUP-COMPLETE.md
+backend/REDIS-INSTALLATION-GUIDE.md
+backend/QUICK-START-REDIS.md
+backend/SETUP-POSTGRES-*.md
+
+# Frontend personal docs
+frontend/*-COMPLETE.md
+frontend/*-GUIDE.md
+frontend/IMPLEMENTATION-PLAN.md
+frontend/PHASE-*.md
+frontend/TASK-*.md
+frontend/QUICK-START.md
+
+# Personal backup folder
+.personal-backup/
+
+# ============================================
+# DEVELOPMENT SCRIPTS (PERSONAL UTILITIES)
+# ============================================
+# PowerShell scripts
+*.ps1
+!.github/**/*.ps1
+
+# Python development scripts (not tests)
+check_*.py
+test_*.py
+!backend/tests/test_*.py
+!backend/tests/**/test_*.py
+!frontend/src/**/*.test.ts
+!frontend/src/**/*.test.tsx
+trigger_*.py
+fix_*.py
+create_test_data.py
+create_database.py
+setup_database.py
+setup_database_auto.ps1
+process_resume_manually.py
+clear_*.py
+validate_config.py
+
+# SQL scripts (setup only)
+backend/setup_postgres.sql
+backend/fix_permissions.sql
+backend/grant_permissions*.ps1
+
+# Batch files
+*.bat
+
+# Temporary files
+backend/trigger_reload.txt
+backend/temp_quota.txt
+
+# Test HTML files
+test-*.html
+frontend/test-*.html
+
+# Test output files
+test-output.txt
+test-results.json
+test-results.txt
+frontend/test-output.txt
+frontend/test-results.json
+frontend/test-results.txt
+frontend/package-additions.txt
+
+# ============================================
+# ENVIRONMENT & SECRETS
+# ============================================
 .env
 .env.local
 .env.*.local
 backend/.env
 frontend/.env
+*.pem
+*.key
+config/secrets.yml
+**/*_SECRET*
+**/*_KEY*
+**/*_PASSWORD*
 
-# Python
+# Keep example files
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# ============================================
+# PYTHON
+# ============================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual Environment
 venv/
 env/
 ENV/
-.venv
+.venv/
 backend/venv/
 backend/env/
-
-# Testing
+pip-log.txt
+pip-delete-this-directory.txt
+*.egg-info/
+dist/
+build/
+*.egg
 .pytest_cache/
 .coverage
 htmlcov/
@@ -45,102 +187,154 @@ htmlcov/
 backend/.pytest_cache/
 backend/htmlcov/
 backend/.coverage
+backend/.hypothesis/
 
-# Node.js / Frontend
+# ============================================
+# NODE / JAVASCRIPT
+# ============================================
 node_modules/
 frontend/node_modules/
-frontend/dist/
-frontend/build/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 .pnpm-debug.log*
 
-# IDE
+# Lock files (optional - uncomment if you want to exclude)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Build outputs
+dist/
+build/
+frontend/dist/
+frontend/build/
+.next/
+out/
+.nuxt/
+.cache/
+
+# ============================================
+# IDEs & EDITORS
+# ============================================
+# VSCode
 .vscode/
+*.code-workspace
+
+# IntelliJ IDEA
 .idea/
+*.iml
+*.ipr
+*.iws
+
+# Vim
 *.swp
 *.swo
 *~
+
+# Emacs
+\#*\#
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ============================================
+# OPERATING SYSTEMS
+# ============================================
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
 
-# Logs
-logs/
-*.log
-backend/logs/
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-# Database
+# Linux
+.directory
+.Trash-*
+
+# ============================================
+# DATABASES
+# ============================================
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
 
-# Redis
-dump.rdb
-redis-windows/*.rdb
-
-# OS
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# Temporary files
-*.tmp
-*.temp
-*.bak
+# PostgreSQL
+*.dump
 *.backup
 
-# Uploaded files (user data)
+# ============================================
+# LOGS
+# ============================================
+*.log
+logs/
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+backend/logs/
+
+# ============================================
+# TESTING & COVERAGE
+# ============================================
+coverage/
+*.cover
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.hypothesis/
+junit.xml
+test-results/
+
+# ============================================
+# UPLOADS & USER DATA
+# ============================================
+uploads/
 backend/uploads/
 frontend/uploads/
+user-data/
+media/
+static/uploads/
 
-# Documentation with sensitive data (contains API keys)
-API-KEYS-CHECKLIST.md
-MULTIPLE-API-KEYS-GUIDE.md
-OLLAMA-REMOVAL-COMPLETE.md
-SESSION-2026-02-11-GEMINI-REMOVAL-SUMMARY.md
-SESSION-2026-02-11-HUGGINGFACE-FIX.md
-SESSION-2026-02-10-SUMMARY.md
-FINAL-API-CONFIGURATION.md
-backend/TASK-025-COMPLETE.md
+# ============================================
+# TEMPORARY FILES
+# ============================================
+temp/
+tmp/
+*.tmp
+*.bak
+*.swp
+.temp/
 
-# Session and debugging documentation (not for version control)
-SESSION-*.md
-TASK-*-COMPLETE.md
-TASK-*-START.md
-TASK-*-PROGRESS.md
-TASK-*-SUMMARY.md
-*-SUMMARY.md
-*-COMPLETE.md
-*-FIX*.md
-*-GUIDE.md
-*-STATUS.md
-*-SUCCESS.md
-*-PLAN.md
-*-CHECKLIST.md
-*-EXPLANATION.md
-*-ASSESSMENT.md
-*-INSTRUCTIONS.md
-*-DIAGNOSIS.md
+# ============================================
+# DOCKER
+# ============================================
+docker-compose.override.yml
 
-# Test and diagnostic scripts in root (should be in tests/)
-check-*.py
-test-*.py
-trigger-*.py
-get-*.py
-evaluate-*.py
-diagnose-*.py
-fix-*.py
-create-*.py
-clear-*.py
-check_*.py
+# ============================================
+# REDIS
+# ============================================
+dump.rdb
+*.rdb
+redis-windows/
 
-# PowerShell utility scripts (local development only)
-RESTART-*.ps1
-START-*.ps1
-CHECK-*.ps1
-FIX-*.ps1
-FORCE-*.ps1
-TEST-*.ps1
-
-# Test HTML files in root
-test-*.html
+# ============================================
+# CERTIFICATES & KEYS
+# ============================================
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx

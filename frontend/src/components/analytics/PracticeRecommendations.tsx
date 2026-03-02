@@ -14,7 +14,7 @@ import {
   Flag,
   TrendingUp,
 } from '@mui/icons-material';
-import { PracticeRecommendation } from '../../services/analyticsService';
+import { type PracticeRecommendation } from '../../services/analyticsService';
 
 interface Props {
   recommendations: PracticeRecommendation[];
@@ -34,7 +34,7 @@ const PracticeRecommendations: React.FC<Props> = ({ recommendations }) => {
     }
   };
 
-  const getPriorityIcon = (priority: string) => {
+  const getPriorityIcon = (_priority: string) => {
     return <Flag fontSize="small" />;
   };
 
@@ -72,8 +72,8 @@ const PracticeRecommendations: React.FC<Props> = ({ recommendations }) => {
       </Box>
 
       <Grid container spacing={2}>
-        {recommendations.map((rec, index) => (
-          <Grid item xs={12} md={6} key={rec.category}>
+        {recommendations.map((rec) => (
+          <Grid size={{ xs: 12, md: 6 }} key={rec.category}>
             <Card
               elevation={1}
               sx={{

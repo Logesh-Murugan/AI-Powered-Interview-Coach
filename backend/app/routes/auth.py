@@ -394,7 +394,7 @@ async def request_password_reset(
     Always returns success message to prevent email enumeration.
     """
     # Request password reset
-    result = AuthService.request_password_reset(db, request_data.email)
+    result = await AuthService.request_password_reset(db, request_data.email)
     
     return PasswordResetRequestResponse(
         message=result["message"]

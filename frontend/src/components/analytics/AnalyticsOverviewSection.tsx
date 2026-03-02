@@ -8,7 +8,7 @@ import {
   TrendingDown,
   TrendingFlat,
 } from '@mui/icons-material';
-import { AnalyticsOverview } from '../../services/analyticsService';
+import { type AnalyticsOverview } from '../../services/analyticsService';
 
 interface Props {
   analytics: AnalyticsOverview;
@@ -34,7 +34,7 @@ const StatCard: React.FC<StatCardProps> = ({
   trendValue,
 }) => {
   const getTrendIcon = () => {
-    if (!trend) return null;
+    if (!trend) return undefined;
     switch (trend) {
       case 'up':
         return <TrendingUp fontSize="small" sx={{ color: 'success.main' }} />;
@@ -140,7 +140,7 @@ const AnalyticsOverviewSection: React.FC<Props> = ({ analytics }) => {
 
   return (
     <Grid container spacing={3}>
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard
           title="Total Interviews"
           value={analytics.total_interviews_completed}
@@ -150,7 +150,7 @@ const AnalyticsOverviewSection: React.FC<Props> = ({ analytics }) => {
         />
       </Grid>
 
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard
           title="Average Score"
           value={formatScore(analytics.average_score_all_time)}
@@ -160,7 +160,7 @@ const AnalyticsOverviewSection: React.FC<Props> = ({ analytics }) => {
         />
       </Grid>
 
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard
           title="Improvement Rate"
           value={analytics.improvement_rate ? `${analytics.improvement_rate > 0 ? '+' : ''}${analytics.improvement_rate.toFixed(1)}%` : 'N/A'}
@@ -172,7 +172,7 @@ const AnalyticsOverviewSection: React.FC<Props> = ({ analytics }) => {
         />
       </Grid>
 
-      <Grid item xs={12} sm={6} md={3}>
+      <Grid size={{ xs: 12, sm: 6, md: 3 }}>
         <StatCard
           title="Practice Time"
           value={formatHours(analytics.total_practice_hours)}
@@ -183,7 +183,7 @@ const AnalyticsOverviewSection: React.FC<Props> = ({ analytics }) => {
       </Grid>
 
       {analytics.average_score_last_30_days !== null && (
-        <Grid item xs={12}>
+        <Grid size={{ xs: 12 }}>
           <Paper elevation={1} sx={{ p: 2, bgcolor: 'primary.light', color: 'primary.contrastText' }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box>

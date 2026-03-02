@@ -30,7 +30,7 @@ class UserAchievement(BaseModel):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     achievement_type = Column(SQLEnum(AchievementType), nullable=False, index=True)
     earned_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    achievement_metadata = Column(JSON, nullable=True)  # Store additional context (e.g., category for Category_Master)
+    achievement_data = Column("metadata", JSON, nullable=True)  # Store additional context (e.g., category for Category_Master)
     
     # Relationships
     user = relationship("User", back_populates="achievements")

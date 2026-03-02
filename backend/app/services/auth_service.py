@@ -382,7 +382,7 @@ class AuthService:
 
     
     @staticmethod
-    def request_password_reset(db: Session, email: str) -> dict:
+    async def request_password_reset(db: Session, email: str) -> dict:
         """
         Request password reset by generating a reset token.
         
@@ -437,10 +437,26 @@ class AuthService:
                 "message": "If the email exists, a password reset link has been sent"
             }
         
-        # TODO: Send email with reset token
-        # For now, we'll just log it (in production, send via email service)
-        print(f"Password reset token for {email}: {reset_token}")
-        print(f"Reset link: http://localhost:3000/reset-password?token={reset_token}")
+        # Send password reset email
+        from app.services.email_service import email_service
+        
+        try:
+            # Send email asynchronously
+            email_result = await email_service.send_password_reset_email(
+                to_email=user.email,
+                reset_token=reset_token,
+                user_name=user.name,
+                expiration_hours=1
+            )
+            
+            if email_result["success"]:
+                print(f"Password reset email sent successfully to {email}")
+            else:
+                print(f"Failed to send password reset email: {email_result['message']}")
+                # Log error but don't expose to user
+        except Exception as e:
+            print(f"Error sending password reset email: {str(e)}")
+            # Continue anyway - don't expose email sending errors to user
         
         return {
             "message": "If the email exists, a password reset link has been sent"

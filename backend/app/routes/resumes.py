@@ -18,7 +18,7 @@ router = APIRouter()
 async def upload_resume(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="Resume file (PDF or DOCX, max 10MB)"),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -31,13 +31,13 @@ async def upload_resume(
     Returns resume_id and upload confirmation.
     """
     service = ResumeService(db)
-    user_id = current_user['user_id']
+    user_id = current_user.id
     return await service.upload_resume(file, user_id, background_tasks)
 
 
 @router.get("/", response_model=ResumeListResponse)
 def get_user_resumes(
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -46,7 +46,7 @@ def get_user_resumes(
     Returns list of resumes ordered by creation date (newest first).
     """
     service = ResumeService(db)
-    user_id = current_user['user_id']
+    user_id = current_user.id
     resumes = service.get_user_resumes(user_id)
     
     return ResumeListResponse(
@@ -58,7 +58,7 @@ def get_user_resumes(
 @router.get("/{resume_id}", response_model=ResumeResponse)
 def get_resume(
     resume_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -67,7 +67,7 @@ def get_resume(
     Returns full resume details including extracted data.
     """
     service = ResumeService(db)
-    user_id = current_user['user_id']
+    user_id = current_user.id
     resume = service.get_resume(resume_id, user_id)
     
     if not resume:
@@ -79,7 +79,7 @@ def get_resume(
 @router.delete("/{resume_id}", status_code=204)
 def delete_resume(
     resume_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -88,7 +88,7 @@ def delete_resume(
     Resume will be marked as deleted but data remains in database.
     """
     service = ResumeService(db)
-    user_id = current_user['user_id']
+    user_id = current_user.id
     deleted = service.delete_resume(resume_id, user_id)
     
     if not deleted:

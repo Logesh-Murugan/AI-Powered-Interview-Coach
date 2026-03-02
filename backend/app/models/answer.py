@@ -5,7 +5,7 @@ This model stores user answers to interview questions.
 
 Requirements: 16.1-16.10, 18.1-18.14
 """
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -42,6 +42,11 @@ class Answer(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     deleted_at = Column(DateTime, nullable=True)
+    
+    # Unique constraint: one answer per question per session
+    __table_args__ = (
+        UniqueConstraint('session_id', 'question_id', name='uq_answers_session_question'),
+    )
     
     def __repr__(self):
         return f"<Answer(id={self.id}, session_id={self.session_id}, question_id={self.question_id}, user_id={self.user_id})>"

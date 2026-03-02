@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, desc
 import logging
 
-from app.models.interview_session import InterviewSession
+from app.models.interview_session import InterviewSession, SessionStatus
 from app.models.answer import Answer
 from app.models.evaluation import Evaluation
 from app.models.session_question import SessionQuestion
@@ -86,7 +86,7 @@ class AnalyticsService:
         )
         
         # Cache for 1 hour (Requirement 20.14)
-        self.cache.set(cache_key, analytics.model_dump(), ttl=timedelta(hours=1))
+        self.cache.set(cache_key, analytics.model_dump(mode='json'), ttl=timedelta(hours=1))
         
         logger.info(f"Analytics calculated and cached for user {user_id}")
         return analytics
@@ -96,7 +96,7 @@ class AnalyticsService:
         count = self.db.query(func.count(InterviewSession.id)).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             )
         ).scalar()
         return count or 0
@@ -110,7 +110,7 @@ class AnalyticsService:
         ).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             )
         ).scalar()
         
@@ -127,7 +127,7 @@ class AnalyticsService:
         ).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed',
+                InterviewSession.status == SessionStatus.COMPLETED,
                 InterviewSession.end_time >= thirty_days_ago
             )
         ).scalar()
@@ -143,7 +143,7 @@ class AnalyticsService:
         sessions = self.db.query(InterviewSession).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             )
         ).order_by(InterviewSession.end_time).all()
         
@@ -185,7 +185,7 @@ class AnalyticsService:
         ).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             )
         ).scalar()
         
@@ -213,7 +213,7 @@ class AnalyticsService:
         ).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             )
         ).group_by(
             func.date_trunc('week', InterviewSession.end_time)
@@ -239,17 +239,15 @@ class AnalyticsService:
             func.avg(Evaluation.overall_score).label('avg_score'),
             func.count(Question.id).label('question_count')
         ).join(
-            SessionQuestion, SessionQuestion.question_id == Question.id
-        ).join(
-            Answer, Answer.session_question_id == SessionQuestion.id
+            Answer, Answer.question_id == Question.id
         ).join(
             Evaluation, Evaluation.answer_id == Answer.id
         ).join(
-            InterviewSession, SessionQuestion.session_id == InterviewSession.id
+            InterviewSession, Answer.session_id == InterviewSession.id
         ).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             )
         ).group_by(
             Question.category
@@ -276,13 +274,11 @@ class AnalyticsService:
         ).join(
             Evaluation, Evaluation.answer_id == Answer.id
         ).join(
-            SessionQuestion, Answer.session_question_id == SessionQuestion.id
-        ).join(
-            Question, SessionQuestion.question_id == Question.id
+            Question, Answer.question_id == Question.id
         ).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed',
+                InterviewSession.status == SessionStatus.COMPLETED,
                 Question.category == category
             )
         ).order_by(InterviewSession.end_time).all()
@@ -404,7 +400,7 @@ class AnalyticsService:
         session = self.db.query(InterviewSession).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             )
         ).order_by(desc(InterviewSession.end_time)).first()
         
@@ -516,7 +512,7 @@ class AnalyticsService:
         ).filter(
             and_(
                 User.target_role == target_role,
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             )
         ).group_by(User.id).all()
         
@@ -597,14 +593,14 @@ class AnalyticsService:
             first_session = self.db.query(func.min(InterviewSession.start_time)).filter(
                 and_(
                     InterviewSession.user_id == user_id,
-                    InterviewSession.status == 'completed'
+                    InterviewSession.status == SessionStatus.COMPLETED
                 )
             ).scalar()
             
             last_session = self.db.query(func.max(InterviewSession.end_time)).filter(
                 and_(
                     InterviewSession.user_id == user_id,
-                    InterviewSession.status == 'completed'
+                    InterviewSession.status == SessionStatus.COMPLETED
                 )
             ).scalar()
             
@@ -613,7 +609,7 @@ class AnalyticsService:
                 session_count = self.db.query(func.count(InterviewSession.id)).filter(
                     and_(
                         InterviewSession.user_id == user_id,
-                        InterviewSession.status == 'completed'
+                        InterviewSession.status == SessionStatus.COMPLETED
                     )
                 ).scalar()
                 sessions_per_week_data.append(session_count / weeks)
@@ -634,7 +630,7 @@ class AnalyticsService:
             avg_questions = self.db.query(func.avg(InterviewSession.question_count)).filter(
                 and_(
                     InterviewSession.user_id == user_id,
-                    InterviewSession.status == 'completed'
+                    InterviewSession.status == SessionStatus.COMPLETED
                 )
             ).scalar()
             if avg_questions:
@@ -647,13 +643,13 @@ class AnalyticsService:
             Question.category,
             func.count(Question.id).label('count')
         ).join(
-            SessionQuestion, SessionQuestion.question_id == Question.id
+            Answer, Answer.question_id == Question.id
         ).join(
-            InterviewSession, SessionQuestion.session_id == InterviewSession.id
+            InterviewSession, Answer.session_id == InterviewSession.id
         ).filter(
             and_(
                 InterviewSession.user_id.in_(top_performers),
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             )
         ).group_by(Question.category).order_by(desc('count')).limit(3).all()
         
@@ -668,7 +664,7 @@ class AnalyticsService:
             ).filter(
                 and_(
                     InterviewSession.user_id == user_id,
-                    InterviewSession.status == 'completed'
+                    InterviewSession.status == SessionStatus.COMPLETED
                 )
             ).distinct().all()
             
@@ -782,3 +778,596 @@ class AnalyticsService:
         cache_key = f"comparison:{user_id}"
         self.cache.delete(cache_key)
         logger.info(f"Performance comparison cache invalidated for user {user_id}")
+    
+    def get_session_statistics(self, user_id: int, date_range: Optional[int] = 30, status_filter: Optional[str] = None) -> Dict:
+        """
+        Get session statistics with date grouping.
+        
+        Requirements: 6.6
+        - Returns sessions_by_date, average_duration, completion_rate
+        - Supports date_range filter (days)
+        - Supports status filter
+        - Cache with 1h TTL
+        """
+        # Check cache
+        cache_key = f"session_stats:{user_id}:{date_range}:{status_filter}"
+        cached_data = self.cache.get(cache_key)
+        
+        if cached_data:
+            logger.info(f"Session statistics cache hit for user {user_id}")
+            cached_data['cache_hit'] = True
+            return cached_data
+        
+        logger.info(f"Session statistics cache miss for user {user_id}, calculating...")
+        
+        # Build query
+        query = self.db.query(InterviewSession).filter(InterviewSession.user_id == user_id)
+        
+        # Apply date range filter
+        if date_range:
+            cutoff_date = datetime.utcnow() - timedelta(days=date_range)
+            query = query.filter(InterviewSession.start_time >= cutoff_date)
+        
+        # Apply status filter
+        if status_filter:
+            query = query.filter(InterviewSession.status == status_filter)
+        
+        sessions = query.all()
+        
+        # Calculate sessions by date
+        sessions_by_date = {}
+        total_duration = 0
+        completed_count = 0
+        
+        for session in sessions:
+            date_key = session.start_time.strftime('%Y-%m-%d')
+            
+            if date_key not in sessions_by_date:
+                sessions_by_date[date_key] = {
+                    'date': date_key,
+                    'session_count': 0,
+                    'scores': []
+                }
+            
+            sessions_by_date[date_key]['session_count'] += 1
+            
+            # Calculate duration if session is completed
+            if session.status == SessionStatus.COMPLETED and session.end_time:
+                duration = (session.end_time - session.start_time).total_seconds() / 60
+                total_duration += duration
+                completed_count += 1
+                
+                # Get average score for this session
+                avg_score = self.db.query(func.avg(Evaluation.overall_score)).join(
+                    Answer, Evaluation.answer_id == Answer.id
+                ).filter(Answer.session_id == session.id).scalar()
+                
+                if avg_score:
+                    sessions_by_date[date_key]['scores'].append(float(avg_score))
+        
+        # Format sessions by date
+        sessions_by_date_list = []
+        for date_data in sorted(sessions_by_date.values(), key=lambda x: x['date']):
+            avg_score = sum(date_data['scores']) / len(date_data['scores']) if date_data['scores'] else None
+            sessions_by_date_list.append({
+                'date': date_data['date'],
+                'session_count': date_data['session_count'],
+                'average_score': round(avg_score, 2) if avg_score else None
+            })
+        
+        # Calculate metrics
+        average_duration = total_duration / completed_count if completed_count > 0 else 0
+        completion_rate = (completed_count / len(sessions) * 100) if sessions else 0
+        
+        result = {
+            'sessions_by_date': sessions_by_date_list,
+            'average_duration': round(average_duration, 2),
+            'completion_rate': round(completion_rate, 2),
+            'total_sessions': len(sessions),
+            'completed_sessions': completed_count,
+            'cache_hit': False
+        }
+        
+        # Cache for 1 hour
+        self.cache.set(cache_key, result, ttl=timedelta(hours=1))
+        
+        logger.info(f"Session statistics calculated and cached for user {user_id}")
+        return result
+
+    
+    def get_skill_statistics(self, user_id: int) -> Dict:
+        """
+        Get skill-based performance analysis.
+        
+        Requirements: 6.6
+        - Returns performance_by_skill, top_skills, weak_skills
+        - Calculates average scores per skill from resume and questions
+        - Cache with 1h TTL
+        """
+        # Check cache
+        cache_key = f"skill_stats:{user_id}"
+        cached_data = self.cache.get(cache_key)
+        
+        if cached_data:
+            logger.info(f"Skill statistics cache hit for user {user_id}")
+            cached_data['cache_hit'] = True
+            return cached_data
+        
+        logger.info(f"Skill statistics cache miss for user {user_id}, calculating...")
+        
+        # Get user's resume to extract skills
+        from app.models.resume import Resume
+        resume = self.db.query(Resume).filter(
+            Resume.user_id == user_id
+        ).order_by(desc(Resume.created_at)).first()
+        
+        if not resume or not resume.skills:
+            # No resume or skills, return empty data
+            result = {
+                'performance_by_skill': [],
+                'top_skills': [],
+                'weak_skills': [],
+                'cache_hit': False
+            }
+            self.cache.set(cache_key, result, ttl=timedelta(hours=1))
+            return result
+        
+        # Extract all skills from resume
+        all_skills = []
+        if isinstance(resume.skills, dict):
+            for category in ['technical_skills', 'soft_skills', 'tools', 'frameworks']:
+                if category in resume.skills:
+                    all_skills.extend(resume.skills[category])
+        
+        # Calculate performance for each skill
+        skill_performance = []
+        
+        for skill in all_skills:
+            # Find questions that mention this skill (case-insensitive)
+            skill_lower = skill.lower()
+            
+            # Get evaluations for questions mentioning this skill
+            results = self.db.query(
+                func.avg(Evaluation.overall_score).label('avg_score'),
+                func.count(Evaluation.id).label('count')
+            ).join(
+                Answer, Evaluation.answer_id == Answer.id
+            ).join(
+                Question, Answer.question_id == Question.id
+            ).join(
+                InterviewSession, Answer.session_id == InterviewSession.id
+            ).filter(
+                and_(
+                    InterviewSession.user_id == user_id,
+                    InterviewSession.status == SessionStatus.COMPLETED,
+                    func.lower(Question.question_text).contains(skill_lower)
+                )
+            ).first()
+            
+            if results.count and results.count > 0:
+                avg_score = float(results.avg_score)
+                question_count = results.count
+                
+                # Calculate trend (simplified - compare first half vs second half)
+                trend = self._calculate_skill_trend(user_id, skill_lower)
+                
+                skill_performance.append({
+                    'skill': skill,
+                    'average_score': round(avg_score, 2),
+                    'question_count': question_count,
+                    'trend': trend
+                })
+        
+        # Sort by average score
+        skill_performance.sort(key=lambda x: x['average_score'], reverse=True)
+        
+        # Identify top and weak skills
+        top_skills = [s['skill'] for s in skill_performance[:5]]
+        weak_skills = [s['skill'] for s in skill_performance[-5:] if s['average_score'] < 70]
+        
+        result = {
+            'performance_by_skill': skill_performance,
+            'top_skills': top_skills,
+            'weak_skills': weak_skills,
+            'cache_hit': False
+        }
+        
+        # Cache for 1 hour
+        self.cache.set(cache_key, result, ttl=timedelta(hours=1))
+        
+        logger.info(f"Skill statistics calculated and cached for user {user_id}")
+        return result
+    
+    def _calculate_skill_trend(self, user_id: int, skill_lower: str) -> str:
+        """Calculate trend for a specific skill."""
+        # Get scores over time for this skill
+        results = self.db.query(
+            InterviewSession.end_time,
+            Evaluation.overall_score
+        ).join(
+            Answer, Answer.session_id == InterviewSession.id
+        ).join(
+            Evaluation, Evaluation.answer_id == Answer.id
+        ).join(
+            Question, Answer.question_id == Question.id
+        ).filter(
+            and_(
+                InterviewSession.user_id == user_id,
+                InterviewSession.status == SessionStatus.COMPLETED,
+                func.lower(Question.question_text).contains(skill_lower)
+            )
+        ).order_by(InterviewSession.end_time).all()
+        
+        if len(results) < 4:
+            return "stable"
+        
+        # Compare first half vs second half
+        mid = len(results) // 2
+        first_half_avg = sum(r.overall_score for r in results[:mid]) / mid
+        second_half_avg = sum(r.overall_score for r in results[mid:]) / (len(results) - mid)
+        
+        diff = second_half_avg - first_half_avg
+        
+        if diff > 5:
+            return "improving"
+        elif diff < -5:
+            return "declining"
+        else:
+            return "stable"
+
+    
+    def get_progress_metrics(self, user_id: int) -> Dict:
+        """
+        Get improvement metrics calculation.
+        
+        Requirements: 6.6
+        - Returns weekly_improvement, monthly_improvement, trend_direction
+        - Calculates score deltas over time periods
+        - Includes confidence intervals for trends
+        - Cache with 1h TTL
+        """
+        # Check cache
+        cache_key = f"progress_metrics:{user_id}"
+        cached_data = self.cache.get(cache_key)
+        
+        if cached_data:
+            logger.info(f"Progress metrics cache hit for user {user_id}")
+            cached_data['cache_hit'] = True
+            return cached_data
+        
+        logger.info(f"Progress metrics cache miss for user {user_id}, calculating...")
+        
+        # Get all completed sessions with scores
+        sessions_with_scores = self.db.query(
+            InterviewSession.end_time,
+            func.avg(Evaluation.overall_score).label('avg_score')
+        ).join(
+            Answer, Answer.session_id == InterviewSession.id
+        ).join(
+            Evaluation, Evaluation.answer_id == Answer.id
+        ).filter(
+            and_(
+                InterviewSession.user_id == user_id,
+                InterviewSession.status == SessionStatus.COMPLETED
+            )
+        ).group_by(InterviewSession.id, InterviewSession.end_time).order_by(
+            InterviewSession.end_time
+        ).all()
+        
+        if len(sessions_with_scores) < 2:
+            # Not enough data
+            result = {
+                'weekly_improvement': None,
+                'monthly_improvement': None,
+                'trend_direction': 'stable',
+                'confidence_interval': None,
+                'cache_hit': False
+            }
+            self.cache.set(cache_key, result, ttl=timedelta(hours=1))
+            return result
+        
+        # Calculate weekly improvement (last week vs previous week)
+        one_week_ago = datetime.utcnow() - timedelta(days=7)
+        two_weeks_ago = datetime.utcnow() - timedelta(days=14)
+        
+        last_week_scores = [
+            float(s.avg_score) for s in sessions_with_scores
+            if s.end_time >= one_week_ago
+        ]
+        
+        previous_week_scores = [
+            float(s.avg_score) for s in sessions_with_scores
+            if two_weeks_ago <= s.end_time < one_week_ago
+        ]
+        
+        weekly_improvement = None
+        if last_week_scores and previous_week_scores:
+            last_week_avg = sum(last_week_scores) / len(last_week_scores)
+            previous_week_avg = sum(previous_week_scores) / len(previous_week_scores)
+            weekly_improvement = ((last_week_avg - previous_week_avg) / previous_week_avg) * 100
+        
+        # Calculate monthly improvement (last month vs previous month)
+        one_month_ago = datetime.utcnow() - timedelta(days=30)
+        two_months_ago = datetime.utcnow() - timedelta(days=60)
+        
+        last_month_scores = [
+            float(s.avg_score) for s in sessions_with_scores
+            if s.end_time >= one_month_ago
+        ]
+        
+        previous_month_scores = [
+            float(s.avg_score) for s in sessions_with_scores
+            if two_months_ago <= s.end_time < one_month_ago
+        ]
+        
+        monthly_improvement = None
+        if last_month_scores and previous_month_scores:
+            last_month_avg = sum(last_month_scores) / len(last_month_scores)
+            previous_month_avg = sum(previous_month_scores) / len(previous_month_scores)
+            monthly_improvement = ((last_month_avg - previous_month_avg) / previous_month_avg) * 100
+        
+        # Calculate overall trend direction
+        all_scores = [float(s.avg_score) for s in sessions_with_scores]
+        trend_direction = self._calculate_overall_trend(all_scores)
+        
+        # Calculate confidence interval (simplified 95% CI)
+        confidence_interval = None
+        if len(all_scores) >= 5:
+            import statistics
+            mean = statistics.mean(all_scores)
+            stdev = statistics.stdev(all_scores)
+            margin = 1.96 * (stdev / (len(all_scores) ** 0.5))  # 95% CI
+            confidence_interval = (round(mean - margin, 2), round(mean + margin, 2))
+        
+        result = {
+            'weekly_improvement': round(weekly_improvement, 2) if weekly_improvement is not None else None,
+            'monthly_improvement': round(monthly_improvement, 2) if monthly_improvement is not None else None,
+            'trend_direction': trend_direction,
+            'confidence_interval': confidence_interval,
+            'cache_hit': False
+        }
+        
+        # Cache for 1 hour
+        self.cache.set(cache_key, result, ttl=timedelta(hours=1))
+        
+        logger.info(f"Progress metrics calculated and cached for user {user_id}")
+        return result
+    
+    def _calculate_overall_trend(self, scores: List[float]) -> str:
+        """Calculate overall trend from score list."""
+        if len(scores) < 4:
+            return "stable"
+        
+        # Compare first quarter vs last quarter
+        quarter_size = len(scores) // 4
+        first_quarter_avg = sum(scores[:quarter_size]) / quarter_size
+        last_quarter_avg = sum(scores[-quarter_size:]) / quarter_size
+        
+        diff = last_quarter_avg - first_quarter_avg
+        
+        if diff > 5:
+            return "improving"
+        elif diff < -5:
+            return "declining"
+        else:
+            return "stable"
+
+    
+    async def get_ai_insights(self, user_id: int) -> Dict:
+        """
+        Get AI-generated insights and recommendations.
+        
+        Requirements: 6.6, 13.7
+        - Analyzes user performance patterns
+        - Generates personalized recommendations
+        - Returns insights_text, recommendations, readiness_score
+        - Cache with 24h TTL
+        """
+        # Check cache
+        cache_key = f"ai_insights:{user_id}"
+        cached_data = self.cache.get(cache_key)
+        
+        if cached_data:
+            logger.info(f"AI insights cache hit for user {user_id}")
+            cached_data['cache_hit'] = True
+            return cached_data
+        
+        logger.info(f"AI insights cache miss for user {user_id}, generating...")
+        
+        # Get user data
+        user = self.db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("User not found")
+        
+        # Get analytics overview
+        analytics = self.get_analytics_overview(user_id)
+        
+        # Get recent performance
+        recent_sessions = self.db.query(InterviewSession).filter(
+            and_(
+                InterviewSession.user_id == user_id,
+                InterviewSession.status == SessionStatus.COMPLETED
+            )
+        ).order_by(desc(InterviewSession.end_time)).limit(5).all()
+        
+        # Build context for AI
+        context = f"""Analyze the following interview preparation performance data and provide insights:
+
+User Profile:
+- Target Role: {user.target_role or 'Not specified'}
+- Experience Level: {user.experience_level or 'Not specified'}
+- Current Streak: {user.current_streak} days
+- Longest Streak: {user.longest_streak} days
+
+Performance Metrics:
+- Total Interviews Completed: {analytics.total_interviews_completed}
+- Average Score (All Time): {analytics.average_score_all_time or 'N/A'}
+- Average Score (Last 30 Days): {analytics.average_score_last_30_days or 'N/A'}
+- Improvement Rate: {analytics.improvement_rate or 'N/A'}%
+- Total Practice Hours: {analytics.total_practice_hours}
+
+Category Performance:
+{self._format_category_performance(analytics.category_performance)}
+
+Strengths: {', '.join(analytics.top_5_strengths) if analytics.top_5_strengths else 'None identified yet'}
+Weaknesses: {', '.join(analytics.top_5_weaknesses) if analytics.top_5_weaknesses else 'None identified yet'}
+
+Recent Activity:
+- Last Session: {analytics.last_session_date.strftime('%Y-%m-%d') if analytics.last_session_date else 'No sessions yet'}
+- Recent Sessions: {len(recent_sessions)}
+
+Please provide:
+1. A comprehensive analysis of their performance patterns (2-3 paragraphs)
+2. 5 specific, actionable recommendations for improvement
+3. An interview readiness score (0-100) based on their preparation level
+
+Format your response as JSON:
+{{
+  "insights_text": "Your detailed analysis here...",
+  "recommendations": ["Recommendation 1", "Recommendation 2", ...],
+  "readiness_score": 75
+}}"""
+        
+        # Call AI orchestrator
+        from app.services.ai.orchestrator import AIOrchestrator
+        from app.services.ai.types import AIRequest
+        
+        orchestrator = AIOrchestrator(cache_service=self.cache)
+        
+        request = AIRequest(
+            prompt=context,
+            max_tokens=1500,
+            temperature=0.7,
+            task_type="insights_generation"
+        )
+        
+        try:
+            response = await orchestrator.call(
+                prompt=context,
+                cache_key=None,  # Don't use orchestrator cache, we have our own
+                use_cache=False
+            )
+            
+            if not response.success:
+                raise Exception(f"AI generation failed: {response.error}")
+            
+            # Parse response
+            import json
+            content = response.content.strip()
+            
+            # Handle markdown code blocks
+            if content.startswith('```'):
+                lines = content.split('\n')
+                content = '\n'.join(lines[1:-1]) if len(lines) > 2 else content
+                content = content.replace('```json', '').replace('```', '').strip()
+            
+            insights_data = json.loads(content)
+            
+            # Validate response structure
+            if 'insights_text' not in insights_data or 'recommendations' not in insights_data or 'readiness_score' not in insights_data:
+                raise ValueError("Invalid AI response structure")
+            
+            # Ensure readiness score is in valid range
+            readiness_score = max(0, min(100, float(insights_data['readiness_score'])))
+            
+            result = {
+                'insights_text': insights_data['insights_text'],
+                'recommendations': insights_data['recommendations'][:5],  # Limit to 5
+                'readiness_score': round(readiness_score, 2),
+                'cache_hit': False
+            }
+            
+            # Cache for 24 hours
+            self.cache.set(cache_key, result, ttl=timedelta(hours=24))
+            
+            logger.info(f"AI insights generated and cached for user {user_id}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Failed to generate AI insights: {e}")
+            # Return fallback insights
+            return {
+                'insights_text': self._generate_fallback_insights(analytics, user),
+                'recommendations': self._generate_fallback_recommendations(analytics),
+                'readiness_score': self._calculate_fallback_readiness_score(analytics),
+                'cache_hit': False
+            }
+    
+    def _format_category_performance(self, categories: List) -> str:
+        """Format category performance for AI prompt."""
+        if not categories:
+            return "No category data available yet"
+        
+        lines = []
+        for cat in categories:
+            lines.append(f"- {cat.category}: {cat.avg_score:.1f} ({cat.question_count} questions, {cat.trend})")
+        return '\n'.join(lines)
+    
+    def _generate_fallback_insights(self, analytics, user) -> str:
+        """Generate fallback insights when AI fails."""
+        insights = []
+        
+        if analytics.total_interviews_completed == 0:
+            insights.append("You're just getting started with your interview preparation. ")
+            insights.append("The key to success is consistent practice and focusing on your weak areas.")
+        elif analytics.total_interviews_completed < 5:
+            insights.append(f"You've completed {analytics.total_interviews_completed} practice sessions. ")
+            insights.append("Keep building momentum with regular practice to see meaningful improvement.")
+        else:
+            insights.append(f"You've completed {analytics.total_interviews_completed} practice sessions with an average score of {analytics.average_score_all_time:.1f}. ")
+            
+            if analytics.improvement_rate and analytics.improvement_rate > 0:
+                insights.append(f"Your improvement rate of {analytics.improvement_rate:.1f}% shows you're making progress. ")
+            elif analytics.improvement_rate and analytics.improvement_rate < 0:
+                insights.append("Your recent scores show some decline. Consider reviewing fundamentals and taking breaks to avoid burnout. ")
+            
+            if analytics.top_5_strengths:
+                insights.append(f"Your strengths in {', '.join(analytics.top_5_strengths[:2])} are notable. ")
+            
+            if analytics.top_5_weaknesses:
+                insights.append(f"Focus on improving in {', '.join(analytics.top_5_weaknesses[:2])} to become more well-rounded.")
+        
+        return ''.join(insights)
+    
+    def _generate_fallback_recommendations(self, analytics) -> List[str]:
+        """Generate fallback recommendations when AI fails."""
+        recommendations = []
+        
+        if analytics.total_interviews_completed < 10:
+            recommendations.append("Complete at least 10 practice sessions to build confidence and identify patterns")
+        
+        if analytics.top_5_weaknesses:
+            for weakness in analytics.top_5_weaknesses[:2]:
+                recommendations.append(f"Focus on {weakness} questions to improve your weak areas")
+        
+        if analytics.average_score_all_time and analytics.average_score_all_time < 70:
+            recommendations.append("Review fundamental concepts and practice with easier questions first")
+        
+        if analytics.total_practice_hours < 5:
+            recommendations.append("Aim for at least 10 hours of total practice time for meaningful improvement")
+        
+        recommendations.append("Maintain a consistent practice schedule to build and retain skills")
+        
+        return recommendations[:5]
+    
+    def _calculate_fallback_readiness_score(self, analytics) -> float:
+        """Calculate fallback readiness score when AI fails."""
+        score = 0
+        
+        # Base score from average performance
+        if analytics.average_score_all_time:
+            score += analytics.average_score_all_time * 0.5
+        
+        # Bonus for number of sessions
+        session_bonus = min(20, analytics.total_interviews_completed * 2)
+        score += session_bonus
+        
+        # Bonus for improvement
+        if analytics.improvement_rate and analytics.improvement_rate > 0:
+            score += min(10, analytics.improvement_rate)
+        
+        # Bonus for practice hours
+        hours_bonus = min(10, analytics.total_practice_hours)
+        score += hours_bonus
+        
+        return round(min(100, max(0, score)), 2)

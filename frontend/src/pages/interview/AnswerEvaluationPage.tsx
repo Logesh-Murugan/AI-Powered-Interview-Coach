@@ -13,7 +13,6 @@ import {
   Grid,
   Chip,
   LinearProgress,
-  CircularProgress,
   Alert,
   Divider,
   List,
@@ -21,6 +20,8 @@ import {
   ListItemIcon,
   ListItemText,
 } from '@mui/material';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorAlert from '../../components/common/ErrorAlert';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TipsAndUpdatesIcon from '@mui/icons-material/TipsAndUpdates';
@@ -100,19 +101,18 @@ function AnswerEvaluationPage() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <CircularProgress />
-      </Box>
+      <LoadingSpinner variant="fullPage" text="Loading evaluation..." />
     );
   }
 
   if (error || !evaluation) {
     return (
       <Box>
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error || 'Evaluation not found'}
-        </Alert>
-        <Button startIcon={<ArrowBackIcon />} onClick={handleBack}>
+        <ErrorAlert
+          message={error || 'Evaluation not found'}
+          onRetry={loadEvaluation}
+        />
+        <Button startIcon={<ArrowBackIcon />} onClick={handleBack} sx={{ mt: 2 }}>
           Back to Summary
         </Button>
       </Box>

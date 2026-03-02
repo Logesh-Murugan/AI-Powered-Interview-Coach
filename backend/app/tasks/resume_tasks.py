@@ -27,18 +27,18 @@ def extract_resume_text_task(resume_id: int):
     db: Session = SessionLocal()
     
     try:
-        logger.info(f"Starting text extraction for resume {resume_id}")
+        logger.info(f"[BACKGROUND TASK] Starting text extraction for resume {resume_id}")
         
         # Get resume from database
         resume = db.query(Resume).filter(Resume.id == resume_id).first()
         
         if not resume:
-            logger.error(f"Resume {resume_id} not found")
+            logger.error(f"[BACKGROUND TASK] Resume {resume_id} not found")
             return
         
         # Check if already processed
         if resume.status != ResumeStatus.UPLOADED.value:
-            logger.warning(f"Resume {resume_id} already processed (status: {resume.status})")
+            logger.warning(f"[BACKGROUND TASK] Resume {resume_id} already processed (status: {resume.status})")
             return
         
         # Get file extension
@@ -46,7 +46,7 @@ def extract_resume_text_task(resume_id: int):
         
         try:
             # Extract text
-            logger.info(f"Extracting text from {resume.filename} ({file_extension})")
+            logger.info(f"[BACKGROUND TASK] Extracting text from {resume.filename} ({file_extension})")
             extracted_text, success = extract_text_from_resume(
                 resume.file_url,
                 file_extension
@@ -56,7 +56,7 @@ def extract_resume_text_task(resume_id: int):
                 # Get text statistics
                 stats = get_text_statistics(extracted_text)
                 logger.info(
-                    f"Text extraction successful for resume {resume_id}: "
+                    f"[BACKGROUND TASK] Text extraction successful for resume {resume_id}: "
                     f"{stats['word_count']} words, {stats['character_count']} characters"
                 )
                 
@@ -65,9 +65,10 @@ def extract_resume_text_task(resume_id: int):
                 resume.status = ResumeStatus.TEXT_EXTRACTED.value
                 
                 db.commit()
-                logger.info(f"Resume {resume_id} updated with extracted text")
+                logger.info(f"[BACKGROUND TASK] Resume {resume_id} updated with extracted text")
                 
                 # Trigger skill extraction
+                logger.info(f"[BACKGROUND TASK] Triggering skill extraction for resume {resume_id}")
                 extract_skills_task(resume_id)
                 
             else:
@@ -75,16 +76,21 @@ def extract_resume_text_task(resume_id: int):
                 
         except Exception as e:
             # Mark as failed
-            logger.error(f"Text extraction failed for resume {resume_id}: {str(e)}")
+            logger.error(f"[BACKGROUND TASK] Text extraction failed for resume {resume_id}: {str(e)}")
+            import traceback
+            logger.error(f"[BACKGROUND TASK] Traceback: {traceback.format_exc()}")
             resume.status = ResumeStatus.EXTRACTION_FAILED.value
             db.commit()
             
     except Exception as e:
-        logger.error(f"Error in extract_resume_text_task for resume {resume_id}: {str(e)}")
+        logger.error(f"[BACKGROUND TASK] Error in extract_resume_text_task for resume {resume_id}: {str(e)}")
+        import traceback
+        logger.error(f"[BACKGROUND TASK] Traceback: {traceback.format_exc()}")
         db.rollback()
         
     finally:
         db.close()
+        logger.info(f"[BACKGROUND TASK] Finished processing resume {resume_id}")
 
 
 def extract_skills_task(resume_id: int):
@@ -104,28 +110,28 @@ def extract_skills_task(resume_id: int):
     db: Session = SessionLocal()
     
     try:
-        logger.info(f"Starting skill extraction for resume {resume_id}")
+        logger.info(f"[BACKGROUND TASK] Starting skill extraction for resume {resume_id}")
         
         # Get resume from database
         resume = db.query(Resume).filter(Resume.id == resume_id).first()
         
         if not resume:
-            logger.error(f"Resume {resume_id} not found")
+            logger.error(f"[BACKGROUND TASK] Resume {resume_id} not found")
             return
         
         # Check if text has been extracted
         if not resume.extracted_text:
-            logger.error(f"Resume {resume_id} has no extracted text")
+            logger.error(f"[BACKGROUND TASK] Resume {resume_id} has no extracted text")
             return
         
         # Check if already processed
         if resume.status not in [ResumeStatus.TEXT_EXTRACTED.value, ResumeStatus.UPLOADED.value]:
-            logger.warning(f"Resume {resume_id} already processed skills (status: {resume.status})")
+            logger.warning(f"[BACKGROUND TASK] Resume {resume_id} already processed skills (status: {resume.status})")
             return
         
         try:
             # Extract skills
-            logger.info(f"Extracting skills from resume {resume_id}")
+            logger.info(f"[BACKGROUND TASK] Extracting skills from resume {resume_id}")
             detailed_skills, categorized_skills = extract_and_categorize_skills(
                 resume.extracted_text,
                 confidence_threshold=0.6
@@ -134,7 +140,7 @@ def extract_skills_task(resume_id: int):
             # Get statistics
             stats = get_skill_statistics(categorized_skills)
             logger.info(
-                f"Skill extraction successful for resume {resume_id}: "
+                f"[BACKGROUND TASK] Skill extraction successful for resume {resume_id}: "
                 f"{stats['total_skills']} total skills extracted"
             )
             
@@ -143,20 +149,25 @@ def extract_skills_task(resume_id: int):
             resume.status = ResumeStatus.SKILLS_EXTRACTED.value
             
             db.commit()
-            logger.info(f"Resume {resume_id} updated with extracted skills")
+            logger.info(f"[BACKGROUND TASK] Resume {resume_id} updated with extracted skills")
             
         except Exception as e:
             # Mark as failed
-            logger.error(f"Skill extraction failed for resume {resume_id}: {str(e)}")
+            logger.error(f"[BACKGROUND TASK] Skill extraction failed for resume {resume_id}: {str(e)}")
+            import traceback
+            logger.error(f"[BACKGROUND TASK] Traceback: {traceback.format_exc()}")
             resume.status = ResumeStatus.EXTRACTION_FAILED.value
             db.commit()
             
     except Exception as e:
-        logger.error(f"Error in extract_skills_task for resume {resume_id}: {str(e)}")
+        logger.error(f"[BACKGROUND TASK] Error in extract_skills_task for resume {resume_id}: {str(e)}")
+        import traceback
+        logger.error(f"[BACKGROUND TASK] Traceback: {traceback.format_exc()}")
         db.rollback()
         
     finally:
         db.close()
+        logger.info(f"[BACKGROUND TASK] Finished skill extraction for resume {resume_id}")
 
 
 def process_resume_pipeline(resume_id: int):

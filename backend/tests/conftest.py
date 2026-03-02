@@ -30,6 +30,7 @@ from app.models.resume_analysis import ResumeAnalysis  # noqa: F401
 
 import pytest
 from fastapi.testclient import TestClient
+from fastapi import Depends
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from app.models.base import Base
@@ -68,6 +69,10 @@ def client(db: Session):
     """Create test client with database override"""
     from app.main import app
     from app.database import get_db
+    from app.middleware.auth import get_current_user, security
+    from app.models.user import User
+    from fastapi import HTTPException, status
+    import jwt
     
     def override_get_db():
         try:
@@ -75,7 +80,54 @@ def client(db: Session):
         finally:
             pass
     
+    async def override_get_current_user(credentials = Depends(security)):
+        """Override get_current_user to use test database session"""
+        from app.utils.jwt import verify_access_token
+        
+        token = credentials.credentials
+        
+        try:
+            payload = verify_access_token(token)
+            if payload is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
+            
+            user_id = payload.get("sub")
+            if not user_id:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid token payload",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
+            
+            # Fetch user from test database session
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found"
+                )
+            
+            return user
+            
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token has expired",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        except jwt.InvalidTokenError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+    
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
     client = TestClient(app)
     yield client
     app.dependency_overrides.clear()

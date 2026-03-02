@@ -1,10 +1,13 @@
 /**
  * Dashboard Page Component
  * Main dashboard for authenticated users with real-time stats
+ * Requirements: COMP-2.1, COMP-2.2, COMP-2.3, COMP-2.4, COMP-2.5, COMP-2.6, COMP-2.7, COMP-2.8
  */
 
 import { useEffect, useState } from 'react';
-import { Box, Typography, Button, Stack, Grid, CircularProgress, Alert } from '@mui/material';
+import { Box, Typography, Button, Stack, Grid, Alert } from '@mui/material';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorAlert from '../../components/common/ErrorAlert';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { logout } from '../../store/slices/authSlice';
@@ -12,6 +15,11 @@ import { ROUTES } from '../../config/app.config';
 import StatsCard from '../../components/dashboard/StatsCard';
 import RecentSessions from '../../components/dashboard/RecentSessions';
 import QuickActions from '../../components/dashboard/QuickActions';
+import StreakCard from '../../components/dashboard/StreakCard';
+import AchievementProgress from '../../components/dashboard/AchievementProgress';
+import UpcomingTasks from '../../components/dashboard/UpcomingTasks';
+import PerformanceChart from '../../components/dashboard/PerformanceChart';
+import QuickStats from '../../components/dashboard/QuickStats';
 import { getInterviewSessions } from '../../services/interviewService';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -41,6 +49,7 @@ function DashboardPage() {
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -75,6 +84,9 @@ function DashboardPage() {
       // Get recent sessions (last 5)
       setRecentSessions(sessions.slice(0, 5));
       
+      // Check if user has any data
+      setHasData(totalSessions > 0);
+      
     } catch (err) {
       console.error('Error loading dashboard data:', err);
       setError('Unable to load dashboard data. Using default values.');
@@ -86,6 +98,7 @@ function DashboardPage() {
         improvementRate: 0,
       });
       setRecentSessions([]);
+      setHasData(false);
     } finally {
       setLoading(false);
     }
@@ -98,9 +111,7 @@ function DashboardPage() {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
-        <CircularProgress />
-      </Box>
+      <LoadingSpinner variant="fullPage" text="Loading dashboard..." />
     );
   }
 
@@ -122,13 +133,23 @@ function DashboardPage() {
 
       {/* Error Alert */}
       {error && (
-        <Alert severity="info" sx={{ mb: 3 }} onClose={() => setError(null)}>
-          {error}
+        <ErrorAlert
+          message={error}
+          severity="warning"
+          onRetry={loadDashboardData}
+          onDismiss={() => setError(null)}
+        />
+      )}
+
+      {/* Onboarding prompt for new users */}
+      {!hasData && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Welcome! Start your interview preparation journey by taking your first practice session.
         </Alert>
       )}
 
       <Stack spacing={3}>
-        {/* Stats Cards */}
+        {/* Stats Cards - Top Row */}
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <FadeIn delay={0.2}>
@@ -174,14 +195,48 @@ function DashboardPage() {
           </Grid>
         </Grid>
 
-        {/* Quick Actions */}
-        <FadeIn delay={0.6}>
-          <QuickActions />
-        </FadeIn>
+        {/* Main Dashboard Widgets - Responsive Grid Layout */}
+        <Grid container spacing={3}>
+          {/* Left Column - Streak and Quick Stats */}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Stack spacing={3}>
+              <FadeIn delay={0.6}>
+                <StreakCard />
+              </FadeIn>
+              <FadeIn delay={0.7}>
+                <QuickStats />
+              </FadeIn>
+            </Stack>
+          </Grid>
 
-        {/* Recent Sessions */}
+          {/* Middle Column - Performance Chart and Quick Actions */}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Stack spacing={3}>
+              <FadeIn delay={0.8}>
+                <PerformanceChart />
+              </FadeIn>
+              <FadeIn delay={0.9}>
+                <QuickActions />
+              </FadeIn>
+            </Stack>
+          </Grid>
+
+          {/* Right Column - Achievements and Upcoming Tasks */}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Stack spacing={3}>
+              <FadeIn delay={1.0}>
+                <AchievementProgress />
+              </FadeIn>
+              <FadeIn delay={1.1}>
+                <UpcomingTasks />
+              </FadeIn>
+            </Stack>
+          </Grid>
+        </Grid>
+
+        {/* Recent Sessions - Full Width */}
         {recentSessions.length > 0 && (
-          <FadeIn delay={0.7}>
+          <FadeIn delay={1.2}>
             <RecentSessions sessions={recentSessions} />
           </FadeIn>
         )}

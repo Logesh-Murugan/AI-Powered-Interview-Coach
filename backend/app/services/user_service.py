@@ -7,6 +7,9 @@ from app.models.user import User
 from app.schemas.user import UserProfileUpdateRequest
 from app.services.cache_service import CacheService
 
+# Create a singleton instance of CacheService
+_cache_service = CacheService()
+
 
 class UserService:
     """Service class for user profile operations."""
@@ -28,7 +31,7 @@ class UserService:
         """
         # Try to get from cache first
         cache_key = f"user:profile:{user_id}"
-        cached_user = CacheService.get(cache_key)
+        cached_user = _cache_service.get(cache_key)
         
         if cached_user:
             # Return from cache (would need to reconstruct User object)
@@ -87,7 +90,7 @@ class UserService:
             user.target_role = profile_data.target_role
         
         if profile_data.experience_level is not None:
-            user.experience_level = profile_data.experience_level.value
+            user.experience_level = profile_data.experience_level.value.lower()
         
         # Save to database
         try:
@@ -102,10 +105,10 @@ class UserService:
         
         # Invalidate cache
         cache_key = f"user:profile:{user_id}"
-        CacheService.delete(cache_key)
+        _cache_service.delete(cache_key)
         
         # Also invalidate user preferences cache
         preferences_key = f"user:preferences:{user_id}"
-        CacheService.delete(preferences_key)
+        _cache_service.delete(preferences_key)
         
         return user

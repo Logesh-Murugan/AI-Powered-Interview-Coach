@@ -64,7 +64,7 @@ class StudyPlanAgentService:
         )
         
         return study_plan
-    
+
     def _validate_user_prerequisites(self, user_id: int) -> None:
         """Validate user has resume analysis."""
         user = self.db.query(User).filter(User.id == user_id).first()
@@ -99,8 +99,8 @@ class StudyPlanAgentService:
             'strengths': analysis_data.get('strengths', []),
             'weaknesses': analysis_data.get('weaknesses', [])
         }
-    
-    def _initialize_agent(self):
+
+    def _initialize_agent(self) -> BaseAgent:
         """Initialize agent with 5 custom tools."""
         tools = [
             SkillAssessmentTool(db=self.db),
@@ -114,16 +114,14 @@ class StudyPlanAgentService:
 Create comprehensive, achievable study plans with daily tasks, weekly milestones,
 resource links, and progress tracking."""
         
-        # Create a simple agent object with tools
-        class StudyPlanAgent:
-            def __init__(self, tools, system_message):
-                self.tools = tools
-                self.system_message = system_message
-        
-        agent = StudyPlanAgent(tools=tools, system_message=system_message)
+        agent = BaseAgent(
+            tools=tools,
+            system_message=system_message,
+            agent_type="study_plan"
+        )
         
         return agent
-    
+
     def _prepare_agent_input(
         self,
         user_id: int,
@@ -146,25 +144,20 @@ User Profile:
 - Strengths: {strengths_str}
 - Skill Gaps: {gaps_str}
 
-Output JSON with: daily_tasks, weekly_milestones, resource_links, time_estimates
-
-Use these tools:
-1. SkillAssessmentTool - Assess current skills
-2. JobMarketTool - Research job requirements
-3. LearningResourceTool - Find learning resources
-4. ProgressTrackerTool - Track progress
-5. SchedulerTool - Create schedule"""
+Output JSON with: daily_tasks, weekly_milestones, resource_links, time_estimates"""
         return prompt
-    
+
     def _parse_agent_output(self, output: str) -> Dict[str, Any]:
         """Parse agent output into structured plan data."""
         import json
         import re
         
+        # Try to extract JSON from markdown code fence (multiline)
         json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', output, re.DOTALL)
         if json_match:
             json_str = json_match.group(1).strip()
         else:
+            # Try to find raw JSON (multiline)
             json_match = re.search(r'\{[\s\S]*\}', output, re.DOTALL)
             if json_match:
                 json_str = json_match.group(0)
@@ -205,7 +198,7 @@ Use these tools:
         for field in required_time_fields:
             if field not in time_estimates:
                 raise ValueError(f"time_estimates missing required field: {field}")
-    
+
     def _create_study_plan_record(
         self,
         user_id: int,
@@ -248,7 +241,7 @@ Use these tools:
             StudyPlan.user_id == user_id,
             StudyPlan.status == 'active'
         ).first()
-    
+
     def update_progress(
         self,
         plan_id: int,

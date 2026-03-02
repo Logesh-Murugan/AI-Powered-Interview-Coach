@@ -50,13 +50,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS Configuration
+# CORS Configuration - Allow all origins in development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origins=["*"],  # Allow all origins in development
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 
@@ -66,6 +67,10 @@ async def add_request_id(request: Request, call_next):
     """
     Add unique request ID to each request for tracing.
     """
+    # Skip middleware for OPTIONS requests (CORS preflight)
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
     
@@ -84,6 +89,10 @@ async def log_requests(request: Request, call_next):
     """
     Log all requests with timing information.
     """
+    # Skip middleware for OPTIONS requests (CORS preflight)
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    
     start_time = time.time()
     
     # Get request_id (set by add_request_id middleware)
@@ -220,6 +229,7 @@ from app.routes import cache_stats
 from app.routes import resume_analysis
 from app.routes import study_plans
 from app.routes import company_coaching
+from app.routes import export
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
@@ -235,6 +245,7 @@ app.include_router(cache_stats.router, prefix="/api/v1/cache", tags=["cache"])
 app.include_router(resume_analysis.router)  # Already has prefix in router definition
 app.include_router(study_plans.router, prefix="/api/v1/study-plans", tags=["study-plans"])
 app.include_router(company_coaching.router)  # Already has prefix in router definition
+app.include_router(export.router, prefix="/api/v1/export", tags=["export"])
 
 # Mount static files for uploaded resumes
 from fastapi.staticfiles import StaticFiles

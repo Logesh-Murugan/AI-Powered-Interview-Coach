@@ -8,6 +8,7 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import { apiService } from '../../services/api.service';
 import { API_ENDPOINTS } from '../../config/api.config';
 import { APP_CONFIG } from '../../config/app.config';
+import { userService, type UpdateProfileRequest, type UserProfile } from '../../services/userService';
 
 interface User {
   id: number;
@@ -97,6 +98,21 @@ export const logout = createAsyncThunk('auth/logout', async (_, { rejectWithValu
     return rejectWithValue('Logout API call failed');
   }
 });
+
+export const updateProfile = createAsyncThunk<UserProfile, UpdateProfileRequest>(
+  'auth/updateProfile',
+  async (request, { rejectWithValue }) => {
+    try {
+      const response = await userService.updateProfile(request);
+      return response;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        return rejectWithValue(error.message);
+      }
+      return rejectWithValue('Profile update failed');
+    }
+  }
+);
 
 const authSlice = createSlice({
   name: 'auth',
@@ -206,6 +222,24 @@ const authSlice = createSlice({
         localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER);
         localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
         localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+      });
+
+    // Update Profile
+    builder
+      .addCase(updateProfile.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload;
+        
+        // Update localStorage
+        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.USER, JSON.stringify(action.payload));
+      })
+      .addCase(updateProfile.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       });
   },
 });

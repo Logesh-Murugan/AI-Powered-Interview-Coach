@@ -3,9 +3,11 @@
 from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional
+from sqlalchemy.orm import Session
 import jwt
 
 from app.utils.jwt import verify_access_token
+from app.database import get_db
 
 
 security = HTTPBearer()
@@ -73,26 +75,33 @@ class AuthMiddleware:
             )
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+):
     """
     Dependency to get current user from JWT token.
     
     Args:
         credentials: HTTP Bearer credentials from request
+        db: Database session
         
     Returns:
-        Dict with user_id, email, and role
+        User model instance
         
     Raises:
         HTTPException: 401 if token is invalid or expired
+        HTTPException: 404 if user not found
         
     Example:
         ```python
         @app.get("/protected")
-        async def protected_route(current_user: dict = Depends(get_current_user)):
-            return {"user_id": current_user["user_id"]}
+        async def protected_route(current_user: User = Depends(get_current_user)):
+            return {"user_id": current_user.id}
         ```
     """
+    from app.models.user import User
+    
     token = credentials.credentials
     
     try:
@@ -103,12 +112,25 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
                 detail="Invalid token",
                 headers={"WWW-Authenticate": "Bearer"}
             )
-        # Return user info with consistent key names
-        return {
-            "user_id": payload.get("sub"),
-            "email": payload.get("email"),
-            "role": payload.get("role")
-        }
+        
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+        
+        # Fetch user from database
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        return user
+        
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

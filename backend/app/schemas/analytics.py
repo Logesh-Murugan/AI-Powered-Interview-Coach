@@ -125,3 +125,53 @@ class ProgressAnalytics(BaseModel):
     improvement_percentage: float
     consistency_score: float = Field(..., ge=0, le=100, description="Practice consistency metric")
     milestone_reached: Optional[str] = None
+
+
+class SessionByDate(BaseModel):
+    """Session count by date."""
+    date: str = Field(..., description="Date in YYYY-MM-DD format")
+    session_count: int = Field(..., ge=0, description="Number of sessions on this date")
+    average_score: Optional[float] = Field(None, ge=0, le=100, description="Average score for sessions on this date")
+
+
+class SessionStatistics(BaseModel):
+    """Session statistics response."""
+    sessions_by_date: List[SessionByDate] = Field(default_factory=list, description="Sessions grouped by date")
+    average_duration: float = Field(..., ge=0, description="Average session duration in minutes")
+    completion_rate: float = Field(..., ge=0, le=100, description="Percentage of sessions completed")
+    total_sessions: int = Field(..., ge=0, description="Total number of sessions")
+    completed_sessions: int = Field(..., ge=0, description="Number of completed sessions")
+    cache_hit: bool = Field(False, description="Whether data was served from cache")
+
+
+class SkillPerformance(BaseModel):
+    """Performance for a specific skill."""
+    skill: str = Field(..., description="Skill name")
+    average_score: float = Field(..., ge=0, le=100, description="Average score for this skill")
+    question_count: int = Field(..., ge=0, description="Number of questions testing this skill")
+    trend: Optional[str] = Field(None, description="Trend: improving, declining, stable")
+
+
+class SkillStatistics(BaseModel):
+    """Skill-based performance statistics."""
+    performance_by_skill: List[SkillPerformance] = Field(default_factory=list, description="Performance breakdown by skill")
+    top_skills: List[str] = Field(default_factory=list, description="Top 5 performing skills")
+    weak_skills: List[str] = Field(default_factory=list, description="Bottom 5 performing skills")
+    cache_hit: bool = Field(False, description="Whether data was served from cache")
+
+
+class ProgressMetrics(BaseModel):
+    """Progress and improvement metrics."""
+    weekly_improvement: Optional[float] = Field(None, description="Week-over-week improvement percentage")
+    monthly_improvement: Optional[float] = Field(None, description="Month-over-month improvement percentage")
+    trend_direction: str = Field(..., description="Overall trend: improving, declining, stable")
+    confidence_interval: Optional[tuple[float, float]] = Field(None, description="95% confidence interval for trend")
+    cache_hit: bool = Field(False, description="Whether data was served from cache")
+
+
+class AIInsights(BaseModel):
+    """AI-generated insights and recommendations."""
+    insights_text: str = Field(..., description="AI-generated analysis of performance patterns")
+    recommendations: List[str] = Field(default_factory=list, description="Personalized recommendations")
+    readiness_score: float = Field(..., ge=0, le=100, description="Overall interview readiness score")
+    cache_hit: bool = Field(False, description="Whether data was served from cache")
