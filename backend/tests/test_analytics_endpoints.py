@@ -241,7 +241,7 @@ class TestSessionsEndpoint:
     def test_sessions_unauthenticated(self, client):
         """Test sessions endpoint without authentication."""
         response = client.get("/api/v1/analytics/sessions")
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_sessions_invalid_token(self, client):
         """Test sessions endpoint with invalid token."""
@@ -432,7 +432,7 @@ class TestSkillsEndpoint:
     def test_skills_unauthenticated(self, client):
         """Test skills endpoint without authentication."""
         response = client.get("/api/v1/analytics/skills")
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_skills_invalid_token(self, client):
         """Test skills endpoint with invalid token."""
@@ -654,7 +654,7 @@ class TestProgressEndpoint:
     def test_progress_unauthenticated(self, client):
         """Test progress endpoint without authentication."""
         response = client.get("/api/v1/analytics/progress")
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_progress_invalid_token(self, client):
         """Test progress endpoint with invalid token."""
@@ -844,7 +844,7 @@ class TestInsightsEndpoint:
     def test_insights_unauthenticated(self, client):
         """Test insights endpoint without authentication."""
         response = client.get("/api/v1/analytics/insights")
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_insights_invalid_token(self, client):
         """Test insights endpoint with invalid token."""
@@ -869,7 +869,7 @@ class TestAnalyticsErrorHandling:
         
         for endpoint in endpoints:
             response = client.get(endpoint)
-            assert response.status_code == 403, f"{endpoint} should require authentication"
+            assert response.status_code == 401, f"{endpoint} should require authentication"
     
     def test_all_endpoints_reject_invalid_tokens(self, client):
         """Test that all analytics endpoints reject invalid tokens."""

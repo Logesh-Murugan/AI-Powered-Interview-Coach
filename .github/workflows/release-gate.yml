@@ -1,0 +1,128 @@
+name: Release Gate
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "codex/**"
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: interviewmaster
+          POSTGRES_PASSWORD: interviewmaster
+          POSTGRES_DB: interviewmaster
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U interviewmaster -d interviewmaster"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      SECRET_KEY: interviewmaster-ci-secret-key-1234567890
+      DATABASE_URL: postgresql://interviewmaster:interviewmaster@localhost:5432/interviewmaster
+      REDIS_HOST: localhost
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      ENVIRONMENT: ci
+      DEBUG: "False"
+      ALLOWED_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173"]'
+      EMAIL_ENABLED: "False"
+      GEMINI_API_KEY: ci-dummy-gemini-key
+      GEMINI_API_KEY_2: ci-dummy-gemini-key-2
+      GEMINI_API_KEY_3: ci-dummy-gemini-key-3
+      PYTHONPATH: backend
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install backend system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmagic1
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run database migrations
+        working-directory: backend
+        run: |
+          alembic upgrade head
+
+      - name: Backend smoke validation
+        working-directory: backend
+        run: |
+          python scripts/demo_smoke_validation.py
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+
+      - name: Frontend type-check
+        working-directory: frontend
+        run: |
+          npm run type-check
+
+      - name: Frontend build
+        working-directory: frontend
+        run: |
+          npm run build
+
+      - name: Frontend critical service tests
+        working-directory: frontend
+        run: |
+          npm test -- --run \
+            src/services/__tests__/userService.test.ts \
+            src/services/__tests__/resumeAnalysisService.test.ts \
+            src/services/__tests__/companyCoachingService.test.ts \
+            src/services/__tests__/studyPlanService.test.ts
+
+      - name: Backend pytest (non-property)
+        working-directory: backend
+        run: |
+          python -m pytest tests -q --ignore=tests/property
+
+      - name: Backend pytest (property)
+        working-directory: backend
+        run: |
+          python -m pytest tests/property -q

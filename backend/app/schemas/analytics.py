@@ -2,7 +2,7 @@
 Analytics schemas for API responses.
 """
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
 
@@ -60,8 +60,7 @@ class AnalyticsOverview(BaseModel):
     cache_hit: bool = Field(False, description="Whether data was served from cache")
     calculated_at: datetime = Field(default_factory=datetime.utcnow, description="When analytics were calculated")
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "total_interviews_completed": 15,
                 "average_score_all_time": 78.5,
@@ -92,7 +91,7 @@ class AnalyticsOverview(BaseModel):
                 "cache_hit": False,
                 "calculated_at": "2026-02-14T15:45:00"
             }
-        }
+        })
 
 
 class SessionAnalytics(BaseModel):

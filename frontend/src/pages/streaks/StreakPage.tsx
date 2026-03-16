@@ -14,9 +14,9 @@ import {
   Breadcrumbs,
   Link,
   Alert,
-  Chip,
-  Grid
+  Chip
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import { useNavigate } from 'react-router-dom';

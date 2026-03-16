@@ -13,18 +13,17 @@ from typing import Optional
 class AnswerSubmit(BaseModel):
     """Schema for answer submission"""
     answer_text: str = Field(
-        ...,
-        min_length=10,
+        default="",
         max_length=5000,
-        description="User's answer text (10-5000 characters)"
+        description="User's answer text (0-5000 characters, can be empty for speech-only answers)"
     )
     
     @field_validator('answer_text')
     @classmethod
     def validate_answer_text(cls, v: str) -> str:
-        """Validate answer text is not empty or whitespace only"""
-        if not v or not v.strip():
-            raise ValueError("Answer text cannot be empty or whitespace only")
+        """Validate answer text - allow empty for speech-only answers"""
+        if v is None:
+            return ""
         return v.strip()
     
     model_config = ConfigDict(

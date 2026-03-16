@@ -6,7 +6,7 @@ This model links questions to interview sessions with display order and timing.
 Requirements: 14.8, 14.9, 15.1-15.7
 """
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 from datetime import datetime
 
 from app.models.base import Base
@@ -24,6 +24,7 @@ class SessionQuestion(Base):
     session_id = Column(Integer, ForeignKey("interview_sessions.id", ondelete="CASCADE"), nullable=False, index=True)
     question_id = Column(Integer, ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True)
     display_order = Column(Integer, nullable=False)  # Order in which questions are displayed
+    order = synonym('display_order')  # Backward-compatible alias for older code paths/tests
     
     # Timing
     question_displayed_at = Column(DateTime, nullable=True)  # When question was first shown to user
@@ -57,3 +58,4 @@ class SessionQuestion(Base):
             'status': self.status,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+

@@ -39,9 +39,14 @@ interface ImprovementRoadmapProps {
 }
 
 function ImprovementRoadmap({ roadmap }: ImprovementRoadmapProps) {
-  const { timeline_weeks, hours_per_week, total_hours, milestones, success_tips } = roadmap;
+  const { timeline_weeks, hours_per_week, total_hours, milestones, success_tips, recommendations, note } = roadmap;
 
-  if (!milestones || milestones.length === 0) {
+  // Check if we have any meaningful data
+  const hasMilestones = milestones && milestones.length > 0;
+  const hasRecommendations = recommendations && recommendations.length > 0;
+  const hasNote = note && note.length > 0;
+
+  if (!hasMilestones && !hasRecommendations && !hasNote) {
     return (
       <Paper sx={{ p: 3 }}>
         <Typography variant="h6" gutterBottom>
@@ -51,6 +56,33 @@ function ImprovementRoadmap({ roadmap }: ImprovementRoadmapProps) {
         <Alert severity="info">
           No improvement roadmap available. Your skills already match the target role well!
         </Alert>
+      </Paper>
+    );
+  }
+
+  // If we only have recommendations text (fallback mode)
+  if (!hasMilestones && (hasRecommendations || hasNote)) {
+    return (
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom>
+          <TrendingUp sx={{ mr: 1, verticalAlign: 'middle' }} />
+          Improvement Roadmap
+        </Typography>
+        {hasNote && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            {note}
+          </Alert>
+        )}
+        {hasRecommendations && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Recommendations:
+            </Typography>
+            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+              {recommendations}
+            </Typography>
+          </Box>
+        )}
       </Paper>
     );
   }

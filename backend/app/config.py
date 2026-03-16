@@ -1,9 +1,10 @@
 """
-Application Configuration using Pydantic Settings
+Application Configuration using Pydantic Settings.
 """
+import json
 from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -50,19 +51,34 @@ class Settings(BaseSettings):
     # Local storage - files saved to uploads/ directory
     # For production, consider AWS S3 or similar cloud storage
     
-    # AI Providers (Phase 4)
-    GROQ_API_KEY: str = ""
-    GROQ_API_KEY_2: str = ""
-    GROQ_API_KEY_3: str = ""
-    HUGGINGFACE_API_KEY: str = ""
-    HUGGINGFACE_API_KEY_2: str = ""
+    # AI Providers - Multi-provider (Gemini deprecated)
+    OPENROUTER_API_KEY: str = Field(default="", description="OpenRouter API key #1")
+    OPENROUTER_API_KEY_2: str = Field(default="", description="OpenRouter API key #2")
+    OPENROUTER_API_KEY_3: str = Field(default="", description="OpenRouter API key #3")
+
+    DEEPINFRA_API_KEY: str = Field(default="", description="DeepInfra API key #1")
+    DEEPINFRA_API_KEY_2: str = Field(default="", description="DeepInfra API key #2")
+    DEEPINFRA_API_KEY_3: str = Field(default="", description="DeepInfra API key #3")
+
+    HUGGINGFACE_API_KEY: str = Field(default="", description="HuggingFace API token #1")
+    HUGGINGFACE_API_KEY_2: str = Field(default="", description="HuggingFace API token #2")
+    HUGGINGFACE_API_KEY_3: str = Field(default="", description="HuggingFace API token #3")
+
+    # Deprecated: retained for backward compatibility only
+    GEMINI_API_KEY: str = ""
+    GEMINI_API_KEY_2: str = ""
+    GEMINI_API_KEY_3: str = ""
     
     # Email
+    EMAIL_ENABLED: bool = False
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
+    SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
     EMAIL_FROM: str = "noreply@interviewmaster.ai"
+    EMAIL_FROM_ADDRESS: str = "noreply@interviewmaster.ai"
+    FRONTEND_URL: str = "http://localhost:5173"
     
     # Monitoring
     SENTRY_DSN: str = ""
@@ -74,6 +90,33 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore"
     )
+
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def parse_allowed_origins(cls, value):
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return []
+            if value.startswith("["):
+                try:
+                    parsed = json.loads(value)
+                    if isinstance(parsed, list):
+                        return [str(item).strip() for item in parsed if str(item).strip()]
+                except json.JSONDecodeError:
+                    pass
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    @property
+    def effective_smtp_user(self) -> str:
+        return self.SMTP_USERNAME or self.SMTP_USER
+
+    @property
+    def effective_email_from(self) -> str:
+        return self.EMAIL_FROM_ADDRESS or self.EMAIL_FROM
 
 
 # Global settings instance

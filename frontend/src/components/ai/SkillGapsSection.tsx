@@ -78,10 +78,25 @@ function SkillGapsSection({ skillGaps }: SkillGapsProps) {
           <Warning sx={{ mr: 1, verticalAlign: 'middle' }} />
           Skill Gaps
         </Typography>
-        <Alert severity="success">
-          Great! No skill gaps identified for the target role "{skillGaps.target_role}".
-          You have {skillGaps.match_percentage}% match.
-        </Alert>
+        {skillGaps.analysis && skillGaps.analysis.trim().length > 0 ? (
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+              {skillGaps.analysis}
+            </Typography>
+          </Box>
+        ) : (
+          <Alert severity="success">
+            Great! No skill gaps identified for the target role "{skillGaps.target_role}".
+            {skillGaps.match_percentage !== undefined && skillGaps.match_percentage > 0 && (
+              <> You have {skillGaps.match_percentage}% match.</>
+            )}
+          </Alert>
+        )}
+        {skillGaps.note && (
+          <Alert severity="info" sx={{ mt: 2 }}>
+            {skillGaps.note}
+          </Alert>
+        )}
       </Paper>
     );
   }

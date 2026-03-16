@@ -9,6 +9,7 @@ import { useAppSelector, useAppDispatch } from '../../store/hooks';
 import { updateProfile, clearError } from '../../store/slices/authSlice';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import ProfileEditForm from '../../components/profile/ProfileEditForm';
+import type { UpdateProfileRequest } from '../../services/userService';
 
 function ProfilePage() {
   const dispatch = useAppDispatch();
@@ -32,7 +33,7 @@ function ProfilePage() {
 
   const handleSubmit = async (data: { name: string; target_role?: string; experience_level?: string }) => {
     try {
-      await dispatch(updateProfile(data)).unwrap();
+      await dispatch(updateProfile(data as UpdateProfileRequest)).unwrap();
       setSuccessMessage('Profile updated successfully!');
       setIsEditMode(false);
       

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.schemas.user import UserProfileResponse, UserProfileUpdateRequest
-from app.services.user_service import UserService
+from app.services.user_service import UserService, normalize_experience_level_for_response
 
 router = APIRouter()
 
@@ -58,7 +58,7 @@ router = APIRouter()
     }
 )
 async def get_current_user_profile(
-    current_user: dict = Depends(get_current_user),
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> UserProfileResponse:
     """
@@ -77,7 +77,7 @@ async def get_current_user_profile(
         email=user.email,
         name=user.name,
         target_role=user.target_role,
-        experience_level=user.experience_level.value if user.experience_level else None,
+        experience_level=normalize_experience_level_for_response(user.experience_level),
         account_status=user.account_status.value,
         created_at=user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at),
         updated_at=user.updated_at.isoformat() if hasattr(user.updated_at, 'isoformat') else str(user.updated_at)
@@ -151,7 +151,7 @@ async def get_current_user_profile(
 )
 async def update_current_user_profile(
     profile_data: UserProfileUpdateRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> UserProfileResponse:
     """
@@ -175,8 +175,9 @@ async def update_current_user_profile(
         email=user.email,
         name=user.name,
         target_role=user.target_role,
-        experience_level=user.experience_level.value if user.experience_level else None,
+        experience_level=normalize_experience_level_for_response(user.experience_level),
         account_status=user.account_status.value,
         created_at=user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at),
         updated_at=user.updated_at.isoformat() if hasattr(user.updated_at, 'isoformat') else str(user.updated_at)
     )
+

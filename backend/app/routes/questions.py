@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 async def generate_questions(
     request: QuestionGenerateRequest,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """
     Generate interview questions based on role and difficulty.
@@ -54,7 +54,7 @@ async def generate_questions(
     start_time = time.time()
     
     try:
-        user_id = current_user.get("user_id")
+        user_id = current_user.id
         logger.info(
             f"User {user_id} requesting {request.question_count} questions "
             f"for role={request.role}, difficulty={request.difficulty}"
@@ -131,3 +131,4 @@ async def health_check():
         "service": "questions",
         "timestamp": time.time()
     }
+

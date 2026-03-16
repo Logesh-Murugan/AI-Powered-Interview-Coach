@@ -14,7 +14,8 @@ Requirements: 27.4, 27.5
 """
 import json
 import logging
-from typing import Dict, Any, List
+import re
+from typing import Dict, Any, List, Union
 from datetime import datetime
 
 from langchain_core.tools import Tool
@@ -45,6 +46,20 @@ class ResumeParserTool:
     )
     
     @staticmethod
+    def _parse_resume_id(raw_input: str) -> Union[int, None]:
+        """
+        Extract the first integer value from the raw input string.
+        """
+        if not raw_input:
+            return None
+
+        match = re.search(r"(\d+)", raw_input)
+        return int(match.group(1)) if match else None
+
+    MAX_EXTRACTED_TEXT_LENGTH = 768
+    MAX_SUMMARY_LENGTH = 256
+
+    @staticmethod
     def _run(resume_id: str) -> str:
         """
         Parse resume from database.
@@ -58,8 +73,9 @@ class ResumeParserTool:
         try:
             db = SessionLocal()
             
-            # Convert to int
-            resume_id_int = int(resume_id)
+            resume_id_int = ResumeParserTool._parse_resume_id(resume_id)
+            if resume_id_int is None:
+                raise ValueError("No valid resume_id found in input")
             
             # Get resume
             resume = db.query(Resume).filter(Resume.id == resume_id_int).first()
@@ -70,10 +86,14 @@ class ResumeParserTool:
                 })
             
             # Extract data
+            extracted_text = resume.extracted_text or ''
+            if len(extracted_text) > ResumeParserTool.MAX_EXTRACTED_TEXT_LENGTH:
+                extracted_text = extracted_text[:ResumeParserTool.MAX_EXTRACTED_TEXT_LENGTH]
+
             result = {
                 'resume_id': resume.id,
                 'filename': resume.filename,
-                'extracted_text': resume.extracted_text or '',
+                'text_summary': extracted_text[:ResumeParserTool.MAX_SUMMARY_LENGTH],
                 'skills': resume.skills or {},
                 'experience': resume.experience or {},
                 'education': resume.education or {},
@@ -82,7 +102,7 @@ class ResumeParserTool:
             
             db.close()
             
-            return json.dumps(result, indent=2)
+            return json.dumps(result, separators=(",", ":"))
             
         except Exception as e:
             logger.error(f"ResumeParserTool error: {e}")
@@ -127,8 +147,28 @@ class SkillExtractorTool:
             JSON string with categorized skills
         """
         try:
+            text_to_parse = resume_text
+
+            # If input looks like a numeric resume_id, load text directly from the database
+            resume_id_guess = None
+            if isinstance(resume_text, str):
+                cleaned = resume_text.strip()
+                if cleaned.isdigit():
+                    resume_id_guess = int(cleaned)
+                else:
+                    match = re.search(r"(\\d+)", cleaned)
+                    if match and len(cleaned) <= 6:
+                        resume_id_guess = int(match.group(1))
+
+            if resume_id_guess is not None:
+                db = SessionLocal()
+                resume_record = db.query(Resume).filter(Resume.id == resume_id_guess).first()
+                if resume_record:
+                    text_to_parse = resume_record.extracted_text or ''
+                db.close()
+
             # Use existing skill extraction utility
-            skills_detailed = extract_skills_from_text(resume_text)
+            skills_detailed = extract_skills_from_text(text_to_parse)
             
             # Extract just the skill names from detailed format
             technical_skills = [skill['skill'] for skill in skills_detailed.get('technical_skills', [])]
@@ -145,7 +185,7 @@ class SkillExtractorTool:
                 'total_skills': len(technical_skills) + len(soft_skills) + len(tools) + len(languages)
             }
             
-            return json.dumps(result, indent=2)
+            return json.dumps(result, separators=(",", ":"))
             
         except Exception as e:
             logger.error(f"SkillExtractorTool error: {e}")
@@ -241,7 +281,7 @@ class ExperienceAnalyzerTool:
                 'career_progression': 'Upward' if len(roles) > 1 else 'Stable'
             }
             
-            return json.dumps(result, indent=2)
+            return json.dumps(result, separators=(",", ":"))
             
         except Exception as e:
             logger.error(f"ExperienceAnalyzerTool error: {e}")
@@ -354,7 +394,7 @@ class SkillGapTool:
                 'recommendation': 'Focus on required skills first' if required_gaps else 'Consider adding preferred skills'
             }
             
-            return json.dumps(result, indent=2)
+            return json.dumps(result, separators=(",", ":"))
             
         except Exception as e:
             logger.error(f"SkillGapTool error: {e}")
@@ -457,7 +497,7 @@ class RoadmapGeneratorTool:
                 ]
             }
             
-            return json.dumps(result, indent=2)
+            return json.dumps(result, separators=(",", ":"))
             
         except Exception as e:
             logger.error(f"RoadmapGeneratorTool error: {e}")
@@ -466,6 +506,74 @@ class RoadmapGeneratorTool:
     @classmethod
     def as_tool(cls) -> Tool:
         """Convert to LangChain Tool."""
+        return Tool(
+            name=cls.name,
+            description=cls.description,
+            func=cls._run
+        )
+
+
+class AnalysisFormatterTool:
+    """
+    Tool to format the assembled data into the required JSON schema.
+    """
+
+    name = "analysis_formatter"
+    description = (
+        "Format the collected skill inventory, experience timeline, skill gaps, "
+        "and learning roadmap into the final JSON structure that the resume agent must return. "
+        "Input should be JSON with keys: skill_inventory, experience_timeline, skill_gaps, improvement_roadmap, and optional analysis_summary."
+    )
+
+    @staticmethod
+    def _extract_json(text: str) -> str:
+        start = text.find("{")
+        if start == -1:
+            raise ValueError("No JSON object found in payload")
+
+        depth = 0
+        for idx in range(start, len(text)):
+            char = text[idx]
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[start: idx + 1]
+
+        raise ValueError("Unbalanced JSON braces in payload")
+
+    def _run(payload: Union[str, Dict[str, Any]]) -> str:
+        try:
+            if isinstance(payload, str):
+                trimmed = payload.strip()
+                json_part = AnalysisFormatterTool._extract_json(trimmed)
+                data = json.loads(json_part)
+            else:
+                data = payload
+        except Exception as exc:
+            logger.error(f"AnalysisFormatterTool input parse error: {exc}")
+            raise
+
+        analysis_data = {
+            "skill_inventory": data.get("skill_inventory", {}) or {},
+            "experience_timeline": data.get("experience_timeline", {}) or {},
+            "skill_gaps": data.get("skill_gaps", {}) or {},
+            "improvement_roadmap": data.get("improvement_roadmap", {}) or {},
+        }
+
+        result = {
+            **analysis_data
+        }
+
+        summary = data.get("analysis_summary")
+        if summary:
+            result["analysis_summary"] = summary
+
+        return json.dumps(result, separators=(",", ":"))
+
+    @classmethod
+    def as_tool(cls) -> Tool:
         return Tool(
             name=cls.name,
             description=cls.description,

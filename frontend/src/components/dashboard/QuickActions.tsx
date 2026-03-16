@@ -11,6 +11,9 @@ import HistoryIcon from '@mui/icons-material/History';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import PsychologyIcon from '@mui/icons-material/Psychology';
+import SchoolIcon from '@mui/icons-material/School';
+import BusinessIcon from '@mui/icons-material/Business';
 
 function QuickActions() {
   const navigate = useNavigate();
@@ -29,6 +32,20 @@ function QuickActions() {
       color: 'secondary' as const,
       variant: 'outlined' as const,
       onClick: () => navigate('/resumes/upload'),
+    },
+    {
+      label: 'Study Plans',
+      icon: <SchoolIcon />,
+      color: 'primary' as const,
+      variant: 'outlined' as const,
+      onClick: () => navigate('/ai/study-plans'),
+    },
+    {
+      label: 'Company Coaching',
+      icon: <BusinessIcon />,
+      color: 'info' as const,
+      variant: 'outlined' as const,
+      onClick: () => navigate('/ai/company-coaching'),
     },
     {
       label: 'View History',

@@ -11,6 +11,9 @@ class ProviderType(str, Enum):
     """AI provider types"""
     GROQ = "groq"
     HUGGINGFACE = "huggingface"
+    GEMINI = "gemini"  # Deprecated (kept for backward compatibility)
+    OPENROUTER = "openrouter"
+    DEEPINFRA = "deepinfra"
 
 
 @dataclass
@@ -19,7 +22,7 @@ class ProviderConfig:
     Configuration for an AI provider.
     
     Attributes:
-        name: Provider name (e.g., "groq", "gemini")
+        name: Provider name (e.g., "openrouter_llama", "deepinfra_llama")
         provider_type: Type of provider
         api_key: API key for authentication (optional for local providers)
         api_url: Base URL for API calls

@@ -138,7 +138,7 @@ function SessionHistoryPage() {
     // Filter by score range
     if (filterScoreRange !== 'all' && filterScoreRange !== 'no_score') {
       filtered = filtered.filter(s => {
-        if (!s.overall_session_score) return false;
+        if (s.overall_session_score === undefined || s.overall_session_score === null) return false;
         
         const score = s.overall_session_score;
         switch (filterScoreRange) {
@@ -155,7 +155,7 @@ function SessionHistoryPage() {
         }
       });
     } else if (filterScoreRange === 'no_score') {
-      filtered = filtered.filter(s => !s.overall_session_score);
+      filtered = filtered.filter(s => s.overall_session_score === undefined || s.overall_session_score === null);
     }
 
     // Sort
@@ -199,7 +199,7 @@ function SessionHistoryPage() {
       });
 
       // Create blob from response
-      const blob = new Blob([response.data], { type: 'text/csv' });
+      const blob = new Blob([response.data as BlobPart], { type: 'text/csv' });
       
       // Create download link
       const url = window.URL.createObjectURL(blob);
@@ -595,3 +595,4 @@ function SessionHistoryPage() {
 }
 
 export default SessionHistoryPage;
+

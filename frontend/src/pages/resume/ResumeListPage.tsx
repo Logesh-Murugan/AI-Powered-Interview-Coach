@@ -40,6 +40,7 @@ import {
   Error as ErrorIcon,
   SearchOff,
   FilterList,
+  Psychology,
 } from '@mui/icons-material';
 import { resumeService, type Resume } from '../../services/resumeService';
 import { format } from 'date-fns';
@@ -357,13 +358,26 @@ function ResumeListPage() {
                 </CardContent>
 
                 <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-                  <Button
-                    size="small"
-                    startIcon={<Visibility />}
-                    onClick={() => navigate(`/resumes/${resume.id}`)}
-                  >
-                    View Details
-                  </Button>
+                  <Stack direction="row" spacing={1}>
+                    <Button
+                      size="small"
+                      startIcon={<Visibility />}
+                      onClick={() => navigate(`/resumes/${resume.id}`)}
+                    >
+                      View
+                    </Button>
+                    {resume.status === 'completed' && (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<Psychology />}
+                        onClick={() => navigate(`/ai/resume-analysis/${resume.id}`)}
+                        color="secondary"
+                      >
+                        Analyze
+                      </Button>
+                    )}
+                  </Stack>
                   <IconButton
                     size="small"
                     color="error"

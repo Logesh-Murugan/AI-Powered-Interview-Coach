@@ -138,7 +138,7 @@ function InterviewStartPage() {
         {error && (
           <ErrorAlert
             message={error}
-            onRetry={handleSubmit}
+            onRetry={() => void handleSubmit(new Event('submit') as unknown as React.FormEvent)}
             onDismiss={() => setError(null)}
           />
         )}

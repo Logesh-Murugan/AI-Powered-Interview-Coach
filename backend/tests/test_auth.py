@@ -7,29 +7,13 @@ import uuid
 
 # Import all models first to ensure they're registered with Base
 from app.models import User, AccountStatus, RefreshToken, PasswordResetToken
-from app.main import app
-from app.database import get_db
-
-client = TestClient(app)
 
 
 class TestUserRegistration:
     """Test user registration endpoint."""
+
     
-    @pytest.fixture(autouse=True)
-    def setup(self, db: Session):
-        """Override get_db dependency to use test database session"""
-        def override_get_db():
-            try:
-                yield db
-            finally:
-                pass
-        
-        app.dependency_overrides[get_db] = override_get_db
-        yield
-        app.dependency_overrides.clear()
-    
-    def test_register_user_success(self, db: Session):
+    def test_register_user_success(self, client: TestClient, db: Session):
         """Test successful user registration."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         response = client.post(
@@ -54,7 +38,7 @@ class TestUserRegistration:
         assert "password_hash" not in data["user"]
         assert "id" in data["user"]
     
-    def test_register_user_without_target_role(self, db: Session):
+    def test_register_user_without_target_role(self, client: TestClient, db: Session):
         """Test registration without optional target_role."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         response = client.post(
@@ -70,7 +54,7 @@ class TestUserRegistration:
         data = response.json()
         assert data["user"]["target_role"] is None
     
-    def test_register_duplicate_email(self, db: Session):
+    def test_register_duplicate_email(self, client: TestClient, db: Session):
         """Test registration with duplicate email returns 409."""
         # Register first user
         client.post(
@@ -95,7 +79,7 @@ class TestUserRegistration:
         assert response.status_code == 409
         assert response.json()["detail"] == "Email already registered"
     
-    def test_register_invalid_email(self, db: Session):
+    def test_register_invalid_email(self, client: TestClient, db: Session):
         """Test registration with invalid email format."""
         response = client.post(
             "/api/v1/auth/register",
@@ -108,7 +92,7 @@ class TestUserRegistration:
         
         assert response.status_code == 422  # Validation error
     
-    def test_register_weak_password_too_short(self, db: Session):
+    def test_register_weak_password_too_short(self, client: TestClient, db: Session):
         """Test registration with password too short."""
         response = client.post(
             "/api/v1/auth/register",
@@ -122,7 +106,7 @@ class TestUserRegistration:
         assert response.status_code == 422
         assert "at least 8 characters" in str(response.json())
     
-    def test_register_weak_password_no_uppercase(self, db: Session):
+    def test_register_weak_password_no_uppercase(self, client: TestClient, db: Session):
         """Test registration with password missing uppercase."""
         response = client.post(
             "/api/v1/auth/register",
@@ -136,7 +120,7 @@ class TestUserRegistration:
         assert response.status_code == 422
         assert "uppercase letter" in str(response.json())
     
-    def test_register_weak_password_no_lowercase(self, db: Session):
+    def test_register_weak_password_no_lowercase(self, client: TestClient, db: Session):
         """Test registration with password missing lowercase."""
         response = client.post(
             "/api/v1/auth/register",
@@ -150,7 +134,7 @@ class TestUserRegistration:
         assert response.status_code == 422
         assert "lowercase letter" in str(response.json())
     
-    def test_register_weak_password_no_number(self, db: Session):
+    def test_register_weak_password_no_number(self, client: TestClient, db: Session):
         """Test registration with password missing number."""
         response = client.post(
             "/api/v1/auth/register",
@@ -164,7 +148,7 @@ class TestUserRegistration:
         assert response.status_code == 422
         assert "number" in str(response.json())
     
-    def test_register_weak_password_no_special(self, db: Session):
+    def test_register_weak_password_no_special(self, client: TestClient, db: Session):
         """Test registration with password missing special character."""
         response = client.post(
             "/api/v1/auth/register",
@@ -178,7 +162,7 @@ class TestUserRegistration:
         assert response.status_code == 422
         assert "special character" in str(response.json())
     
-    def test_register_empty_name(self, db: Session):
+    def test_register_empty_name(self, client: TestClient, db: Session):
         """Test registration with empty name."""
         response = client.post(
             "/api/v1/auth/register",
@@ -191,7 +175,7 @@ class TestUserRegistration:
         
         assert response.status_code == 422
     
-    def test_register_whitespace_name(self, db: Session):
+    def test_register_whitespace_name(self, client: TestClient, db: Session):
         """Test registration with whitespace-only name."""
         response = client.post(
             "/api/v1/auth/register",
@@ -205,7 +189,7 @@ class TestUserRegistration:
         assert response.status_code == 422
         assert "empty or whitespace" in str(response.json())
     
-    def test_register_name_too_short(self, db: Session):
+    def test_register_name_too_short(self, client: TestClient, db: Session):
         """Test registration with name too short."""
         response = client.post(
             "/api/v1/auth/register",
@@ -218,7 +202,7 @@ class TestUserRegistration:
         
         assert response.status_code == 422
     
-    def test_register_email_case_insensitive(self, db: Session):
+    def test_register_email_case_insensitive(self, client: TestClient, db: Session):
         """Test that email is stored in lowercase."""
         unique_prefix = uuid.uuid4().hex[:8]
         response = client.post(
@@ -234,7 +218,7 @@ class TestUserRegistration:
         data = response.json()
         assert data["user"]["email"] == f"test{unique_prefix}@example.com"
     
-    def test_register_password_hashed(self, db: Session):
+    def test_register_password_hashed(self, client: TestClient, db: Session):
         """Test that password is hashed before storage."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         response = client.post(
@@ -258,7 +242,7 @@ class TestUserRegistration:
         
         pass  # Using db fixture
     
-    def test_register_response_time(self, db: Session):
+    def test_register_response_time(self, client: TestClient, db: Session):
         """Test that registration completes within acceptable time."""
         import time
         
@@ -282,7 +266,7 @@ class TestUserRegistration:
 class TestUserLogin:
     """Test user login endpoint."""
     
-    def test_login_success(self, db: Session):
+    def test_login_success(self, client: TestClient, db: Session):
         """Test successful user login."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         # Register user first
@@ -320,7 +304,7 @@ class TestUserLogin:
         assert data["user"]["email"] == unique_email
         assert "password" not in data["user"]
     
-    def test_login_invalid_email(self, db: Session):
+    def test_login_invalid_email(self, client: TestClient, db: Session):
         """Test login with non-existent email."""
         response = client.post(
             "/api/v1/auth/login",
@@ -333,7 +317,7 @@ class TestUserLogin:
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid credentials"
     
-    def test_login_invalid_password(self, db: Session):
+    def test_login_invalid_password(self, client: TestClient, db: Session):
         """Test login with incorrect password."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         # Register user
@@ -358,7 +342,7 @@ class TestUserLogin:
         assert response.status_code == 401
         assert response.json()["detail"] == "Invalid credentials"
     
-    def test_login_account_locked_after_5_failures(self, db: Session):
+    def test_login_account_locked_after_5_failures(self, client: TestClient, db: Session):
         """Test that account locks after 5 failed login attempts."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         # Register user
@@ -388,7 +372,7 @@ class TestUserLogin:
                 assert response.status_code == 423
                 assert "locked" in response.json()["detail"].lower()
     
-    def test_login_case_insensitive_email(self, db: Session):
+    def test_login_case_insensitive_email(self, client: TestClient, db: Session):
         """Test that login email is case-insensitive."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         # Register user
@@ -424,7 +408,7 @@ class TestUserLogin:
 class TestTokenRefresh:
     """Test token refresh endpoint."""
     
-    def test_refresh_token_success(self, db: Session):
+    def test_refresh_token_success(self, client: TestClient, db: Session):
         """Test successful token refresh."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         # Register and login user
@@ -471,7 +455,7 @@ class TestTokenRefresh:
         # Verify it's a valid JWT token (has 3 parts)
         assert len(data["access_token"].split('.')) == 3
     
-    def test_refresh_token_invalid(self, db: Session):
+    def test_refresh_token_invalid(self, client: TestClient, db: Session):
         """Test refresh with invalid token."""
         response = client.post(
             "/api/v1/auth/refresh",
@@ -483,7 +467,7 @@ class TestTokenRefresh:
         assert response.status_code == 401
         assert "Invalid or expired" in response.json()["detail"]
     
-    def test_refresh_token_expired(self, db: Session):
+    def test_refresh_token_expired(self, client: TestClient, db: Session):
         """Test refresh with expired token."""
         from datetime import datetime, timedelta
         import jwt
@@ -508,7 +492,7 @@ class TestTokenRefresh:
         
         assert response.status_code == 401
     
-    def test_refresh_token_not_in_database(self, db: Session):
+    def test_refresh_token_not_in_database(self, client: TestClient, db: Session):
         """Test refresh with token not in database."""
         from app.utils.jwt import create_refresh_token
         
@@ -525,7 +509,7 @@ class TestTokenRefresh:
         assert response.status_code == 401
         assert "not found" in response.json()["detail"].lower()
     
-    def test_refresh_token_response_time(self, db: Session):
+    def test_refresh_token_response_time(self, client: TestClient, db: Session):
         """Test that token refresh completes quickly."""
         import time
         
@@ -576,7 +560,7 @@ class TestTokenRefresh:
 class TestLogout:
     """Test logout endpoints."""
     
-    def test_logout_success(self, db: Session):
+    def test_logout_success(self, client: TestClient, db: Session):
         """Test successful logout from current session."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         # Register and login user
@@ -631,7 +615,7 @@ class TestLogout:
         assert token_record.is_revoked is True
         pass  # Using db fixture
     
-    def test_logout_invalid_token(self, db: Session):
+    def test_logout_invalid_token(self, client: TestClient, db: Session):
         """Test logout with invalid refresh token."""
         response = client.post(
             "/api/v1/auth/logout",
@@ -643,7 +627,7 @@ class TestLogout:
         assert response.status_code == 401
         assert "Invalid refresh token" in response.json()["detail"]
     
-    def test_logout_prevents_token_reuse(self, db: Session):
+    def test_logout_prevents_token_reuse(self, client: TestClient, db: Session):
         """Test that logged out token cannot be used for refresh."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         # Register and login user
@@ -693,7 +677,7 @@ class TestLogout:
         assert response.status_code == 401
         assert "revoked" in response.json()["detail"].lower()
     
-    def test_logout_response_time(self, db: Session):
+    def test_logout_response_time(self, client: TestClient, db: Session):
         """Test that logout completes quickly."""
         import time
         
@@ -743,7 +727,7 @@ class TestLogout:
 class TestLogoutAllDevices:
     """Test logout from all devices endpoint."""
     
-    def test_logout_all_devices_success(self, db: Session):
+    def test_logout_all_devices_success(self, client: TestClient, db: Session):
         """Test successful logout from all devices."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         # Register and login user
@@ -811,13 +795,13 @@ class TestLogoutAllDevices:
                 assert token_record.is_revoked is True
         pass  # Using db fixture
     
-    def test_logout_all_devices_no_auth(self, db: Session):
+    def test_logout_all_devices_no_auth(self, client: TestClient, db: Session):
         """Test logout all devices without authentication."""
         response = client.post("/api/v1/auth/logout-all")
         
-        assert response.status_code == 403  # FastAPI HTTPBearer returns 403 for missing auth
+        assert response.status_code == 401
     
-    def test_logout_all_devices_invalid_token(self, db: Session):
+    def test_logout_all_devices_invalid_token(self, client: TestClient, db: Session):
         """Test logout all devices with invalid access token."""
         response = client.post(
             "/api/v1/auth/logout-all",
@@ -828,7 +812,7 @@ class TestLogoutAllDevices:
         
         assert response.status_code == 401
     
-    def test_logout_all_devices_prevents_token_reuse(self, db: Session):
+    def test_logout_all_devices_prevents_token_reuse(self, client: TestClient, db: Session):
         """Test that all tokens cannot be used after logout-all."""
         unique_email = f"test_{uuid.uuid4().hex[:8]}@example.com"
         # Register and login user
@@ -882,7 +866,7 @@ class TestLogoutAllDevices:
             assert response.status_code == 401
             assert "revoked" in response.json()["detail"].lower()
     
-    def test_logout_all_devices_response_time(self, db: Session):
+    def test_logout_all_devices_response_time(self, client: TestClient, db: Session):
         """Test that logout-all completes within acceptable time."""
         import time
         
@@ -931,3 +915,6 @@ class TestLogoutAllDevices:
         
         assert response.status_code == 200
         assert duration_ms < 200  # Should complete within 200ms
+
+
+

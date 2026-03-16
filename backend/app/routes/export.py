@@ -165,7 +165,18 @@ async def export_analytics_pdf(
         analytics_service = AnalyticsService(db, cache_service)
         
         # Fetch comprehensive analytics
-        overview = analytics_service.get_analytics_overview(user_id)
+        overview_raw = analytics_service.get_analytics_overview(user_id)
+        # Convert to dict if it's a Pydantic model or other object
+        if hasattr(overview_raw, 'model_dump'):
+            overview = overview_raw.model_dump()
+        elif hasattr(overview_raw, 'dict'):
+            overview = overview_raw.dict()
+        elif hasattr(overview_raw, '__dict__'):
+            overview = vars(overview_raw)
+        elif isinstance(overview_raw, dict):
+            overview = overview_raw
+        else:
+            overview = dict(overview_raw)
         
         # Import PDF generation library
         try:
@@ -220,12 +231,17 @@ async def export_analytics_pdf(
         # Overview Statistics
         story.append(Paragraph("Performance Overview", heading_style))
         
+        total_sessions = overview.get('total_interviews_completed', 0)
+        avg_score = overview.get('average_score_all_time') or 0
+        practice_hours = overview.get('total_practice_hours', 0)
+        improvement = overview.get('improvement_rate') or 0
+        
         overview_data = [
             ['Metric', 'Value'],
-            ['Total Sessions', str(overview.total_sessions)],
-            ['Average Score', f"{overview.average_score:.1f}"],
-            ['Total Practice Time', f"{overview.total_practice_time_minutes} minutes"],
-            ['Completion Rate', f"{overview.completion_rate:.1f}%"]
+            ['Total Sessions', str(total_sessions)],
+            ['Average Score', f"{avg_score:.1f}%"],
+            ['Total Practice Time', f"{practice_hours:.1f} hours"],
+            ['Improvement Rate', f"{improvement:.1f}%"]
         ]
         
         overview_table = Table(overview_data, colWidths=[3*inch, 2*inch])
@@ -244,39 +260,46 @@ async def export_analytics_pdf(
         story.append(Spacer(1, 0.3*inch))
         
         # Strengths and Weaknesses
-        story.append(Paragraph("Strengths & Areas for Improvement", heading_style))
+        story.append(Paragraph("Strengths &amp; Areas for Improvement", heading_style))
         
-        if overview.top_strengths:
+        top_strengths = overview.get('top_5_strengths', [])
+        if top_strengths:
             story.append(Paragraph("<b>Top Strengths:</b>", styles['Normal']))
-            for strength in overview.top_strengths[:5]:
+            for strength in top_strengths[:5]:
                 story.append(Paragraph(f"• {strength}", styles['Normal']))
             story.append(Spacer(1, 0.1*inch))
         
-        if overview.top_weaknesses:
+        top_weaknesses = overview.get('top_5_weaknesses', [])
+        if top_weaknesses:
             story.append(Paragraph("<b>Areas for Improvement:</b>", styles['Normal']))
-            for weakness in overview.top_weaknesses[:5]:
+            for weakness in top_weaknesses[:5]:
                 story.append(Paragraph(f"• {weakness}", styles['Normal']))
             story.append(Spacer(1, 0.3*inch))
         
         # Recommendations
-        if overview.recommendations:
+        recommendations = overview.get('practice_recommendations', [])
+        if recommendations:
             story.append(Paragraph("Personalized Recommendations", heading_style))
-            for i, rec in enumerate(overview.recommendations[:5], 1):
-                story.append(Paragraph(f"{i}. {rec}", styles['Normal']))
+            for i, rec in enumerate(recommendations[:5], 1):
+                if isinstance(rec, dict):
+                    story.append(Paragraph(f"{i}. {rec.get('suggestion', str(rec))}", styles['Normal']))
+                else:
+                    story.append(Paragraph(f"{i}. {rec}", styles['Normal']))
             story.append(Spacer(1, 0.3*inch))
         
         # Recent Sessions
         story.append(Paragraph("Recent Session Performance", heading_style))
         
-        if overview.recent_sessions:
-            session_data = [['Date', 'Role', 'Score', 'Status']]
-            for session in overview.recent_sessions[:10]:
-                session_data.append([
-                    session.get('date', 'N/A'),
-                    session.get('role', 'N/A'),
-                    f"{session.get('score', 0):.1f}",
-                    session.get('status', 'N/A')
-                ])
+        recent_sessions = overview.get('score_over_time', [])
+        if recent_sessions:
+            session_data = [['Week', 'Avg Score', 'Sessions']]
+            for session in recent_sessions[:10]:
+                if isinstance(session, dict):
+                    session_data.append([
+                        session.get('week', 'N/A'),
+                        f"{session.get('avg_score', 0):.1f}",
+                        str(session.get('session_count', 0)),
+                    ])
             
             session_table = Table(session_data, colWidths=[1.5*inch, 2*inch, 1*inch, 1.5*inch])
             session_table.setStyle(TableStyle([
@@ -317,3 +340,4 @@ async def export_analytics_pdf(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to export analytics report: {str(e)}"
         )
+

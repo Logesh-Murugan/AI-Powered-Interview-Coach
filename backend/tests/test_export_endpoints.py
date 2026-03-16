@@ -114,8 +114,8 @@ def test_sessions(db: Session, test_user: User):
 @pytest.fixture
 def auth_headers(test_user: User):
     """Create authentication headers for test user."""
-    from app.middleware.auth import create_access_token
-    token = create_access_token(data={"sub": test_user.email})
+    from app.utils.jwt import create_access_token
+    token = create_access_token(test_user.id, test_user.email)
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -341,7 +341,7 @@ class TestExportSessionsCSV:
         """
         response = client.get("/api/v1/export/sessions")
         # Returns 403 Forbidden when no auth token provided
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_export_sessions_csv_empty(
         self,
@@ -363,8 +363,8 @@ class TestExportSessionsCSV:
         db.add(user)
         db.commit()
         
-        from app.middleware.auth import create_access_token
-        token = create_access_token(data={"sub": user.email})
+        from app.utils.jwt import create_access_token
+        token = create_access_token(user.id, user.email)
         headers = {"Authorization": f"Bearer {token}"}
         
         response = client.get(
@@ -427,7 +427,7 @@ class TestExportAnalyticsPDF:
         """
         response = client.get("/api/v1/export/analytics")
         # Returns 403 Forbidden when no auth token provided
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_export_analytics_pdf_no_reportlab(
         self,
@@ -576,3 +576,6 @@ class TestExportDataFormat:
         
         # Note: Full PDF content verification would require PDF parsing library
         # For now, we verify the PDF is generated and has reasonable size
+
+
+

@@ -8,9 +8,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from app.models.user_achievement import UserAchievement, AchievementType
 from app.models.user import User
-from app.models.interview_session import InterviewSession
+from app.models.interview_session import InterviewSession, SessionStatus
 from app.models.evaluation import Evaluation
-from app.models.session_question import SessionQuestion
+from app.models.answer import Answer
+from app.models.question import Question
 from app.schemas.achievement import (
     AchievementDefinition,
     UserAchievementResponse,
@@ -135,7 +136,7 @@ class AchievementService:
         completed_count = self.db.query(func.count(InterviewSession.id)).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed',
+                InterviewSession.status == SessionStatus.COMPLETED,
                 InterviewSession.deleted_at.is_(None)
             )
         ).scalar()
@@ -149,7 +150,7 @@ class AchievementService:
         completed_count = self.db.query(func.count(InterviewSession.id)).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed',
+                InterviewSession.status == SessionStatus.COMPLETED,
                 InterviewSession.deleted_at.is_(None)
             )
         ).scalar()
@@ -163,7 +164,7 @@ class AchievementService:
         completed_count = self.db.query(func.count(InterviewSession.id)).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed',
+                InterviewSession.status == SessionStatus.COMPLETED,
                 InterviewSession.deleted_at.is_(None)
             )
         ).scalar()
@@ -191,12 +192,16 @@ class AchievementService:
             func.avg(Evaluation.overall_score).label('avg_score'),
             func.count(Evaluation.id).label('count')
         ).join(
-            SessionQuestion, Evaluation.session_question_id == SessionQuestion.id
+            Answer, Evaluation.answer_id == Answer.id
+        ).join(
+            Question, Answer.question_id == Question.id
         ).filter(
             and_(
-                SessionQuestion.category == category,
+                Answer.user_id == user_id,
+                Question.category == category,
                 Evaluation.deleted_at.is_(None),
-                SessionQuestion.deleted_at.is_(None)
+                Answer.deleted_at.is_(None),
+                Question.deleted_at.is_(None)
             )
         ).first()
         
@@ -226,14 +231,15 @@ class AchievementService:
         ).first()
         
         if session:
-            for sq in session.session_questions:
-                if sq.evaluation:
-                    achievement = self.check_perfect_score(user_id, sq.evaluation.id)
+            for answer in session.answers:
+                if answer.evaluation:
+                    achievement = self.check_perfect_score(user_id, answer.evaluation.id)
                     if achievement:
                         awarded.append(achievement)
                 
-                if sq.category:
-                    achievement = self.check_category_master(user_id, sq.category)
+                question_category = answer.question.category if answer.question else None
+                if question_category:
+                    achievement = self.check_category_master(user_id, question_category)
                     if achievement:
                         awarded.append(achievement)
         
@@ -264,25 +270,31 @@ class AchievementService:
         completed_count = self.db.query(func.count(InterviewSession.id)).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed',
+                InterviewSession.status == SessionStatus.COMPLETED,
                 InterviewSession.deleted_at.is_(None)
             )
         ).scalar() or 0
         
-        has_perfect_score = self.db.query(Evaluation).join(
-            SessionQuestion
-        ).join(
-            InterviewSession
-        ).filter(
-            and_(
-                InterviewSession.user_id == user_id,
-                Evaluation.overall_score == 100,
-                Evaluation.deleted_at.is_(None)
-            )
-        ).first() is not None
+        has_perfect_score = False
+        try:
+            from app.models.answer import Answer
+            has_perfect_score = self.db.query(Evaluation).join(
+                Answer, Evaluation.answer_id == Answer.id
+            ).join(
+                InterviewSession, Answer.session_id == InterviewSession.id
+            ).filter(
+                and_(
+                    InterviewSession.user_id == user_id,
+                    Evaluation.overall_score == 100,
+                    Evaluation.deleted_at.is_(None)
+                )
+            ).first() is not None
+        except Exception as e:
+            logger.warning(f"Error checking perfect score for user {user_id}: {e}")
+            has_perfect_score = False
         
         user = self.db.query(User).filter(User.id == user_id).first()
-        current_streak = int(user.current_streak) if user and user.current_streak else 0
+        current_streak = int(getattr(user, 'current_streak', 0) or 0) if user else 0
         
         for achievement_type, definition in ACHIEVEMENT_DEFINITIONS.items():
             is_earned = achievement_type in earned_achievements
@@ -328,3 +340,8 @@ class AchievementService:
             ))
         
         return progress_list
+
+
+
+
+

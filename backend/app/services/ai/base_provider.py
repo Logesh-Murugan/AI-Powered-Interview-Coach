@@ -14,8 +14,7 @@ class AIProvider(ABC):
     """
     Abstract base class for AI providers.
     
-    All AI providers (Groq, HuggingFace) must extend this class
-    and implement the required methods.
+    All AI providers must extend this class and implement the required methods.
     """
     
     def __init__(self, config: ProviderConfig):
@@ -29,7 +28,6 @@ class AIProvider(ABC):
         self.health = ProviderHealth(provider_name=config.name)
         logger.info(f"Initialized {config.name} provider with model {config.model}")
     
-    @abstractmethod
     async def call(
         self,
         prompt: str,
@@ -48,7 +46,12 @@ class AIProvider(ABC):
         Raises:
             Exception: If the API call fails
         """
-        pass
+        legacy_call = getattr(self, "_call_api", None)
+        if legacy_call is None:
+            raise NotImplementedError(
+                f"{self.__class__.__name__} must implement call() or _call_api()"
+            )
+        return await legacy_call(prompt, **kwargs)
     
     async def call_with_tracking(
         self,

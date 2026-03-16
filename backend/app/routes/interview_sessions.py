@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
+from app.models.user import User
 from app.schemas.interview_session import (
     InterviewSessionCreate,
     InterviewSessionResponse,
@@ -34,7 +35,7 @@ router = APIRouter()
     description="Get all interview sessions for the current user"
 )
 async def list_interview_sessions(
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -42,6 +43,7 @@ async def list_interview_sessions(
     
     Returns:
     - List of interview sessions ordered by creation date (newest first)
+    - Includes answered_count for in-progress sessions to show resume functionality
     """
     try:
         user_id = current_user.id
@@ -50,6 +52,9 @@ async def list_interview_sessions(
         
         # Get all sessions for user
         from app.models.interview_session import InterviewSession
+        from app.models.session_question import SessionQuestion
+        from app.models.session_summary import SessionSummary
+        
         sessions = db.query(InterviewSession).filter(
             InterviewSession.user_id == user_id
         ).order_by(InterviewSession.created_at.desc()).all()
@@ -57,17 +62,35 @@ async def list_interview_sessions(
         # Format response
         result = []
         for session in sessions:
-            result.append({
+            session_data = {
                 'id': session.id,
                 'role': session.role,
                 'difficulty': session.difficulty,
-                'status': session.status.value if hasattr(session.status, 'value') else session.status,
+                'status': session.status.value.lower() if hasattr(session.status, 'value') else str(session.status).lower(),
                 'question_count': session.question_count,
                 'categories': session.categories,
                 'start_time': session.start_time.isoformat() if session.start_time else None,
                 'end_time': session.end_time.isoformat() if session.end_time else None,
                 'created_at': session.created_at.isoformat() if session.created_at else None
-            })
+            }
+            
+            # For in-progress sessions, include answered_count for resume functionality
+            if session.status.value == 'in_progress':
+                answered_count = db.query(SessionQuestion).filter(
+                    SessionQuestion.session_id == session.id,
+                    SessionQuestion.status == 'answered'
+                ).count()
+                session_data['answered_count'] = answered_count
+            
+            # For completed sessions, include overall_score from summary
+            elif session.status.value == 'completed':
+                summary = db.query(SessionSummary).filter(
+                    SessionSummary.session_id == session.id
+                ).first()
+                if summary:
+                    session_data['overall_score'] = summary.overall_score
+            
+            result.append(session_data)
         
         logger.info(f"Found {len(result)} sessions for user {user_id}")
         return result
@@ -89,7 +112,7 @@ async def list_interview_sessions(
 )
 async def create_interview_session(
     session_data: InterviewSessionCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -157,6 +180,136 @@ async def create_interview_session(
 
 
 @router.get(
+    "/{session_id}/resume",
+    summary="Resume Interview Session",
+    description="Resume an in-progress interview session from where you left off"
+)
+async def resume_interview_session(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Resume an in-progress interview session.
+    
+    Returns the next unanswered question and progress information.
+    
+    Args:
+        session_id: Interview session ID to resume
+        current_user: Authenticated user
+        db: Database session
+        
+    Returns:
+        Session progress and next question
+        
+    Raises:
+        404: Session not found or access denied
+        400: Session already completed or invalid state
+    """
+    try:
+        user_id = current_user.id
+        
+        logger.info(f"Resuming session {session_id} for user {user_id}")
+        
+        # Resume session using service
+        service = InterviewSessionService(db)
+        result = service.resume_session(session_id, user_id)
+        
+        logger.info(f"Successfully resumed session {session_id}, next question: {result['next_question']['question_number']}")
+        return result
+        
+    except ValueError as e:
+        # Validation errors
+        logger.warning(f"Cannot resume session {session_id}: {e}")
+        if "not found" in str(e).lower() or "access denied" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=str(e)
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+    except Exception as e:
+        logger.error(f"Error resuming session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to resume session"
+        )
+
+
+@router.get(
+    "/{session_id:int}",
+    summary="Get Interview Session",
+    description="Get a specific interview session by ID"
+)
+async def get_interview_session(
+    session_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a specific interview session by ID.
+    
+    Args:
+        session_id: Interview session ID
+        current_user: Authenticated user
+        db: Database session
+        
+    Returns:
+        Session details
+        
+    Raises:
+        404: Session not found or access denied
+    """
+    try:
+        user_id = current_user.id
+        
+        logger.info(f"Fetching session {session_id} for user {user_id}")
+        
+        # Get session
+        from app.models.interview_session import InterviewSession
+        session = db.query(InterviewSession).filter(
+            InterviewSession.id == session_id,
+            InterviewSession.user_id == user_id,
+            InterviewSession.deleted_at.is_(None)
+        ).first()
+        
+        if not session:
+            logger.warning(f"Session {session_id} not found for user {user_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Session not found or access denied"
+            )
+        
+        # Format response
+        result = {
+            'id': session.id,
+            'role': session.role,
+            'difficulty': session.difficulty,
+            'status': session.status.value.lower() if hasattr(session.status, 'value') else str(session.status).lower(),
+            'question_count': session.question_count,
+            'categories': session.categories,
+            'start_time': session.start_time.isoformat() if session.start_time else None,
+            'end_time': session.end_time.isoformat() if session.end_time else None,
+            'created_at': session.created_at.isoformat() if session.created_at else None
+        }
+        
+        logger.info(f"Successfully fetched session {session_id}")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching session: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch session"
+        )
+
+
+@router.get(
     "/health",
     summary="Health Check",
     description="Check if the interview sessions service is healthy"
@@ -175,7 +328,7 @@ async def health_check():
 async def get_question(
     session_id: int,
     question_number: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -266,7 +419,7 @@ async def submit_answer(
     session_id: int,
     answer_data: AnswerSubmit,
     question_id: int = Query(..., description="Question ID"),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -315,49 +468,70 @@ async def submit_answer(
                 detail="Question not found in this session"
             )
         
-        # Check if already answered - return existing answer instead of error (idempotency)
-        if session_question.answer_id is not None:
-            logger.info(f"Question {question_id} already answered with answer_id {session_question.answer_id}")
+        # Check if answer already exists for this session+question combination
+        # This handles both regular submissions and speech-to-text workflow where recording upload creates answer first
+        from app.models.answer import Answer
+        existing_answer = db.query(Answer).filter(
+            Answer.session_id == session_id,
+            Answer.question_id == question_id,
+            Answer.user_id == user_id,
+            Answer.deleted_at.is_(None)
+        ).first()
+        
+        if existing_answer:
+            logger.info(f"Answer already exists for session {session_id}, question {question_id}: answer_id={existing_answer.id}")
             
-            # Fetch the existing answer
-            from app.models.answer import Answer
-            existing_answer = db.query(Answer).filter(Answer.id == session_question.answer_id).first()
+            # Update existing answer with new text if provided (for speech-to-text workflow)
+            if answer_data.answer_text.strip():
+                existing_answer.answer_text = answer_data.answer_text
+                from datetime import datetime
+                existing_answer.updated_at = datetime.utcnow()
+                logger.info(f"Updated existing answer {existing_answer.id} with new text")
             
-            if existing_answer:
-                # Check if all questions are answered
-                total_questions = db.query(SessionQuestion).filter(
-                    SessionQuestion.session_id == session_id
-                ).count()
-                
-                answered_questions = db.query(SessionQuestion).filter(
-                    SessionQuestion.session_id == session_id,
-                    SessionQuestion.status == 'answered'
-                ).count()
-                
-                all_questions_answered = (answered_questions == total_questions)
-                session_completed = (session.status == SessionStatus.COMPLETED)
-                
-                # Return the existing answer (idempotent response)
-                response = AnswerResponse(
-                    answer_id=existing_answer.id,
-                    session_id=session_id,
-                    question_id=question_id,
-                    time_taken=existing_answer.time_taken,
-                    submitted_at=existing_answer.submitted_at,
-                    status='submitted',
-                    all_questions_answered=all_questions_answered,
-                    session_completed=session_completed
-                )
-                
-                logger.info(f"Returning existing answer {existing_answer.id} (idempotent)")
-                return response
-            else:
-                # This shouldn't happen, but handle it gracefully
-                logger.error(f"session_question.answer_id={session_question.answer_id} but answer not found")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Data inconsistency detected"
-                )
+            # Ensure session_question is linked to this answer
+            if session_question.answer_id != existing_answer.id:
+                session_question.answer_id = existing_answer.id
+                session_question.status = 'answered'
+                logger.info(f"Linked session_question to existing answer {existing_answer.id}")
+            
+            db.commit()
+            
+            # Check if all questions are answered
+            total_questions = db.query(SessionQuestion).filter(
+                SessionQuestion.session_id == session_id
+            ).count()
+            
+            answered_questions = db.query(SessionQuestion).filter(
+                SessionQuestion.session_id == session_id,
+                SessionQuestion.status == 'answered'
+            ).count()
+            
+            all_questions_answered = (answered_questions == total_questions)
+            session_completed = (session.status == SessionStatus.COMPLETED)
+            
+            # Update session status if all answered
+            if all_questions_answered and not session_completed:
+                session.status = SessionStatus.COMPLETED
+                from datetime import datetime
+                session.end_time = datetime.utcnow()
+                session_completed = True
+                db.commit()
+                logger.info(f"Session {session_id} marked as completed")
+            
+            # Return the existing answer (idempotent response)
+            response = AnswerResponse(
+                answer_id=existing_answer.id,
+                session_id=session_id,
+                question_id=question_id,
+                time_taken=existing_answer.time_taken,
+                submitted_at=existing_answer.submitted_at,
+                status='submitted',
+                all_questions_answered=all_questions_answered,
+                session_completed=session_completed
+            )
+            
+            logger.info(f"Returning existing answer {existing_answer.id} (updated and linked)")
+            return response
         
         # Calculate time_taken (Req 16.4)
         from datetime import datetime
@@ -420,23 +594,11 @@ async def submit_answer(
             session_completed = True
             db.commit()
         
-        # Trigger evaluation (Req 16.7)
-        # For now, call synchronously. Will be async with Celery in TASK-037
-        evaluation_triggered = False
-        try:
-            from app.services.evaluation_service import EvaluationService
-            evaluation_service = EvaluationService(db)
-            evaluation_result = evaluation_service.evaluate_answer(answer.id)
-            evaluation_triggered = True
-            logger.info(f"Evaluation completed for answer {answer.id}: score={evaluation_result.get('overall_score')}")
-        except Exception as e:
-            # Log the error but don't fail the answer submission
-            logger.error(f"Evaluation failed for answer {answer.id}: {e}", exc_info=True)
-            logger.warning(f"Answer {answer.id} submitted but evaluation failed. User can retry evaluation later.")
-            # Store a flag that evaluation needs to be retried
-            evaluation_triggered = False
-        
-        logger.info(f"Answer {answer.id} submitted successfully for session {session_id}")
+        # Evaluation is handled by the dedicated evaluation flow.
+        # Keeping answer submission fast and deterministic avoids blocking on AI providers.
+        logger.info(
+            f"Answer {answer.id} submitted successfully for session {session_id}; evaluation deferred"
+        )
         
         # Format response
         response = AnswerResponse(
@@ -475,7 +637,7 @@ async def save_answer_draft(
     session_id: int,
     draft_data: AnswerDraftSave,
     question_id: int = Query(..., description="Question ID"),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -583,7 +745,7 @@ async def save_answer_draft(
 async def get_answer_draft(
     session_id: int,
     question_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -659,7 +821,7 @@ async def get_answer_draft(
 async def delete_answer_draft(
     session_id: int,
     question_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -727,7 +889,7 @@ async def delete_answer_draft(
 )
 async def get_session_summary(
     session_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -773,3 +935,6 @@ async def get_session_summary(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to generate session summary"
         )
+
+
+

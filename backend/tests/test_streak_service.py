@@ -23,7 +23,7 @@ class TestStreakService:
         assert result['streak_increased'] is True
         
         db.refresh(test_user)
-        assert test_user.current_streak == "1"
+        assert test_user.current_streak == 1
         assert test_user.last_practice_date is not None
     
     def test_practice_within_24_hours_increments_streak(self, db: Session, test_user: User):

@@ -56,7 +56,7 @@ import {
 import { resumeService, type Resume } from '../../services/resumeService';
 import { format } from 'date-fns';
 import { useAppDispatch, useAppSelector } from '../../store';
-import { analyzeResume, fetchAnalysis } from '../../store/slices/resumeAnalysisSlice';
+import { analyzeResume, fetchAnalysis, clearError } from '../../store/slices/resumeAnalysisSlice';
 import ResumeAnalysisCard from '../../components/ai/ResumeAnalysisCard';
 
 function ResumeDetailPage() {
@@ -69,6 +69,8 @@ function ResumeDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [autoStarted, setAutoStarted] = useState(false);
+  const [pollAttempts, setPollAttempts] = useState(0);
 
   // Redux state for resume analysis
   const { currentAnalysis, isLoading: analysisLoading, isGenerating, error: analysisError } = useAppSelector(
@@ -83,6 +85,57 @@ function ResumeDetailPage() {
       dispatch(fetchAnalysis(parseInt(id)));
     }
   }, [id, dispatch]);
+
+  // Auto-trigger analysis once resume is completed and no analysis exists
+  useEffect(() => {
+    if (!resume || autoStarted) return;
+    if (resume.status === 'completed' && !currentAnalysis) {
+      dispatch(clearError());
+      const targetRole = userProfile?.target_role || 'Software Engineer';
+      dispatch(analyzeResume({ resumeId: resume.id, request: { target_role: targetRole } }));
+      setAutoStarted(true);
+      setPollAttempts(0);
+    }
+  }, [resume, currentAnalysis, autoStarted, dispatch, userProfile]);
+
+  // Poll for analysis result while generating (up to 90s)
+  useEffect(() => {
+    if (!resume) return;
+    if (currentAnalysis) {
+      setPollAttempts(0);
+      return;
+    }
+    if (pollAttempts >= 18) return; // 18 * 5s = 90s
+
+    const timer = setTimeout(() => {
+      if (resume.status === 'completed') {
+        dispatch(fetchAnalysis(resume.id));
+      }
+      setPollAttempts((p) => p + 1);
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [resume, currentAnalysis, pollAttempts, dispatch]);
+
+  // Poll for analysis while generation is in progress
+  useEffect(() => {
+    if (!resume || !isGenerating || currentAnalysis) return;
+    if (pollAttempts >= 6) return;
+
+    const timer = setTimeout(() => {
+      setPollAttempts((p) => p + 1);
+      dispatch(fetchAnalysis(resume.id));
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [resume, isGenerating, currentAnalysis, pollAttempts, dispatch]);
+
+  // Reset polling when a new resume is loaded or analysis arrives
+  useEffect(() => {
+    if (currentAnalysis || !isGenerating) {
+      setPollAttempts(0);
+    }
+  }, [currentAnalysis, isGenerating]);
 
   const loadResume = async (resumeId: number) => {
     setLoading(true);
@@ -115,6 +168,9 @@ function ResumeDetailPage() {
   // Handle generate analysis
   const handleGenerateAnalysis = () => {
     if (!resume) return;
+
+    // Clear previous errors
+    dispatch(clearError());
     
     const targetRole = userProfile?.target_role || 'Software Engineer';
     dispatch(analyzeResume({ 

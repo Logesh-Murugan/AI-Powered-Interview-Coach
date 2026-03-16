@@ -93,7 +93,7 @@ export const userService = {
   async getLeaderboardPreference(): Promise<{ user_id: number; leaderboard_opt_out: boolean }> {
     try {
       const response = await apiService.get<{ user_id: number; leaderboard_opt_out: boolean }>(
-        '/api/v1/leaderboard/preference'
+        '/leaderboard/preference'
       );
       return response.data;
     } catch (error) {
@@ -108,7 +108,7 @@ export const userService = {
   async updateLeaderboardPreference(optOut: boolean): Promise<{ user_id: number; leaderboard_opt_out: boolean }> {
     try {
       const response = await apiService.put<{ user_id: number; leaderboard_opt_out: boolean }>(
-        '/api/v1/leaderboard/preference',
+        '/leaderboard/preference',
         { opt_out: optOut }
       );
       return response.data;
@@ -120,3 +120,4 @@ export const userService = {
 };
 
 export default userService;
+

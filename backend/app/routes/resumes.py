@@ -35,7 +35,7 @@ async def upload_resume(
     return await service.upload_resume(file, user_id, background_tasks)
 
 
-@router.get("/", response_model=ResumeListResponse)
+@router.get("", response_model=ResumeListResponse)
 def get_user_resumes(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -64,7 +64,7 @@ def get_resume(
     """
     Get resume details by ID.
     
-    Returns full resume details including extracted data.
+    Returns full resume details including extracted data and processing status.
     """
     service = ResumeService(db)
     user_id = current_user.id
@@ -74,6 +74,39 @@ def get_resume(
         raise HTTPException(status_code=404, detail="Resume not found")
     
     return ResumeResponse.model_validate(resume)
+
+
+@router.get("/{resume_id}/status")
+def get_resume_status(
+    resume_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get resume processing status.
+    
+    Returns detailed status information including:
+    - Current processing status
+    - Whether resume is ready for analysis
+    - Skills count
+    - Processing messages
+    
+    Use this endpoint to poll for processing completion after upload.
+    """
+    from app.utils.resume_processing import get_resume_processing_status
+    
+    service = ResumeService(db)
+    resume = service.get_resume(resume_id, current_user.id)
+    
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    
+    status_info = get_resume_processing_status(resume_id, db)
+    
+    return {
+        'resume_id': resume_id,
+        **status_info
+    }
 
 
 @router.delete("/{resume_id}", status_code=204)

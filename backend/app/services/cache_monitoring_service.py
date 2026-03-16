@@ -184,35 +184,39 @@ class CacheMonitoringService:
         Returns:
             Dictionary with alert status and details
         """
-        overall = self.db.query(CacheMetadata).filter(
-            CacheMetadata.cache_layer == self.LAYER_OVERALL
-        ).first()
-        
-        if not overall:
+        layer_metadata = self.db.query(CacheMetadata).filter(
+            CacheMetadata.cache_layer != self.LAYER_OVERALL
+        ).all()
+
+        if not layer_metadata:
             return {
                 'alert': False,
                 'message': 'No cache data available yet'
             }
-        
+
+        total_hits = sum(metadata.cache_hits for metadata in layer_metadata)
+        total_misses = sum(metadata.cache_misses for metadata in layer_metadata)
+        total_requests = total_hits + total_misses
+        hit_rate = (total_hits / total_requests * 100) if total_requests > 0 else 0.0
+
         # Only check if we have enough data (at least 100 requests per Req 25.12)
-        total_requests = overall.cache_hits + overall.cache_misses
         if total_requests < 100:
             return {
                 'alert': False,
                 'message': f'Insufficient data: {total_requests}/100 requests',
-                'hit_rate': overall.hit_rate
+                'hit_rate': hit_rate
             }
         
         # Check if hit rate is below threshold (Req 25.10)
-        if overall.hit_rate < self.HIT_RATE_THRESHOLD:
+        if hit_rate < self.HIT_RATE_THRESHOLD:
             logger.warning(
-                f"Cache hit rate alert: {overall.hit_rate:.2f}% "
+                f"Cache hit rate alert: {hit_rate:.2f}% "
                 f"(threshold: {self.HIT_RATE_THRESHOLD}%)"
             )
             return {
                 'alert': True,
-                'message': f'Cache hit rate below threshold: {overall.hit_rate:.2f}%',
-                'hit_rate': overall.hit_rate,
+                'message': f'Cache hit rate below threshold: {hit_rate:.2f}%',
+                'hit_rate': hit_rate,
                 'threshold': self.HIT_RATE_THRESHOLD,
                 'total_requests': total_requests
             }
@@ -220,7 +224,7 @@ class CacheMonitoringService:
         return {
             'alert': False,
             'message': 'Cache performance is healthy',
-            'hit_rate': overall.hit_rate,
+            'hit_rate': hit_rate,
             'threshold': self.HIT_RATE_THRESHOLD,
             'total_requests': total_requests
         }

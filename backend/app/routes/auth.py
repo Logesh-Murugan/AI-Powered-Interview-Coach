@@ -22,6 +22,7 @@ from app.schemas.auth import (
     PasswordResetResponse
 )
 from app.services.auth_service import AuthService
+from app.services.user_service import normalize_experience_level_for_response
 
 router = APIRouter()
 
@@ -99,7 +100,7 @@ async def register(
         email=user.email,
         name=user.name,
         target_role=user.target_role,
-        experience_level=user.experience_level.value if user.experience_level else None,
+        experience_level=normalize_experience_level_for_response(user.experience_level),
         account_status=user.account_status.value,
         created_at=user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at),
         updated_at=user.updated_at.isoformat() if hasattr(user.updated_at, 'isoformat') else str(user.updated_at)
@@ -188,7 +189,7 @@ async def login(
         email=user.email,
         name=user.name,
         target_role=user.target_role,
-        experience_level=user.experience_level.value if user.experience_level else None,
+        experience_level=normalize_experience_level_for_response(user.experience_level),
         account_status=user.account_status.value,
         created_at=user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at),
         updated_at=user.updated_at.isoformat() if hasattr(user.updated_at, 'isoformat') else str(user.updated_at)
@@ -342,7 +343,7 @@ async def logout(
     }
 )
 async def logout_all_devices(
-    current_user: dict = Depends(get_current_user),
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> LogoutAllResponse:
     """
@@ -353,7 +354,7 @@ async def logout_all_devices(
     This is useful for security purposes when you suspect unauthorized access.
     """
     # Logout from all devices
-    result = AuthService.logout_all_devices(db, current_user["user_id"])
+    result = AuthService.logout_all_devices(db, current_user.id)
     
     return LogoutAllResponse(
         message=result["message"],
@@ -466,3 +467,4 @@ async def reset_password(
     return PasswordResetResponse(
         message=result["message"]
     )
+

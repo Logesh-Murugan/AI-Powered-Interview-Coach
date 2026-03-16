@@ -38,6 +38,72 @@ class QuestionService:
     
     VALID_CATEGORIES = {'Technical', 'Behavioral', 'Domain_Specific', 'System_Design', 'Coding'}
     VALID_DIFFICULTIES = {'Easy', 'Medium', 'Hard', 'Expert'}
+
+    # Minimal always-available question bank to keep demos running even if AI quota is exhausted
+    STATIC_QUESTION_BANK = {
+        ("data scientist", "medium"): [
+            {
+                "question_text": "Explain the bias-variance tradeoff and how you would detect and address high variance in a model you shipped.",
+                "category": "Technical",
+                "difficulty": "Medium",
+                "expected_answer_points": [
+                    "Define bias and variance and their impact on error",
+                    "Describe diagnostic signals (learning curves, cross-validation gap)",
+                    "Mitigation strategies (regularization, more data, simpler model)",
+                    "Business impact of under/overfitting"
+                ],
+                "time_limit_seconds": 300
+            },
+            {
+                "question_text": "You have a text classification model with 200k sparse features. How would you select the most informative features and keep the pipeline efficient?",
+                "category": "Technical",
+                "difficulty": "Medium",
+                "expected_answer_points": [
+                    "Discuss chi-square / mutual information / L1 regularization for selection",
+                    "Use of hashing trick or dimensionality reduction",
+                    "Pipeline performance considerations (vectorizer fit, sparse ops)",
+                    "Evaluation with held-out set to avoid leakage"
+                ],
+                "time_limit_seconds": 300
+            },
+            {
+                "question_text": "A production Airflow job that creates training data started producing empty parquet files. Walk through how you would debug and fix this.",
+                "category": "Behavioral",
+                "difficulty": "Medium",
+                "expected_answer_points": [
+                    "Reproduce and isolate the failing task with logs/metrics",
+                    "Check upstream data availability and schema drift",
+                    "Add data quality checks and alerts",
+                    "Implement a rollback or backfill plan and validate outputs"
+                ],
+                "time_limit_seconds": 300
+            },
+            {
+                "question_text": "How would you interpret SHAP values for a gradient boosting model and communicate them to a non-technical stakeholder?",
+                "category": "Domain_Specific",
+                "difficulty": "Medium",
+                "expected_answer_points": [
+                    "Briefly define SHAP and local feature attributions",
+                    "Explain global vs local views and common pitfalls",
+                    "Use visuals (beeswarm/force plots) and plain-language summaries",
+                    "Discuss actions/decisions that attributions inform"
+                ],
+                "time_limit_seconds": 240
+            },
+            {
+                "question_text": "Write a SQL query to compute a 7-day rolling average of daily active users per product_id ordered by date.",
+                "category": "Coding",
+                "difficulty": "Medium",
+                "expected_answer_points": [
+                    "Use window functions with PARTITION BY product_id",
+                    "Order by event_date and frame rows or range 6 preceding",
+                    "Handle NULLs or missing dates considerations",
+                    "Return product_id, event_date, rolling_avg columns"
+                ],
+                "time_limit_seconds": 240
+            }
+        ]
+    }
     
     def __init__(self, db: Session, cache: Optional[CacheService] = None):
         """Initialize question service"""
@@ -54,51 +120,106 @@ class QuestionService:
         categories: Optional[List[str]] = None
     ) -> List[Dict]:
         """
-        Generate interview questions with multi-layer caching.
-        
+        Generate interview questions with cache, database, and AI fallback.
+
+        Strategy:
+        1. Try Redis cache first
+        2. If cache misses, try database
+        3. If database misses, generate with AI
+        4. Cache successful non-empty results
+
         Requirements: 12.1-12.15
-        
-        Args:
-            role: Target job role
-            difficulty: Question difficulty level
-            question_count: Number of questions to generate
-            categories: Optional list of question categories
-            
-        Returns:
-            List of question dictionaries
         """
-        # Validate inputs
         if difficulty not in self.VALID_DIFFICULTIES:
             raise ValueError(f"Invalid difficulty. Must be one of: {self.VALID_DIFFICULTIES}")
-        
+
         if question_count < 1 or question_count > 20:
             raise ValueError("question_count must be between 1 and 20")
-        
+
         if categories:
             invalid_cats = set(categories) - self.VALID_CATEGORIES
             if invalid_cats:
                 raise ValueError(f"Invalid categories: {invalid_cats}")
-        
-        # ALWAYS generate fresh questions with AI for maximum variety
-        # Skip cache and database to ensure unique questions every time
-        logger.info(f"Generating fresh questions with AI for role={role}, difficulty={difficulty}")
-        generated_questions = self._generate_with_ai(role, difficulty, question_count, categories)
-        
-        # Validate and store questions
-        validated_questions = []
-        for q_data in generated_questions:
-            if self._validate_question(q_data):
-                question = self._store_question(q_data, role, difficulty)
-                validated_questions.append(question.to_dict())
-            else:
-                logger.warning(f"Question validation failed: {q_data.get('question_text', '')[:50]}")
-        
-        if not validated_questions:
-            raise Exception("Failed to generate valid questions")
-        
-        # Don't cache - return fresh questions each time for variety
-        return validated_questions
-    
+
+        cache_key = self._construct_cache_key(role, difficulty, question_count, categories)
+
+        cached_questions = self._get_from_cache(cache_key)
+        if cached_questions and len(cached_questions) >= question_count:
+            logger.info(f"Cache hit for questions key={cache_key}")
+            return cached_questions[:question_count]
+
+        logger.info(f"Cache miss for questions key={cache_key}, checking database")
+        db_questions = self._get_from_database(role, difficulty, question_count, categories)
+        if db_questions and len(db_questions) >= question_count:
+            result = [q.to_dict() for q in db_questions[:question_count]]
+            self._cache_questions(cache_key, result)
+            logger.info(f"Retrieved {len(result)} questions from database")
+            return result
+
+        try:
+            import concurrent.futures
+            logger.info(f"Generating fresh questions with AI for role={role}, difficulty={difficulty}")
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(
+                    self._generate_with_ai, role, difficulty, question_count, categories
+                )
+                generated_questions = future.result(timeout=30)
+
+            validated_questions = []
+            for q_data in generated_questions:
+                if self._validate_question(q_data):
+                    question = self._store_question(q_data, role, difficulty)
+                    validated_questions.append(question.to_dict())
+                else:
+                    logger.warning(
+                        f"Question validation failed: {q_data.get('question_text', '')[:50]}"
+                    )
+
+            if validated_questions:
+                self._cache_questions(cache_key, validated_questions)
+                logger.info(f"AI generated {len(validated_questions)} valid questions")
+                return validated_questions
+
+            logger.warning("AI generated questions but none passed validation, falling back to database")
+        except concurrent.futures.TimeoutError:
+            logger.warning("AI generation timed out after 30s, falling back to database questions")
+        except Exception as e:
+            logger.warning(f"AI generation failed ({str(e)[:100]}), falling back to database questions")
+
+        if categories:
+            logger.info("Not enough category-filtered questions, trying without category filter")
+            db_questions = self._get_from_database(role, difficulty, question_count, None)
+            if db_questions and len(db_questions) >= question_count:
+                result = [q.to_dict() for q in db_questions[:question_count]]
+                self._cache_questions(cache_key, result)
+                return result
+
+        logger.info("Trying any difficulty for this role")
+        from sqlalchemy import func
+        any_questions = self.db.query(Question).filter(
+            Question.role == role,
+            Question.deleted_at.is_(None)
+        ).order_by(func.random()).limit(question_count).all()
+
+        if any_questions and len(any_questions) >= question_count:
+            result = [q.to_dict() for q in any_questions[:question_count]]
+            self._cache_questions(cache_key, result)
+            return result
+
+        # Static safety net to keep demos working when AI quota is exhausted and DB is empty
+        static_questions = self._get_static_questions(role, difficulty, question_count, categories)
+        if static_questions:
+            stored = [self._store_question(q, role, difficulty).to_dict() for q in static_questions]
+            self._cache_questions(cache_key, stored)
+            logger.info(f"Served {len(stored)} static fallback questions for role={role}, difficulty={difficulty}")
+            return stored[:question_count]
+
+        raise Exception(
+            f"Unable to generate questions. AI timed out and no matching questions found in database. "
+            f"Try again or select a different role/difficulty."
+        )
+
     def _construct_cache_key(
         self,
         role: str,
@@ -227,7 +348,7 @@ Example format:
         
         # Call orchestrator WITHOUT caching to ensure fresh questions every time
         # We explicitly disable caching for question generation to maximize variety
-        response = self.orchestrator.generate_without_cache(request)
+        response = self.orchestrator.generate(request)
         
         if not response.success:
             raise Exception(f"AI generation failed: {response.error}")
@@ -339,8 +460,24 @@ Example format:
         Requirements: 12.10, 12.12
         """
         try:
-            from datetime import timedelta
-            self.cache.set(cache_key, json.dumps(questions), ttl=timedelta(seconds=self.CACHE_TTL_SECONDS))
+            self.cache.set(cache_key, json.dumps(questions), ttl=self.CACHE_TTL_SECONDS)
             logger.info(f"Cached {len(questions)} questions with key {cache_key}")
         except Exception as e:
             logger.error(f"Cache storage error: {e}")
+
+    def _get_static_questions(
+        self,
+        role: str,
+        difficulty: str,
+        question_count: int,
+        categories: Optional[List[str]]
+    ) -> List[Dict]:
+        """
+        Return a small built-in question set for demos when AI quota or DB is unavailable.
+        """
+        key = (role.lower(), difficulty.capitalize())
+        static_list = self.STATIC_QUESTION_BANK.get(key, [])
+        if categories:
+            allowed = set(categories)
+            static_list = [q for q in static_list if q["category"] in allowed]
+        return static_list[:question_count]

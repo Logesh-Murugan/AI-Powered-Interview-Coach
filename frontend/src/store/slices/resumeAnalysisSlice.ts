@@ -25,7 +25,7 @@ interface ResumeAnalysisState {
   isLoading: boolean;
   // Loading state for generating new analysis
   isGenerating: boolean;
-  // Error message
+  // Error message (non-404/ready errors)
   error: string | null;
 }
 
@@ -45,17 +45,24 @@ const initialState: ResumeAnalysisState = {
  */
 export const analyzeResume = createAsyncThunk<
   ResumeAnalysis,
-  { resumeId: number; request: AnalyzeResumeRequest }
+  { resumeId: number; request: AnalyzeResumeRequest },
+  { rejectValue: { status?: number; message?: string } }
 >(
   'resumeAnalysis/analyze',
   async ({ resumeId, request }, { rejectWithValue }) => {
     try {
       return await resumeAnalysisService.analyzeResume(resumeId, request);
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
+    } catch (error: any) {
+      if (error?.status === 404) {
+        return rejectWithValue({ status: 404, message: 'Analysis not ready yet' });
       }
-      return rejectWithValue('Failed to analyze resume');
+      if (typeof error?.message === 'string' && error.message.includes('not ready for analysis')) {
+        return rejectWithValue({ status: 400, message: error.message });
+      }
+      if (error instanceof Error) {
+        return rejectWithValue({ message: error.message });
+      }
+      return rejectWithValue({ message: 'Failed to analyze resume' });
     }
   }
 );
@@ -63,16 +70,26 @@ export const analyzeResume = createAsyncThunk<
 /**
  * Fetch latest analysis for resume
  */
-export const fetchAnalysis = createAsyncThunk<ResumeAnalysis, number>(
+export const fetchAnalysis = createAsyncThunk<
+  ResumeAnalysis,
+  number,
+  { rejectValue: { status?: number; message?: string } }
+>(
   'resumeAnalysis/fetch',
   async (resumeId, { rejectWithValue }) => {
     try {
       return await resumeAnalysisService.getAnalysis(resumeId);
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
+    } catch (error: any) {
+      if (error?.status === 404) {
+        return rejectWithValue({ status: 404, message: 'Analysis not ready yet' });
       }
-      return rejectWithValue('Failed to fetch analysis');
+      if (typeof error?.message === 'string' && error.message.includes('not ready for analysis')) {
+        return rejectWithValue({ status: 400, message: error.message });
+      }
+      if (error instanceof Error) {
+        return rejectWithValue({ message: error.message });
+      }
+      return rejectWithValue({ message: 'Failed to fetch analysis' });
     }
   }
 );
@@ -82,18 +99,25 @@ export const fetchAnalysis = createAsyncThunk<ResumeAnalysis, number>(
  */
 export const fetchHistory = createAsyncThunk<
   AnalysisHistoryResponse & { resumeId: number },
-  { resumeId: number; limit?: number }
+  { resumeId: number; limit?: number },
+  { rejectValue: { status?: number; message?: string } }
 >(
   'resumeAnalysis/fetchHistory',
   async ({ resumeId, limit }, { rejectWithValue }) => {
     try {
       const response = await resumeAnalysisService.getAnalysisHistory(resumeId, limit);
       return { ...response, resumeId };
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
+    } catch (error: any) {
+      if (error?.status === 404) {
+        return rejectWithValue({ status: 404, message: 'Analysis history not ready yet' });
       }
-      return rejectWithValue('Failed to fetch analysis history');
+      if (typeof error?.message === 'string' && error.message.includes('not ready for analysis')) {
+        return rejectWithValue({ status: 400, message: error.message });
+      }
+      if (error instanceof Error) {
+        return rejectWithValue({ message: error.message });
+      }
+      return rejectWithValue({ message: 'Failed to fetch analysis history' });
     }
   }
 );
@@ -124,7 +148,13 @@ const resumeAnalysisSlice = createSlice({
       })
       .addCase(analyzeResume.rejected, (state, action) => {
         state.isGenerating = false;
-        state.error = action.payload as string;
+        const payload = action.payload as { status?: number; message?: string } | undefined;
+        if (payload?.status === 404 || payload?.status === 400) {
+          state.isGenerating = true;
+          state.error = null;
+        } else {
+          state.error = payload?.message ?? 'Failed to analyze resume';
+        }
       });
 
     // Fetch analysis
@@ -141,7 +171,14 @@ const resumeAnalysisSlice = createSlice({
       })
       .addCase(fetchAnalysis.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload as string;
+        const payload = action.payload as { status?: number; message?: string } | undefined;
+        if (payload?.status === 404 || payload?.status === 400) {
+          state.error = null;
+          state.currentAnalysis = null;
+          state.isGenerating = true;
+        } else {
+          state.error = payload?.message ?? 'Failed to fetch analysis';
+        }
       });
 
     // Fetch history
@@ -157,7 +194,12 @@ const resumeAnalysisSlice = createSlice({
       })
       .addCase(fetchHistory.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload as string;
+        const payload = action.payload as { status?: number; message?: string } | undefined;
+        if (payload?.status === 404) {
+          state.error = null;
+        } else {
+          state.error = payload?.message ?? 'Failed to fetch analysis history';
+        }
       });
   },
 });

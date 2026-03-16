@@ -45,7 +45,7 @@ async def get_all_achievements(
         raise HTTPException(status_code=500, detail="Failed to fetch achievements")
 
 
-@router.get("/user", response_model=UserAchievementsResponse)
+@router.get("/user")
 async def get_user_achievements(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -62,24 +62,27 @@ async def get_user_achievements(
         total_earned = len(achievements)
         completion_percentage = (total_earned / total_available * 100) if total_available > 0 else 0
         
-        return UserAchievementsResponse(
-            achievements=[
-                UserAchievementResponse(
-                    id=a.id,
-                    user_id=a.user_id,
-                    achievement_type=a.achievement_type,
-                    earned_at=a.earned_at,
-                    metadata=a.achievement_data
-                )
-                for a in achievements
-            ],
-            total_earned=total_earned,
-            total_available=total_available,
-            completion_percentage=round(completion_percentage, 2)
-        )
+        # Build response as plain dicts to avoid Pydantic enum issues
+        achievement_list = []
+        for a in achievements:
+            achievement_list.append({
+                "id": a.id,
+                "user_id": a.user_id,
+                "achievement_type": a.achievement_type.value if hasattr(a.achievement_type, 'value') else str(a.achievement_type),
+                "earned_at": a.earned_at.isoformat() if a.earned_at else None,
+                "metadata": a.achievement_data
+            })
+        
+        return {
+            "achievements": achievement_list,
+            "total_earned": total_earned,
+            "total_available": total_available,
+            "completion_percentage": round(completion_percentage, 2)
+        }
     except Exception as e:
-        logger.error(f"Error fetching user achievements for user {current_user.id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch user achievements")
+        import traceback
+        logger.error(f"Error fetching user achievements for user {current_user.id}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch user achievements: {str(e)}")
 
 
 @router.get("/progress", response_model=AchievementProgressResponse)

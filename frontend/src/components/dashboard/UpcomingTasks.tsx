@@ -52,17 +52,19 @@ function UpcomingTasks() {
       // Get upcoming tasks (next 5 incomplete tasks)
       const upcomingTasks: TaskWithDay[] = [];
       
-      for (const dayTasks of plan.plan_data.daily_tasks) {
-        for (const task of dayTasks.tasks) {
-          if (!task.completed && upcomingTasks.length < 5) {
-            upcomingTasks.push({
-              task,
-              day: dayTasks.day,
-              date: dayTasks.date,
-            });
+      if (plan?.plan_data?.daily_tasks) {
+        for (const dayTasks of plan.plan_data.daily_tasks) {
+          for (const task of dayTasks.tasks) {
+            if (!task.completed && upcomingTasks.length < 5) {
+              upcomingTasks.push({
+                task,
+                day: dayTasks.day,
+                date: dayTasks.date,
+              });
+            }
           }
+          if (upcomingTasks.length >= 5) break;
         }
-        if (upcomingTasks.length >= 5) break;
       }
       
       setTasks(upcomingTasks);

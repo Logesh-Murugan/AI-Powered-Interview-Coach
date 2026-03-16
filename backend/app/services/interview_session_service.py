@@ -23,7 +23,7 @@ class InterviewSessionService:
     """Service for managing interview sessions"""
     
     # Redis TTL for session metadata
-    SESSION_CACHE_TTL = 2 * 60 * 60  # 2 hours
+    SESSION_CACHE_TTL = timedelta(hours=2)  # 2 hours
     
     def __init__(self, db: Session, cache: Optional[CacheService] = None):
         """Initialize interview session service"""
@@ -111,7 +111,7 @@ class InterviewSessionService:
                     'question_count': question_count,
                     'categories': categories,
                     'start_time': session.start_time.isoformat(),
-                    'status': session.status.value
+                    'status': session.status.value.lower()
                 })
             except Exception as cache_error:
                 # Don't fail the whole operation if caching fails
@@ -125,7 +125,7 @@ class InterviewSessionService:
                 'session_id': session.id,
                 'role': session.role,
                 'difficulty': session.difficulty,
-                'status': session.status.value,
+                'status': session.status.value.lower(),
                 'question_count': session.question_count,
                 'categories': session.categories,
                 'start_time': session.start_time,
@@ -155,6 +155,87 @@ class InterviewSessionService:
         ).first()
         
         return session
+    
+    def resume_session(self, session_id: int, user_id: int) -> Dict:
+        """
+        Resume an in-progress interview session.
+        
+        Returns the next unanswered question and session progress.
+        
+        Args:
+            session_id: Session ID to resume
+            user_id: User ID (for authorization)
+            
+        Returns:
+            Dictionary with session details and next question
+            
+        Raises:
+            ValueError: If session not found, not owned by user, or already completed
+        """
+        # Get session
+        session = self.get_session(session_id, user_id)
+        if not session:
+            raise ValueError("Session not found or access denied")
+        
+        # Check if session is resumable
+        if session.status == SessionStatus.COMPLETED:
+            raise ValueError("Session is already completed")
+        
+        # Get all session questions with their status
+        from app.models.session_question import SessionQuestion
+        from app.models.question import Question
+        
+        session_questions = self.db.query(SessionQuestion).join(Question).filter(
+            SessionQuestion.session_id == session_id
+        ).order_by(SessionQuestion.display_order).all()
+        
+        if not session_questions:
+            raise ValueError("No questions found for this session")
+        
+        # Find next unanswered question
+        next_question = None
+        answered_count = 0
+        
+        for sq in session_questions:
+            if sq.status == 'answered':
+                answered_count += 1
+            elif sq.status == 'pending' and next_question is None:
+                next_question = sq
+        
+        if not next_question:
+            # All questions answered, mark session as completed
+            session.status = SessionStatus.COMPLETED
+            session.end_time = datetime.utcnow()
+            self.db.commit()
+            raise ValueError("All questions have been answered. Session is now completed.")
+        
+        # Get question details
+        question = next_question.question
+        question_number = next_question.display_order
+        
+        # Record question displayed timestamp if not already set
+        if not next_question.question_displayed_at:
+            next_question.question_displayed_at = datetime.utcnow()
+            self.db.commit()
+        
+        # Format response
+        return {
+            'session_id': session.id,
+            'role': session.role,
+            'difficulty': session.difficulty,
+            'status': session.status.value.lower(),
+            'question_count': session.question_count,
+            'answered_count': answered_count,
+            'progress_percentage': int((answered_count / session.question_count) * 100),
+            'next_question': {
+                'id': question.id,
+                'question_text': question.question_text,
+                'category': question.category,
+                'difficulty': question.difficulty,
+                'time_limit_seconds': question.time_limit_seconds,
+                'question_number': question_number
+            }
+        }
     
     def _cache_session_metadata(self, session_id: int, metadata: Dict) -> None:
         """
@@ -191,3 +272,4 @@ class InterviewSessionService:
         except Exception as e:
             logger.error(f"Failed to get cached session metadata: {e}")
         return None
+

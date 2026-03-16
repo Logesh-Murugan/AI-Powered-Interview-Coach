@@ -64,7 +64,7 @@ function DashboardPage() {
       const sessions = await getInterviewSessions();
       
       // Calculate stats
-      const completed = sessions.filter(s => s.status === 'completed');
+      const completed = sessions.filter(s => s.status.toLowerCase() === 'completed');
       const totalSessions = sessions.length;
       const completedSessions = completed.length;
       

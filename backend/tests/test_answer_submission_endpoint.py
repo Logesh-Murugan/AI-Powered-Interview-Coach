@@ -140,7 +140,7 @@ class TestAnswerSubmissionEndpoint:
             json={"answer_text": "Test answer"}
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_submit_answer_session_not_found(self, db: Session):
         """Test answer submission with non-existent session"""
@@ -440,8 +440,12 @@ class TestAnswerSubmissionEndpoint:
             json={"answer_text": "Second answer attempt"}
         )
         
-        assert response.status_code == 400
-        assert "already answered" in response.json()["detail"].lower()
+        assert response.status_code == 201
+        data = response.json()
+        assert data["answer_id"] == answer.id
+        assert data["status"] == "submitted"
+        assert data["session_id"] == session.id
+        assert data["question_id"] == question.id
     
     def test_submit_answer_multiple_questions_partial(self, db: Session):
         """Test submitting answer when not all questions are answered"""

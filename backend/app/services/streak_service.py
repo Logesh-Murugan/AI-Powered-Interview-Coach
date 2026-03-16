@@ -6,6 +6,7 @@ from typing import List, Dict, Optional
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
+from sqlalchemy.orm.attributes import flag_modified
 from app.models.user import User
 from app.models.user_achievement import AchievementType
 from app.services.achievement_service import AchievementService
@@ -43,11 +44,12 @@ class StreakService:
             last_practice = user.last_practice_date
             
             # Calculate new streak
-            new_streak = self._calculate_new_streak(current_time, last_practice, user.current_streak)
+            current_streak = int(user.current_streak or 0)
+            new_streak = self._calculate_new_streak(current_time, last_practice, current_streak)
             
             # Update user fields (Req 23.1, 23.2)
             user.last_practice_date = current_time
-            old_streak = user.current_streak or 0
+            old_streak = current_streak
             user.current_streak = new_streak
             
             # Update longest streak if needed
@@ -64,6 +66,7 @@ class StreakService:
             if len(streak_history) > 90:
                 streak_history = streak_history[-90:]
             user.streak_history = streak_history
+            flag_modified(user, "streak_history")
             
             self.db.commit()
             self.db.refresh(user)

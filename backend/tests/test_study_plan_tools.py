@@ -229,11 +229,24 @@ class TestSchedulerTool:
 @pytest.fixture
 def test_resume_analysis(db, test_user):
     """Create test resume analysis"""
+    from app.models.resume import Resume
     from app.models.resume_analysis import ResumeAnalysis
+
+    resume = Resume(
+        user_id=test_user.id,
+        filename="resume.pdf",
+        file_url="/uploads/resume.pdf",
+        file_size=1024,
+        extracted_text="Python JavaScript SQL",
+        status="completed"
+    )
+    db.add(resume)
+    db.commit()
+    db.refresh(resume)
     
     analysis = ResumeAnalysis(
         user_id=test_user.id,
-        resume_id=1,
+        resume_id=resume.id,
         analysis_data={
             "technical_skills": ["Python", "JavaScript", "SQL"],
             "soft_skills": ["Communication", "Problem Solving"],

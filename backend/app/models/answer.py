@@ -3,9 +3,9 @@ Answer Model
 
 This model stores user answers to interview questions.
 
-Requirements: 16.1-16.10, 18.1-18.14
+Requirements: 16.1-16.10, 18.1-18.14, Recording System
 """
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, UniqueConstraint, Float, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -27,6 +27,14 @@ class Answer(Base):
     
     # Answer content
     answer_text = Column(Text, nullable=False)
+    
+    # Recording fields (nullable for backward compatibility)
+    audio_url = Column(String(500), nullable=True)
+    video_url = Column(String(500), nullable=True)
+    recording_duration = Column(Float, nullable=True)  # Duration in seconds
+    recording_format = Column(String(20), nullable=True)  # webm, mp4, etc.
+    transcription = Column(Text, nullable=True)
+    voice_analysis = Column(JSON, nullable=True)  # Speaking pace, filler words, etc.
     
     # Timing
     time_taken = Column(Integer, nullable=False)  # Time taken in seconds
@@ -59,6 +67,12 @@ class Answer(Base):
             'question_id': self.question_id,
             'user_id': self.user_id,
             'answer_text': self.answer_text,
+            'audio_url': self.audio_url,
+            'video_url': self.video_url,
+            'recording_duration': self.recording_duration,
+            'recording_format': self.recording_format,
+            'transcription': self.transcription,
+            'voice_analysis': self.voice_analysis,
             'time_taken': self.time_taken,
             'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,

@@ -1,0 +1,17 @@
+{
+    "generated_at":  "2026-03-12T19:19:40.9503895+05:30",
+    "backend_url":  "http://127.0.0.1:8000",
+    "frontend_url":  "http://127.0.0.1:5173",
+    "processes":  [
+                      {
+                          "name":  "backend",
+                          "pid":  33716,
+                          "port":  8000
+                      },
+                      {
+                          "name":  "frontend",
+                          "pid":  2836,
+                          "port":  5173
+                      }
+                  ]
+}

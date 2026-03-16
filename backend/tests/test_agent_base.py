@@ -34,14 +34,12 @@ class TestAgent(BaseAgent):
 Tools available:
 {tools}
 
-Tool names: {tool_names}
-
 Question: {input}
 Thought: {agent_scratchpad}"""
         
         return PromptTemplate(
             template=template,
-            input_variables=["input", "tools", "tool_names", "agent_scratchpad"]
+            input_variables=["input", "tools", "agent_scratchpad"]
         )
 
 
@@ -68,7 +66,8 @@ class TestBaseAgent:
         agent = TestAgent()
         
         assert agent.llm is not None
-        assert agent.llm.model_name == "mixtral-8x7b-32768"
+        assert agent.llm.model_name == "gemini-2.0-flash"
+        assert agent.llm._llm_type == "orchestrator"
     
     def test_tool_registration(self):
         """Test tools are registered"""

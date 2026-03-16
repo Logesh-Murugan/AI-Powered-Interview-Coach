@@ -11,7 +11,6 @@ import {
   Container,
   Typography,
   Button,
-  Grid,
   Card,
   CardContent,
   AppBar,
@@ -27,6 +26,7 @@ import {
   useMediaQuery,
   alpha,
 } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import {
   Menu as MenuIcon,
   ArrowForward,

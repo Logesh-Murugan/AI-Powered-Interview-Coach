@@ -1,487 +1,217 @@
-# 🤝 Contributing to InterviewMaster AI
+# Contributing to AI-Powered Interview Coach
 
-Thank you for considering contributing to InterviewMaster AI! We welcome contributions from developers of all skill levels.
+Thank you for your interest in contributing to AI-Powered Interview Coach! This document provides guidelines and information for contributors.
 
-## 📋 Table of Contents
+## 🤝 How to Contribute
 
-- [Getting Started](#getting-started)
-- [Development Setup](#development-setup)
-- [Code Style](#code-style)
-- [Commit Messages](#commit-messages)
-- [Pull Request Process](#pull-request-process)
-- [Testing](#testing)
-- [Project Structure](#project-structure)
-- [Questions](#questions)
+### Reporting Issues
+- Use the [GitHub Issues](https://github.com/your-username/ai-powered-interview-coach/issues) page
+- Search existing issues before creating a new one
+- Provide detailed information including:
+  - Steps to reproduce
+  - Expected vs actual behavior
+  - System information (OS, Python version, etc.)
+  - Error messages and logs
 
-## 🚀 Getting Started
+### Suggesting Features
+- Open a [GitHub Discussion](https://github.com/your-username/ai-powered-interview-coach/discussions) first
+- Describe the feature and its benefits
+- Consider implementation complexity and project scope
 
-1. **Fork the repository** on GitHub
-2. **Clone your fork** locally:
-   ```bash
-   git clone https://github.com/YOUR-USERNAME/AI-Powered-Interview-Coach.git
-   cd AI-Powered-Interview-Coach
-   ```
-3. **Add upstream remote**:
-   ```bash
-   git remote add upstream https://github.com/Logesh-Murugan/AI-Powered-Interview-Coach.git
-   ```
-4. **Create a branch** for your feature:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+### Code Contributions
 
-## 🛠️ Development Setup
-
-See the main [README.md](README.md) for detailed setup instructions. Quick summary:
-
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL 15+
-- Redis 7+
-
-### Backend Setup
+#### 1. Fork and Clone
 ```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # Windows: .\venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your configuration
-alembic upgrade head
-uvicorn app.main:app --reload
+git clone https://github.com/your-username/ai-powered-interview-coach.git
+cd ai-powered-interview-coach
 ```
 
-### Frontend Setup
+#### 2. Create a Branch
 ```bash
-cd frontend
-npm install
-cp .env.example .env
-npm run dev
+git checkout -b feature/your-feature-name
+# or
+git checkout -b fix/issue-description
 ```
 
-## 🎨 Code Style
+#### 3. Development Setup
+Follow the [Quick Start Guide](README.md#quick-start) to set up your development environment.
+
+#### 4. Make Changes
+- Follow the coding standards (see below)
+- Add tests for new functionality
+- Update documentation as needed
+- Ensure all tests pass
+
+#### 5. Commit and Push
+```bash
+git add .
+git commit -m "feat: add new feature description"
+git push origin feature/your-feature-name
+```
+
+#### 6. Create Pull Request
+- Use a clear, descriptive title
+- Reference related issues
+- Provide detailed description of changes
+- Include screenshots for UI changes
+
+## 📝 Coding Standards
 
 ### Python (Backend)
+- Follow PEP 8 style guide
+- Use Black for code formatting: `black backend/`
+- Use flake8 for linting: `flake8 backend/`
+- Add type hints where appropriate
+- Write docstrings for functions and classes
 
-We follow **PEP 8** style guidelines with some modifications:
+### TypeScript/React (Frontend)
+- Follow ESLint configuration
+- Use Prettier for formatting
+- Use TypeScript strict mode
+- Follow React best practices
+- Use Material-UI components consistently
 
-- **Line length**: 100 characters (not 79)
-- **Imports**: Use absolute imports, group by standard library, third-party, local
-- **Type hints**: Required for all function signatures
-- **Docstrings**: Required for all public functions and classes
-
-**Formatting Tools:**
-```bash
-# Format code with Black
-black app/ tests/
-
-# Check linting with Flake8
-flake8 app/ tests/
-
-# Type checking with mypy (optional)
-mypy app/
-```
-
-**Example:**
-```python
-from typing import Optional, List
-from sqlalchemy.orm import Session
-from app.models.user import User
-from app.schemas.user import UserCreate
-
-
-def create_user(
-    db: Session,
-    user_data: UserCreate,
-    is_active: bool = True
-) -> User:
-    """
-    Create a new user in the database.
-    
-    Args:
-        db: Database session
-        user_data: User creation data
-        is_active: Whether user is active (default: True)
-        
-    Returns:
-        Created user object
-        
-    Raises:
-        ValueError: If email already exists
-    """
-    # Implementation here
-    pass
-```
-
-### TypeScript (Frontend)
-
-We follow **Airbnb TypeScript Style Guide**:
-
-- **Naming**: camelCase for variables/functions, PascalCase for components/types
-- **Imports**: Group by external, internal, relative
-- **Types**: Prefer interfaces over types for object shapes
-- **Components**: Use functional components with hooks
-
-**Formatting Tools:**
-```bash
-# Format code with Prettier
-npm run format
-
-# Check linting with ESLint
-npm run lint
-
-# Fix linting issues
-npm run lint:fix
-```
-
-**Example:**
-```typescript
-import React, { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { fetchUserProfile } from '@/store/slices/authSlice';
-
-interface UserProfileProps {
-  userId: string;
-  showDetails?: boolean;
-}
-
-export const UserProfile: React.FC<UserProfileProps> = ({ 
-  userId, 
-  showDetails = true 
-}) => {
-  const [loading, setLoading] = useState(false);
-  const dispatch = useAppDispatch();
-  const user = useAppSelector((state) => state.auth.user);
-
-  useEffect(() => {
-    dispatch(fetchUserProfile(userId));
-  }, [userId, dispatch]);
-
-  return (
-    <Box>
-      <Typography variant="h5">{user?.name}</Typography>
-      {showDetails && <Typography>{user?.email}</Typography>}
-    </Box>
-  );
-};
-```
-
-## 📝 Commit Messages
-
-We follow **Conventional Commits** specification:
-
-### Format
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-### Types
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation changes
-- `style`: Code style changes (formatting, no logic change)
-- `refactor`: Code refactoring
-- `test`: Adding or updating tests
-- `chore`: Maintenance tasks
-- `perf`: Performance improvements
-
-### Examples
-```bash
-feat(auth): add password reset functionality
-
-Implement password reset flow with email verification.
-- Add password reset token generation
-- Create email template for reset link
-- Add reset password API endpoint
-
-Closes #123
-
----
-
-fix(interview): resolve answer submission timeout
-
-Increase timeout for AI evaluation from 30s to 60s
-to handle complex answers.
-
-Fixes #456
-
----
-
-docs(api): update authentication endpoint documentation
-
-Add examples for refresh token usage
-
----
-
-test(analytics): add tests for performance comparison
-
-Add unit tests and property-based tests for
-analytics comparison service
-```
-
-## 🔄 Pull Request Process
-
-### Before Submitting
-
-1. **Update your branch** with latest upstream:
-   ```bash
-   git fetch upstream
-   git rebase upstream/main
-   ```
-
-2. **Run tests** and ensure they pass:
-   ```bash
-   # Backend
-   cd backend
-   pytest
-   
-   # Frontend
-   cd frontend
-   npm test
-   ```
-
-3. **Check code quality**:
-   ```bash
-   # Backend
-   black app/ tests/
-   flake8 app/ tests/
-   
-   # Frontend
-   npm run lint
-   npm run format
-   ```
-
-4. **Update documentation** if needed
-
-### Submitting PR
-
-1. **Push your branch**:
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-2. **Create Pull Request** on GitHub with:
-   - Clear title following commit message format
-   - Detailed description of changes
-   - Link to related issues
-   - Screenshots (if UI changes)
-   - Test results
-
-3. **PR Template**:
-   ```markdown
-   ## Description
-   Brief description of what this PR does
-   
-   ## Type of Change
-   - [ ] Bug fix
-   - [ ] New feature
-   - [ ] Breaking change
-   - [ ] Documentation update
-   
-   ## Related Issues
-   Closes #123
-   
-   ## Testing
-   - [ ] Unit tests added/updated
-   - [ ] Integration tests added/updated
-   - [ ] Manual testing completed
-   
-   ## Screenshots (if applicable)
-   
-   ## Checklist
-   - [ ] Code follows style guidelines
-   - [ ] Self-review completed
-   - [ ] Comments added for complex code
-   - [ ] Documentation updated
-   - [ ] No new warnings generated
-   - [ ] Tests pass locally
-   ```
-
-### Review Process
-
-- Maintainers will review your PR within 2-3 business days
-- Address review comments by pushing new commits
-- Once approved, maintainers will merge your PR
-- Your contribution will be credited in release notes
+### Database
+- Use Alembic for migrations
+- Follow naming conventions for tables and columns
+- Add appropriate indexes and constraints
+- Document schema changes
 
 ## 🧪 Testing
 
-### Backend Testing
-
-We maintain **80%+ test coverage**. All new features must include tests.
-
+### Backend Tests
 ```bash
 cd backend
-
-# Run all tests
 pytest
-
-# Run with coverage
-pytest --cov=app --cov-report=html --cov-report=term
-
-# Run specific test file
-pytest tests/test_auth.py -v
-
-# Run property-based tests
-pytest tests/property/ -v
-
-# Run tests matching pattern
-pytest -k "test_user" -v
+pytest --cov=app tests/  # With coverage
 ```
 
-**Test Types:**
-- **Unit tests**: Test individual functions/methods
-- **Integration tests**: Test API endpoints
-- **Property-based tests**: Test with generated data (using Hypothesis)
-
-**Example Test:**
-```python
-import pytest
-from app.services.user_service import create_user
-from app.schemas.user import UserCreate
-
-
-def test_create_user_success(db_session):
-    """Test successful user creation."""
-    user_data = UserCreate(
-        email="test@example.com",
-        password="SecurePass123!",
-        full_name="Test User"
-    )
-    
-    user = create_user(db_session, user_data)
-    
-    assert user.email == "test@example.com"
-    assert user.full_name == "Test User"
-    assert user.hashed_password != "SecurePass123!"
-
-
-def test_create_user_duplicate_email(db_session):
-    """Test user creation with duplicate email fails."""
-    user_data = UserCreate(
-        email="test@example.com",
-        password="SecurePass123!",
-        full_name="Test User"
-    )
-    
-    create_user(db_session, user_data)
-    
-    with pytest.raises(ValueError, match="Email already exists"):
-        create_user(db_session, user_data)
-```
-
-### Frontend Testing
-
+### Frontend Tests
 ```bash
 cd frontend
-
-# Run tests
 npm test
-
-# Run with coverage
 npm run test:coverage
-
-# Run tests in UI mode
-npm run test:ui
-
-# Run tests in watch mode
-npm run test:watch
 ```
 
-**Test Types:**
-- **Component tests**: Test React components
-- **Integration tests**: Test user flows
-- **Property-based tests**: Test with generated data
+### Integration Tests
+- Test API endpoints with realistic data
+- Test speech-to-text workflow end-to-end
+- Verify database migrations work correctly
 
-**Example Test:**
-```typescript
-import { render, screen, fireEvent } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import { LoginPage } from './LoginPage';
-import { store } from '@/store';
+## 📚 Documentation
 
-describe('LoginPage', () => {
-  it('renders login form', () => {
-    render(
-      <Provider store={store}>
-        <LoginPage />
-      </Provider>
-    );
-    
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
-  });
+- Update README.md for significant changes
+- Add docstrings to new functions/classes
+- Update API documentation
+- Include examples for new features
 
-  it('submits form with valid data', async () => {
-    render(
-      <Provider store={store}>
-        <LoginPage />
-      </Provider>
-    );
-    
-    fireEvent.change(screen.getByLabelText(/email/i), {
-      target: { value: 'test@example.com' }
-    });
-    fireEvent.change(screen.getByLabelText(/password/i), {
-      target: { value: 'password123' }
-    });
-    
-    fireEvent.click(screen.getByRole('button', { name: /login/i }));
-    
-    // Assert expected behavior
-  });
-});
+## 🔍 Code Review Process
+
+1. **Automated Checks**: All PRs must pass CI/CD checks
+2. **Code Review**: At least one maintainer review required
+3. **Testing**: Verify functionality works as expected
+4. **Documentation**: Ensure docs are updated appropriately
+
+## 🏷️ Commit Message Format
+
+Use conventional commits format:
+```
+type(scope): description
+
+[optional body]
+
+[optional footer]
 ```
 
-## 📁 Project Structure
+Types:
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `chore`: Maintenance tasks
 
+Examples:
 ```
-InterviewMaster-AI/
-├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI app entry
-│   │   ├── config.py            # Configuration
-│   │   ├── database.py          # Database connection
-│   │   ├── models/              # SQLAlchemy models
-│   │   ├── schemas/             # Pydantic schemas
-│   │   ├── routes/              # API endpoints
-│   │   ├── services/            # Business logic
-│   │   ├── tasks/               # Background tasks
-│   │   └── utils/               # Utilities
-│   ├── alembic/                 # Database migrations
-│   ├── tests/                   # Test suite
-│   └── requirements.txt         # Dependencies
-│
-├── frontend/
-│   ├── src/
-│   │   ├── pages/              # Page components
-│   │   ├── components/         # Reusable components
-│   │   ├── services/           # API services
-│   │   ├── store/              # Redux store
-│   │   ├── routes/             # Routing
-│   │   └── utils/              # Utilities
-│   └── package.json            # Dependencies
-│
-└── docker-compose.yml          # Docker setup
+feat(speech): add voice analysis visualization
+fix(auth): resolve token expiration issue
+docs(readme): update installation instructions
 ```
 
-## ❓ Questions?
+## 🚀 Release Process
 
-- **Issues**: Open an issue on GitHub
-- **Discussions**: Use GitHub Discussions for questions
-- **Email**: Contact maintainers (see README.md)
+1. **Version Bump**: Update version numbers
+2. **Changelog**: Update CHANGELOG.md
+3. **Testing**: Run full test suite
+4. **Tag**: Create git tag for release
+5. **Deploy**: Update deployment documentation
 
-## 🙏 Thank You!
+## 🛡️ Security
 
-Your contributions make InterviewMaster AI better for everyone. We appreciate your time and effort!
+- Report security vulnerabilities privately
+- Don't commit sensitive information (API keys, passwords)
+- Use environment variables for configuration
+- Follow security best practices
 
----
+## 📋 Development Workflow
 
-**Happy Coding! 🚀**
+### Feature Development
+1. Create issue or discussion
+2. Get approval from maintainers
+3. Create feature branch
+4. Implement with tests
+5. Submit pull request
+6. Address review feedback
+7. Merge after approval
+
+### Bug Fixes
+1. Reproduce the issue
+2. Create fix with test
+3. Verify fix resolves issue
+4. Submit pull request
+5. Quick review and merge
+
+## 🎯 Areas for Contribution
+
+### High Priority
+- Bug fixes and stability improvements
+- Performance optimizations
+- Test coverage improvements
+- Documentation enhancements
+
+### Medium Priority
+- New AI features and models
+- UI/UX improvements
+- Additional language support
+- Mobile responsiveness
+
+### Low Priority
+- Code refactoring
+- Developer tooling
+- Advanced features
+- Experimental functionality
+
+## 💬 Communication
+
+- **GitHub Issues**: Bug reports and feature requests
+- **GitHub Discussions**: General questions and ideas
+- **Pull Requests**: Code review and discussion
+- **Email**: security@your-domain.com (security issues only)
+
+## 📖 Resources
+
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [React Documentation](https://reactjs.org/docs/)
+- [Material-UI Documentation](https://mui.com/)
+- [SQLAlchemy Documentation](https://docs.sqlalchemy.org/)
+- [Whisper Documentation](https://github.com/openai/whisper)
+
+## 🙏 Recognition
+
+Contributors will be recognized in:
+- README.md contributors section
+- Release notes
+- Project documentation
+
+Thank you for contributing to AI-Powered Interview Coach! 🎉

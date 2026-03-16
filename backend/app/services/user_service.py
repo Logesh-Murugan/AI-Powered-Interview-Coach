@@ -3,12 +3,32 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 
-from app.models.user import User
+from app.models.user import User, ExperienceLevel as ModelExperienceLevel
 from app.schemas.user import UserProfileUpdateRequest
 from app.services.cache_service import CacheService
 
 # Create a singleton instance of CacheService
 _cache_service = CacheService()
+
+_EXPERIENCE_LEVEL_WRITE_MAP = {
+    "Entry": ModelExperienceLevel.ENTRY,
+    "Mid": ModelExperienceLevel.MID,
+    "Senior": ModelExperienceLevel.SENIOR,
+    "Staff": ModelExperienceLevel.LEAD,
+    "Principal": ModelExperienceLevel.PRINCIPAL,
+}
+
+
+def normalize_experience_level_for_response(experience_level):
+    """Return the public API experience-level value."""
+    if experience_level is None:
+        return None
+
+    raw_value = getattr(experience_level, "value", experience_level)
+    if raw_value == ModelExperienceLevel.LEAD.value:
+        return "staff"
+
+    return str(raw_value)
 
 
 class UserService:
@@ -49,7 +69,10 @@ class UserService:
         
         # Cache the user profile (cache for 1 hour)
         # Note: In production, you'd serialize the user object properly
-        CacheService.set(cache_key, {"id": user.id, "email": user.email}, ttl=3600)
+        try:
+            _cache_service.set(cache_key, {"id": user.id, "email": user.email}, ttl=3600)
+        except Exception:
+            pass  # Cache failures should not break profile retrieval
         
         return user
     
@@ -90,7 +113,7 @@ class UserService:
             user.target_role = profile_data.target_role
         
         if profile_data.experience_level is not None:
-            user.experience_level = profile_data.experience_level.value.lower()
+            user.experience_level = _EXPERIENCE_LEVEL_WRITE_MAP[profile_data.experience_level.value]
         
         # Save to database
         try:

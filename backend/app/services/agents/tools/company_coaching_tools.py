@@ -5,8 +5,10 @@ Custom LangChain tools for company-specific interview coaching.
 
 Requirements: 29.1, 29.3-29.7
 """
+import json
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
+from langchain_core.tools import Tool
 from app.models.resume_analysis import ResumeAnalysis
 
 
@@ -18,7 +20,7 @@ class CompanyResearchTool:
     Input: company_name (string)
     Output: Dictionary with culture, values, interview_style, hiring_process"""
     
-    def _run(self, company_name: str) -> Dict[str, Any]:
+    def _run(self, company_name: str) -> str:
         """
         Research company information from public sources.
         
@@ -69,19 +71,29 @@ class CompanyResearchTool:
         
         # Get company data or return generic template
         if company_name in company_data:
-            return company_data[company_name]
+            result = company_data[company_name]
         else:
             # Generic template for unknown companies
-            return {
+            result = {
                 'culture': f'{company_name.title()} values innovation, collaboration, and excellence. Research their website and Glassdoor for specific cultural insights.',
                 'values': ['Innovation', 'Collaboration', 'Excellence', 'Integrity', 'Customer Focus'],
                 'interview_style': 'Typical tech interview process with technical and behavioral components. Research Glassdoor for specific interview experiences.',
                 'hiring_process': 'Standard process: Initial screen, technical interviews, behavioral interviews, final round with leadership'
             }
+        
+        return json.dumps(result, separators=(',', ':'))
     
     async def _arun(self, company_name: str) -> Dict[str, Any]:
         """Async version"""
         return self._run(company_name)
+    
+    def as_tool(self) -> Tool:
+        """Convert to LangChain Tool."""
+        return Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run
+        )
 
 
 class InterviewPatternTool:
@@ -96,7 +108,7 @@ class InterviewPatternTool:
         """Initialize with database session"""
         self.db = db
     
-    def _run(self, company_name: str) -> Dict[str, Any]:
+    def _run(self, company_name: str) -> str:
         """
         Analyze interview patterns from database.
         
@@ -165,10 +177,10 @@ class InterviewPatternTool:
         }
         
         if company_name in patterns:
-            return patterns[company_name]
+            result = patterns[company_name]
         else:
             # Generic pattern for unknown companies
-            return {
+            result = {
                 'common_categories': ['Algorithms', 'System Design', 'Behavioral', 'Technical Skills', 'Problem Solving'],
                 'difficulty_distribution': {'Easy': 20, 'Medium': 50, 'Hard': 30},
                 'typical_questions': [
@@ -179,10 +191,20 @@ class InterviewPatternTool:
                     'Solve a coding problem'
                 ]
             }
+        
+        return json.dumps(result, separators=(',', ':'))
     
     async def _arun(self, company_name: str) -> Dict[str, Any]:
         """Async version"""
         return self._run(company_name)
+    
+    def as_tool(self) -> Tool:
+        """Convert to LangChain Tool."""
+        return Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run
+        )
 
 
 class STARMethodTool:
@@ -197,7 +219,7 @@ class STARMethodTool:
         """Initialize with database session"""
         self.db = db
     
-    def _run(self, user_id: int) -> List[Dict[str, str]]:
+    def _run(self, user_id: int) -> str:
         """
         Extract STAR examples from user's resume analysis.
         
@@ -207,11 +229,11 @@ class STARMethodTool:
         # Get user's resume analysis
         resume_analysis = self.db.query(ResumeAnalysis).filter(
             ResumeAnalysis.user_id == user_id,
-            ResumeAnalysis.status == 'completed'
+            ResumeAnalysis.status.in_(['success', 'completed'])
         ).first()
         
         if not resume_analysis:
-            return []
+            return json.dumps([], separators=(',', ':'))
         
         analysis_data = resume_analysis.analysis_data or {}
         
@@ -255,11 +277,19 @@ class STARMethodTool:
                 })
         
         # Return top 5 examples
-        return star_examples[:5]
+        return json.dumps(star_examples[:5], separators=(',', ':'))
     
     async def _arun(self, user_id: int) -> List[Dict[str, str]]:
         """Async version"""
         return self._run(user_id)
+    
+    def as_tool(self) -> Tool:
+        """Convert to LangChain Tool."""
+        return Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run
+        )
 
 
 class ConfidenceTool:
@@ -270,7 +300,7 @@ class ConfidenceTool:
     Input: company_name (string), target_role (string)
     Output: List of confidence-building tips and pre-interview checklist"""
     
-    def _run(self, company_name: str, target_role: str = "") -> Dict[str, List[str]]:
+    def _run(self, company_name: str, target_role: str = "") -> str:
         """
         Generate confidence-building tips and pre-interview checklist.
         
@@ -313,11 +343,21 @@ class ConfidenceTool:
                 confidence_tips.append("Be ready to discuss product decisions, user research, and prioritization frameworks")
                 pre_interview_checklist.append("✓ Review the company's products and prepare improvement suggestions")
         
-        return {
+        result = {
             'confidence_tips': confidence_tips,
             'pre_interview_checklist': pre_interview_checklist
         }
+        
+        return json.dumps(result, separators=(',', ':'))
     
     async def _arun(self, company_name: str, target_role: str = "") -> Dict[str, List[str]]:
         """Async version"""
         return self._run(company_name, target_role)
+    
+    def as_tool(self) -> Tool:
+        """Convert to LangChain Tool."""
+        return Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run
+        )

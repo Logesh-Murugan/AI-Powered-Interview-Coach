@@ -206,7 +206,7 @@ class TestAnswerDraftEndpoints:
             json={"draft_text": "Test draft"}
         )
         
-        assert response.status_code == 403
+        assert response.status_code == 401
     
     def test_save_draft_session_not_found(self, db: Session):
         """Test draft save with non-existent session"""

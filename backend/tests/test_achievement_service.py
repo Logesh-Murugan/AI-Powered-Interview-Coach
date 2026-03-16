@@ -4,14 +4,15 @@ Requirements: 22.1-22.10
 """
 import pytest
 from datetime import datetime
+import uuid
 from sqlalchemy.orm import Session
 from app.services.achievement_service import AchievementService, ACHIEVEMENT_DEFINITIONS
 from app.models.user_achievement import UserAchievement, AchievementType
 from app.models.user import User
 from app.models.interview_session import InterviewSession, SessionStatus
 from app.models.evaluation import Evaluation
-from app.models.session_question import SessionQuestion
 from app.models.answer import Answer
+from app.models.question import Question
 
 
 class TestAchievementService:
@@ -34,7 +35,7 @@ class TestAchievementService:
         
         # Check user's total_achievements_count incremented
         db.refresh(test_user)
-        assert test_user.total_achievements_count == "1"
+        assert test_user.total_achievements_count == 1
     
     def test_check_and_award_achievement_duplicate(self, db: Session, test_user: User):
         """Test that duplicate achievements are not awarded (Req 22.2)."""
@@ -96,20 +97,22 @@ class TestAchievementService:
         )
         db.add(session)
         db.flush()
-        
-        sq = SessionQuestion(
-            session_id=session.id,
-            question_id=1,
-            order=1,
-            category="algorithms"
+
+        question = Question(
+            question_text="Explain binary search.",
+            category="algorithms",
+            difficulty="medium",
+            role="Software Engineer",
+            expected_answer_points=["sorted input", "divide and conquer"],
+            time_limit_seconds=300,
         )
-        db.add(sq)
+        db.add(question)
         db.flush()
         
         answer = Answer(
             user_id=test_user.id,
             session_id=session.id,
-            question_id=1,
+            question_id=question.id,
             answer_text="Perfect answer",
             time_taken=300
         )
@@ -118,14 +121,14 @@ class TestAchievementService:
         
         evaluation = Evaluation(
             answer_id=answer.id,
-            session_question_id=sq.id,
             overall_score=100,
             content_quality=100,
             clarity=100,
             confidence=100,
             technical_accuracy=100,
             strengths=["Perfect"],
-            improvements=[]
+            improvements=[],
+            suggestions=[]
         )
         db.add(evaluation)
         db.commit()
@@ -212,7 +215,7 @@ class TestAchievementService:
 def test_user(db: Session) -> User:
     """Create a test user."""
     user = User(
-        email="test@example.com",
+        email=f"test-{uuid.uuid4()}@example.com",
         password_hash="hashed_password",
         name="Test User",
         account_status="active"
@@ -221,3 +224,5 @@ def test_user(db: Session) -> User:
     db.commit()
     db.refresh(user)
     return user
+
+

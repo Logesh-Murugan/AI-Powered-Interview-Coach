@@ -63,13 +63,13 @@ function CoachingSessionCard({ session, onViewDetails }: CoachingSessionCardProp
           <Stack direction="row" spacing={2} alignItems="center">
             <Stack direction="row" spacing={0.5} alignItems="center">
               <QuestionAnswer fontSize="small" color="action" />
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" component="div">
                 {predicted_questions?.length || 0} questions
               </Typography>
             </Stack>
             <Stack direction="row" spacing={0.5} alignItems="center">
               <CalendarToday fontSize="small" color="action" />
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" component="div">
                 {format(new Date(created_at), 'MMM dd, yyyy')}
               </Typography>
             </Stack>

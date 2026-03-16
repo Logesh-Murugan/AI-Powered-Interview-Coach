@@ -150,7 +150,7 @@ class TestQuestionGenerationEndpoint:
             }
         )
         
-        assert response.status_code == 403  # Forbidden (no auth header)
+        assert response.status_code == 401  # Unauthorized (no auth header)
     
     def test_generate_questions_with_categories(self, db: Session, auth_headers, mocker):
         """

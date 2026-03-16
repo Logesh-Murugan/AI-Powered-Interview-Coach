@@ -117,8 +117,8 @@ class TestInterviewSessionEndpoint:
             }
         )
         
-        # Auth middleware returns 403 when no token provided
-        assert response.status_code == 403
+        # Auth middleware returns 401 when no token is provided
+        assert response.status_code == 401
     
     def test_create_session_invalid_difficulty(self, db: Session):
         """Test session creation with invalid difficulty"""

@@ -76,7 +76,7 @@ export const fetchStudyPlan = createAsyncThunk<StudyPlan, number>(
 /**
  * Fetch the active study plan
  */
-export const fetchActivePlan = createAsyncThunk<StudyPlan, void>(
+export const fetchActivePlan = createAsyncThunk<StudyPlan | null, void>(
   'studyPlan/fetchActive',
   async (_, { rejectWithValue }) => {
     try {
@@ -179,12 +179,17 @@ const studyPlanSlice = createSlice({
       .addCase(fetchActivePlan.fulfilled, (state, action) => {
         state.isLoading = false;
         const plan = action.payload;
-        state.plans[plan.id] = plan;
-        state.activePlan = plan;
+        if (plan) {
+          state.plans[plan.id] = plan;
+          state.activePlan = plan;
+        } else {
+          state.activePlan = null;
+        }
       })
       .addCase(fetchActivePlan.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+        state.activePlan = null;
       });
 
     // Update progress

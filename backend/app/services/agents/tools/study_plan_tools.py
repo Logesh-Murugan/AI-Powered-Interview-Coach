@@ -14,7 +14,7 @@ from langchain_core.tools import Tool
 from sqlalchemy.orm import Session
 
 from app.models.resume_analysis import ResumeAnalysis
-from app.models.interview_session import InterviewSession
+from app.models.interview_session import InterviewSession, SessionStatus
 from app.models.evaluation import Evaluation
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ class SkillAssessmentTool:
             # Get latest resume analysis
             resume_analysis = self.db.query(ResumeAnalysis).filter(
                 ResumeAnalysis.user_id == user_id,
-                ResumeAnalysis.status == 'completed'
+                ResumeAnalysis.status.in_(['success', 'completed'])
             ).order_by(ResumeAnalysis.created_at.desc()).first()
             
             if not resume_analysis:
@@ -59,6 +59,14 @@ class SkillAssessmentTool:
         except Exception as e:
             logger.error(f"Error in skill assessment: {e}")
             return {'error': str(e)}
+    
+    def as_tool(self) -> Tool:
+        """Convert to LangChain Tool."""
+        return Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run
+        )
 
 
 class JobMarketTool:
@@ -117,6 +125,14 @@ class JobMarketTool:
                 'market_trends': [],
                 'note': f'Generic requirements for {target_role}'
             }
+    
+    def as_tool(self) -> Tool:
+        """Convert to LangChain Tool."""
+        return Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run
+        )
 
 
 class LearningResourceTool:
@@ -267,6 +283,14 @@ class LearningResourceTool:
                 'books': ['Search on Amazon or O\'Reilly'],
                 'practice_sites': ['Search for practice platforms']
             }
+    
+    def as_tool(self) -> Tool:
+        """Convert to LangChain Tool."""
+        return Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run
+        )
 
 
 class ProgressTrackerTool:
@@ -289,7 +313,7 @@ class ProgressTrackerTool:
             # Get interview sessions
             sessions = self.db.query(InterviewSession).filter(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == 'completed'
+                InterviewSession.status == SessionStatus.COMPLETED
             ).order_by(InterviewSession.created_at.desc()).limit(20).all()
             
             if not sessions:
@@ -323,6 +347,14 @@ class ProgressTrackerTool:
         except Exception as e:
             logger.error(f"Error tracking progress: {e}")
             return {'error': str(e)}
+    
+    def as_tool(self) -> Tool:
+        """Convert to LangChain Tool."""
+        return Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run
+        )
 
 
 class SchedulerTool:
@@ -384,3 +416,11 @@ class SchedulerTool:
         except Exception as e:
             logger.error(f"Error creating schedule: {e}")
             return {'error': str(e)}
+    
+    def as_tool(self) -> Tool:
+        """Convert to LangChain Tool."""
+        return Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run
+        )

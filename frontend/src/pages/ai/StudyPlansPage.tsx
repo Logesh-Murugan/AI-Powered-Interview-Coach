@@ -236,6 +236,25 @@ function StudyPlansPage() {
           </Paper>
         )}
 
+        {/* No Active Plan Message */}
+        {!activePlan && !isLoading && !shouldShowForm && (
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No active study plan yet
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Create a personalized study plan to track your learning progress
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setShowCreateForm(true)}
+            >
+              Create Study Plan
+            </Button>
+          </Paper>
+        )}
+
         {/* Active Plan Display */}
         {activePlan && !shouldShowForm && (
           <Stack spacing={3}>

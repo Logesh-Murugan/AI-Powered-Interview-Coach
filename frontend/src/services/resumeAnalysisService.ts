@@ -34,6 +34,7 @@ export interface SkillGaps {
   priority?: string;
   recommendation?: string;
   analysis?: string;
+  note?: string;
 }
 
 // Learning roadmap milestone
@@ -53,6 +54,7 @@ export interface ImprovementRoadmap {
   milestones: Milestone[];
   success_tips: string[];
   recommendations?: string;
+  note?: string;
 }
 
 // Agent reasoning step
@@ -73,6 +75,8 @@ export interface ResumeAnalysis {
     experience_timeline: ExperienceTimeline;
     skill_gaps: SkillGaps;
     improvement_roadmap: ImprovementRoadmap;
+    analysis_summary?: string;
+    fallback_used?: boolean;
   };
   agent_reasoning?: ReasoningStep[];
   execution_time_ms: number;

@@ -40,15 +40,16 @@ function AchievementProgress() {
       setLoading(true);
       setError(null);
       const data = await getUserAchievements();
-      
-      // Get recent achievements (last 3)
+
+      // Get recent achievements (last 3) — backend returns earned_at not unlocked_at
       const recentAchievements = data.achievements
-        .sort((a, b) => new Date(b.unlocked_at).getTime() - new Date(a.unlocked_at).getTime())
+        .filter(a => a.earned_at)
+        .sort((a, b) => new Date(b.earned_at!).getTime() - new Date(a.earned_at!).getTime())
         .slice(0, 3);
-      
+
       setAchievements(recentAchievements);
       setCompletionPercentage(data.completion_percentage);
-      setTotalPoints(data.total_points);
+      setTotalPoints(data.total_earned);
     } catch (err) {
       console.error('Error loading achievements:', err);
       setError('Unable to load achievements');
@@ -136,22 +137,16 @@ function AchievementProgress() {
                     alignItems: 'center',
                   }}
                 >
-                  {userAchievement.achievement.icon}
+                  🏆
                 </Box>
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="body2" fontWeight="medium">
-                    {userAchievement.achievement.name}
+                    {userAchievement.achievement_type.replace(/_/g, ' ')}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {userAchievement.achievement.description}
+                    Earned {userAchievement.earned_at ? new Date(userAchievement.earned_at).toLocaleDateString() : ''}
                   </Typography>
                 </Box>
-                <Chip
-                  label={`${userAchievement.achievement.points} pts`}
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                />
               </Box>
             ))}
           </Stack>

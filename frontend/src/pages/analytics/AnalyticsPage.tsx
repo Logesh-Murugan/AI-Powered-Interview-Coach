@@ -120,7 +120,7 @@ const AnalyticsPage: React.FC = () => {
       });
 
       // Create blob from response
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const blob = new Blob([response.data as BlobPart], { type: 'application/pdf' });
       
       // Create download link
       const url = window.URL.createObjectURL(blob);

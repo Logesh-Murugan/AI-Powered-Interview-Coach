@@ -163,11 +163,11 @@ def test_cache_key_builder():
     """Test cache key builder"""
     # User keys
     assert CacheKeyBuilder.user_profile(123) == "user:profile:123"
-    assert CacheKeyBuilder.user_preferences(456) == "user:preferences:456"
+    assert CacheKeyBuilder.user_preferences(456) == "user:456:prefs"
     
     # Question keys
     assert CacheKeyBuilder.question_set("engineer", "medium", "algorithms") == \
-           "question:set:engineer:medium:algorithms"
+           "questions:set:engineer:medium:algorithms"
     
     # Interview keys
     assert CacheKeyBuilder.interview_session(789) == "interview:session:789"
@@ -191,7 +191,6 @@ def test_cache_ttl_values():
     
     # L2 Cache
     assert CacheTTL.L2_USER_PROFILE == timedelta(minutes=30)
-    assert CacheTTL.L2_USER_PREFERENCES == timedelta(minutes=60)
     assert CacheTTL.L2_QUESTION_SET == timedelta(minutes=15)
     
     # L3 Cache
@@ -200,6 +199,7 @@ def test_cache_ttl_values():
     assert CacheTTL.L3_INTERVIEW_HISTORY == timedelta(hours=12)
     
     # L4 Cache
+    assert CacheTTL.L4_USER_PREFERENCES == timedelta(hours=24)
     assert CacheTTL.L4_AI_RESPONSE == timedelta(days=30)
     assert CacheTTL.L4_QUESTION_BANK == timedelta(days=7)
     assert CacheTTL.L4_SKILL_TAXONOMY == timedelta(days=30)

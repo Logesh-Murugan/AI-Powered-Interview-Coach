@@ -130,8 +130,8 @@ class TestAnalyticsEndpoints:
         """Test GET /api/v1/analytics/overview without authentication."""
         response = client.get("/api/v1/analytics/overview")
         
-        # Should return 403 Forbidden (FastAPI HTTPBearer default behavior)
-        assert response.status_code == 403
+        # Should return 401 Unauthorized (normalized auth behavior)
+        assert response.status_code == 401
     
     def test_get_analytics_overview_invalid_token(self, client):
         """Test GET /api/v1/analytics/overview with invalid token."""

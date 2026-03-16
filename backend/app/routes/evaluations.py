@@ -29,7 +29,7 @@ router = APIRouter()
 )
 async def evaluate_answer(
     request: EvaluationRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -46,7 +46,7 @@ async def evaluate_answer(
     Response time target: < 5000ms at 95th percentile
     """
     try:
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         logger.info(f"Evaluating answer {request.answer_id} for user {user_id}")
         
@@ -103,7 +103,7 @@ async def evaluate_answer(
 )
 async def get_evaluation(
     answer_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -115,7 +115,7 @@ async def get_evaluation(
     - Evaluation scores and feedback
     """
     try:
-        user_id = current_user['user_id']
+        user_id = current_user.id
         
         # Verify answer belongs to user
         answer = db.query(Answer).filter(Answer.id == answer_id).first()
@@ -177,3 +177,4 @@ async def get_evaluation(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve evaluation"
         )
+

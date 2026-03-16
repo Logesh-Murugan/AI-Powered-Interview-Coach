@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Container,
@@ -19,13 +19,19 @@ import {
   Chip,
   Stack,
   Fade,
+  CircularProgress,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
-import { Send, Timer, NavigateNext, NavigateBefore, CheckCircle, Save } from '@mui/icons-material';
+import { Send, Timer, NavigateNext, NavigateBefore, CheckCircle, Save, Edit, Mic } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import apiService from '../../services/api.service';
 import FadeIn from '../../components/animations/FadeIn';
+import { RecordingControls } from '../../components/interview/RecordingControls';
+import recordingService from '../../services/recordingService';
+import type { RecordingResult } from '../../types/recording';
 
 interface Question {
   id: number;
@@ -45,6 +51,7 @@ interface SessionInfo {
 function InterviewSessionPage() {
   const { id: sessionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [question, setQuestion] = useState<Question | null>(null);
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
@@ -58,9 +65,14 @@ function InterviewSessionPage() {
   const [saved, setSaved] = useState(false);
   const [hasSavedDraft, setHasSavedDraft] = useState(false); // Track if we've ever saved a draft
   const [hasSubmitted, setHasSubmitted] = useState(false); // Prevent duplicate submissions
+  const [recordingResult, setRecordingResult] = useState<RecordingResult | null>(null);
+  const [uploadingRecording, setUploadingRecording] = useState(false);
+  const [recordingUploaded, setRecordingUploaded] = useState(false);
+  const [answerMode, setAnswerMode] = useState<'text' | 'speech'>('text'); // New: Answer mode selector
   
   const autoSaveTimerRef = useRef<number | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
+  const initialQuestionNumber = (location.state as { questionNumber?: number } | null)?.questionNumber ?? 1;
 
   const loadSessionInfo = useCallback(async () => {
     if (!sessionId) return;
@@ -79,6 +91,8 @@ function InterviewSessionPage() {
     setLoading(true);
     setError(null);
     setHasSubmitted(false); // Reset submission flag for new question
+    setRecordingResult(null); // Reset recording state
+    setRecordingUploaded(false);
     
     try {
       const response = await apiService.get(`/interviews/${sessionId}/questions/${questionNumber}`);
@@ -170,8 +184,17 @@ function InterviewSessionPage() {
       return;
     }
     
-    if (answer.length < 10) {
-      setError('Answer must be at least 10 characters');
+    // Check submission requirements based on mode
+    const hasText = answer.length >= 10;
+    const hasRecording = recordingResult && recordingResult.audioBlob;
+    
+    if (answerMode === 'text' && !hasText) {
+      setError('Please provide a text answer (minimum 10 characters)');
+      return;
+    }
+    
+    if (answerMode === 'speech' && !hasRecording) {
+      setError('Please record your answer using the microphone');
       return;
     }
     
@@ -185,9 +208,16 @@ function InterviewSessionPage() {
     setError(null);
     
     try {
+      // In speech mode, ensure recording is uploaded and transcribed first
+      if (answerMode === 'speech' && recordingResult && !recordingUploaded) {
+        await handleRecordingUpload();
+        // The transcription will populate the answer field automatically
+      }
+      
+      // Submit answer (in speech mode, answer_text will contain transcription)
       const response = await apiService.post(
         `/interviews/${sessionId}/answers?question_id=${question.id}`,
-        { answer_text: answer }
+        { answer_text: answer || "" }
       );
       
       const responseData = response.data as {
@@ -209,6 +239,17 @@ function InterviewSessionPage() {
         console.error('Failed to delete draft:', err);
         // Don't fail the submission if draft deletion fails
       }
+
+      // Upload recording if available
+      if (recordingResult && !recordingUploaded) {
+        try {
+          await handleRecordingUpload();
+        } catch (recordingError) {
+          console.error('Recording upload failed:', recordingError);
+          // Don't fail the submission if recording upload fails
+          setError('Answer submitted successfully, but recording upload failed. You can continue to the next question.');
+        }
+      }
       
       if (session_completed || all_questions_answered) {
         navigate(`/interviews/${sessionId}/summary`);
@@ -221,6 +262,57 @@ function InterviewSessionPage() {
       setError(err.message || 'Failed to submit answer');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRecordingComplete = useCallback((result: RecordingResult) => {
+    setRecordingResult(result);
+    setRecordingUploaded(false);
+    console.log('Recording completed:', result);
+  }, []);
+
+  const handleRecordingUpload = async () => {
+    if (!recordingResult || !sessionId || !question) {
+      return;
+    }
+
+    setUploadingRecording(true);
+    setError(null);
+
+    try {
+      const files = recordingService.createUploadFiles(recordingResult);
+      
+      const uploadResponse = await recordingService.uploadRecording({
+        sessionId: parseInt(sessionId),
+        questionId: question.id,
+        audioFile: files.audioFile,
+        videoFile: files.videoFile
+      });
+
+      console.log('Recording uploaded successfully:', uploadResponse);
+      setRecordingUploaded(true);
+      
+      // If transcription is available and text field is empty, populate it
+      if (uploadResponse.transcription && !answer.trim()) {
+        setAnswer(uploadResponse.transcription);
+        console.log('Populated text field with transcription:', uploadResponse.transcription);
+      }
+      
+      // Show success message with transcription if available
+      if (uploadResponse.transcription) {
+        console.log('Transcription:', uploadResponse.transcription);
+      }
+      
+      if (uploadResponse.voice_analysis) {
+        console.log('Voice analysis:', uploadResponse.voice_analysis);
+      }
+
+    } catch (error: any) {
+      console.error('Recording upload failed:', error);
+      setError(`Recording upload failed: ${error.message}`);
+      throw error;
+    } finally {
+      setUploadingRecording(false);
     }
   };
 
@@ -240,8 +332,8 @@ function InterviewSessionPage() {
 
   useEffect(() => {
     loadSessionInfo();
-    loadQuestion(1);
-  }, [loadSessionInfo, loadQuestion]);
+    loadQuestion(initialQuestionNumber);
+  }, [initialQuestionNumber, loadSessionInfo, loadQuestion]);
 
   // Save draft on navigation/page unload
   useEffect(() => {
@@ -383,6 +475,23 @@ function InterviewSessionPage() {
               Your Answer
             </Typography>
             
+            {/* Answer Mode Selector */}
+            <ToggleButtonGroup
+              value={answerMode}
+              exclusive
+              onChange={(_, newMode) => newMode && setAnswerMode(newMode)}
+              size="small"
+            >
+              <ToggleButton value="text" aria-label="text mode">
+                <Edit sx={{ mr: 1 }} />
+                Text
+              </ToggleButton>
+              <ToggleButton value="speech" aria-label="speech mode">
+                <Mic sx={{ mr: 1 }} />
+                Speech
+              </ToggleButton>
+            </ToggleButtonGroup>
+            
             <AnimatePresence>
               {saving && (
                 <motion.div
@@ -427,16 +536,149 @@ function InterviewSessionPage() {
             </Fade>
           )}
           
-          <TextField
-            fullWidth
-            multiline
-            rows={12}
-            value={answer}
-            onChange={handleAnswerChange}
-            placeholder="Type your answer here... (minimum 10 characters)"
-            disabled={submitting}
-            sx={{ mb: 2 }}
-          />
+          {/* Text Input - Show only in text mode */}
+          {answerMode === 'text' && (
+            <TextField
+              fullWidth
+              multiline
+              rows={12}
+              value={answer}
+              onChange={handleAnswerChange}
+              placeholder="Type your answer here... (minimum 10 characters)"
+              disabled={submitting}
+              sx={{ mb: 3 }}
+            />
+          )}
+
+          {/* Recording Controls - Show only in speech mode */}
+          {answerMode === 'speech' && (
+            <Box sx={{ mb: 3 }}>
+              <RecordingControls
+                onRecordingComplete={handleRecordingComplete}
+                disabled={submitting || hasSubmitted}
+                maxDuration={question?.time_limit_seconds || 600}
+                includeVideo={false}
+                showVideoToggle={true}
+              />
+              
+              {/* Show transcription in speech mode */}
+              {recordingUploaded && answer && (
+                <Paper 
+                  variant="outlined" 
+                  sx={{ 
+                    p: 2, 
+                    mt: 2,
+                    bgcolor: 'grey.50',
+                    border: '2px solid',
+                    borderColor: 'success.main'
+                  }}
+                >
+                  <Typography variant="subtitle2" color="success.main" gutterBottom>
+                    ✓ Speech converted to text:
+                  </Typography>
+                  <Typography variant="body2">
+                    {answer}
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+          )}
+
+          {/* Recording Controls - Always show in text mode for hybrid answers */}
+          {answerMode === 'text' && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" gutterBottom>
+                Optional: Add Voice Recording
+              </Typography>
+              <RecordingControls
+                onRecordingComplete={handleRecordingComplete}
+                disabled={submitting || hasSubmitted}
+                maxDuration={question?.time_limit_seconds || 600}
+                includeVideo={false}
+                showVideoToggle={true}
+              />
+            </Box>
+          )}
+
+          {/* Recording Status */}
+          {recordingResult && (
+            <Alert 
+              severity={recordingUploaded ? "success" : "info"} 
+              sx={{ mb: 2 }}
+              action={
+                !recordingUploaded && !uploadingRecording && (
+                  <Button 
+                    size="small" 
+                    onClick={handleRecordingUpload}
+                    disabled={uploadingRecording}
+                  >
+                    Upload Recording
+                  </Button>
+                )
+              }
+            >
+              {uploadingRecording ? (
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <CircularProgress size={16} />
+                  <Typography variant="body2">Uploading recording...</Typography>
+                </Stack>
+              ) : recordingUploaded ? (
+                `Recording uploaded successfully! Duration: ${recordingService.formatDuration(recordingResult.duration)}`
+              ) : (
+                `Recording ready for upload. Duration: ${recordingService.formatDuration(recordingResult.duration)}`
+              )}
+            </Alert>
+          )}
+
+          {/* Submission Status Indicator */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              {answerMode === 'text' ? 'Text Answer Mode' : 'Speech Answer Mode'}:
+            </Typography>
+            <Stack direction="row" spacing={2} alignItems="center">
+              {answerMode === 'text' ? (
+                <>
+                  <Chip
+                    label={`Text: ${answer.length >= 10 ? 'Ready' : `${answer.length}/10 chars`}`}
+                    color={answer.length >= 10 ? 'success' : 'default'}
+                    size="small"
+                    variant={answer.length >= 10 ? 'filled' : 'outlined'}
+                  />
+                  {recordingResult && (
+                    <Chip
+                      label="+ Voice Recording"
+                      color="info"
+                      size="small"
+                      variant="outlined"
+                    />
+                  )}
+                </>
+              ) : (
+                <>
+                  <Chip
+                    label={`Recording: ${recordingResult ? 'Ready' : 'None'}`}
+                    color={recordingResult ? 'success' : 'default'}
+                    size="small"
+                    variant={recordingResult ? 'filled' : 'outlined'}
+                  />
+                  {recordingUploaded && answer && (
+                    <Chip
+                      label="✓ Converted to Text"
+                      color="success"
+                      size="small"
+                      variant="filled"
+                    />
+                  )}
+                </>
+              )}
+              <Typography variant="caption" color="text.secondary">
+                {answerMode === 'text' 
+                  ? (answer.length >= 10 ? "✓ Ready to submit" : "Type at least 10 characters")
+                  : (recordingResult ? "✓ Ready to submit" : "Record your answer to continue")
+                }
+              </Typography>
+            </Stack>
+          </Box>
           
           <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
             <Stack direction="row" spacing={1} alignItems="center">
@@ -489,7 +731,12 @@ function InterviewSessionPage() {
                   variant="contained"
                   size="large"
                   onClick={handleSubmit}
-                  disabled={submitting || hasSubmitted || answer.length < 10}
+                  disabled={
+                    submitting || 
+                    hasSubmitted || 
+                    (answerMode === 'text' && answer.length < 10) ||
+                    (answerMode === 'speech' && (!recordingResult || !recordingResult.audioBlob))
+                  }
                   startIcon={submitting ? <LoadingSpinner size="small" /> : <Send />}
                   endIcon={<NavigateNext />}
                 >
@@ -505,3 +752,4 @@ function InterviewSessionPage() {
 }
 
 export default InterviewSessionPage;
+

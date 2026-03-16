@@ -14,26 +14,24 @@ import {
   CardContent,
   LinearProgress,
   Chip,
-  Alert,
 } from '@mui/material';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import LockIcon from '@mui/icons-material/Lock';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import {
   getAllAchievements,
   getUserAchievements,
-  type Achievement,
+  type AchievementDefinition,
   type UserAchievement,
 } from '../../services/achievementsService';
 import FadeIn from '../../components/animations/FadeIn';
 
 function AchievementsPage() {
-  const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
+  const [allAchievements, setAllAchievements] = useState<AchievementDefinition[]>([]);
   const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
   const [totalUnlocked, setTotalUnlocked] = useState(0);
-  const [totalPoints, setTotalPoints] = useState(0);
+  const [totalAvailable, setTotalAvailable] = useState(0);
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,16 +44,16 @@ function AchievementsPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const [allData, userData] = await Promise.all([
         getAllAchievements(),
         getUserAchievements(),
       ]);
-      
+
       setAllAchievements(allData.achievements);
       setUserAchievements(userData.achievements);
-      setTotalUnlocked(userData.total_unlocked);
-      setTotalPoints(userData.total_points);
+      setTotalUnlocked(userData.total_earned);
+      setTotalAvailable(userData.total_available);
       setCompletionPercentage(userData.completion_percentage);
     } catch (err: any) {
       setError(err.message || 'Failed to load achievements');
@@ -64,19 +62,18 @@ function AchievementsPage() {
     }
   };
 
-  const isUnlocked = (achievementId: number): UserAchievement | undefined => {
-    return userAchievements.find(ua => ua.achievement_id === achievementId);
+  const isUnlocked = (achievementType: string): UserAchievement | undefined => {
+    return userAchievements.find(ua => ua.achievement_type === achievementType);
   };
 
-  const getCategoryColor = (category: string) => {
+  const getRarityColor = (rarity: string) => {
     const colors: Record<string, string> = {
-      interview: 'primary',
-      practice: 'secondary',
-      streak: 'success',
-      score: 'warning',
-      special: 'error',
+      common: 'default',
+      rare: 'primary',
+      epic: 'secondary',
+      legendary: 'warning',
     };
-    return colors[category] || 'default';
+    return colors[rarity] || 'default';
   };
 
   if (loading) {
@@ -126,10 +123,10 @@ function AchievementsPage() {
             <Grid size={{ xs: 12, md: 4 }}>
               <Box sx={{ textAlign: 'center' }}>
                 <Typography variant="h3" color="secondary">
-                  {totalPoints}
+                  {totalAvailable}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Total Points
+                  Total Available
                 </Typography>
               </Box>
             </Grid>
@@ -155,11 +152,10 @@ function AchievementsPage() {
 
         <Grid container spacing={3}>
           {allAchievements.map((achievement) => {
-            const unlocked = isUnlocked(achievement.id);
-            const isLocked = !unlocked && achievement.is_hidden;
+            const unlocked = isUnlocked(achievement.type);
 
             return (
-              <Grid key={achievement.id} size={{ xs: 12, sm: 6, md: 4 }}>
+              <Grid key={achievement.type} size={{ xs: 12, sm: 6, md: 4 }}>
                 <Card
                   sx={{
                     height: '100%',
@@ -192,30 +188,33 @@ function AchievementsPage() {
                           filter: unlocked ? 'none' : 'grayscale(100%)',
                         }}
                       >
-                        {isLocked ? <LockIcon fontSize="large" /> : achievement.icon}
+                        {achievement.icon}
                       </Box>
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="h6">
-                          {isLocked ? '???' : achievement.name}
+                          {achievement.name}
                         </Typography>
                         <Chip
-                          label={achievement.category}
+                          label={achievement.rarity}
                           size="small"
-                          color={getCategoryColor(achievement.category) as any}
+                          color={getRarityColor(achievement.rarity) as any}
                           sx={{ mt: 0.5 }}
                         />
                       </Box>
                     </Box>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                      {isLocked ? 'Hidden achievement' : achievement.description}
+                      {achievement.description}
                     </Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="body2" fontWeight="bold">
-                        {achievement.points} points
-                      </Typography>
-                      {unlocked && (
+                      <Chip
+                        label={unlocked ? 'Unlocked' : 'Locked'}
+                        size="small"
+                        color={unlocked ? 'success' : 'default'}
+                        variant={unlocked ? 'filled' : 'outlined'}
+                      />
+                      {unlocked && unlocked.earned_at && (
                         <Typography variant="caption" color="text.secondary">
-                          Unlocked {new Date(unlocked.unlocked_at).toLocaleDateString()}
+                          {new Date(unlocked.earned_at).toLocaleDateString()}
                         </Typography>
                       )}
                     </Box>

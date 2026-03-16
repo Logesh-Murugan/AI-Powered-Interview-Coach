@@ -172,7 +172,7 @@ function LeaderboardPage() {
               <TableBody>
                 {leaderboard.map((entry) => (
                   <TableRow
-                    key={entry.user_id}
+                    key={`${entry.rank}-${entry.username}`}
                     sx={{
                       backgroundColor: entry.is_current_user ? 'action.selected' : 'inherit',
                       fontWeight: entry.is_current_user ? 'bold' : 'normal',
@@ -204,7 +204,7 @@ function LeaderboardPage() {
                     </TableCell>
                     <TableCell align="right">{entry.sessions_completed}</TableCell>
                     <TableCell align="right">{entry.average_score.toFixed(1)}%</TableCell>
-                    <TableCell align="right">{entry.score}</TableCell>
+                    <TableCell align="right">{(entry.average_score * entry.sessions_completed).toFixed(1)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -217,3 +217,4 @@ function LeaderboardPage() {
 }
 
 export default LeaderboardPage;
+

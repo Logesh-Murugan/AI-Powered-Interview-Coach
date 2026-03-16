@@ -124,8 +124,8 @@ class TestQuestionDisplayEndpoint:
         """Test question retrieval without authentication"""
         response = client.get("/api/v1/interviews/1/questions/1")
         
-        # Auth middleware returns 403 when no token provided
-        assert response.status_code == 403
+        # Auth middleware returns 401 when no token is provided
+        assert response.status_code == 401
     
     def test_get_question_session_not_found(self, db: Session):
         """Test question retrieval with non-existent session"""

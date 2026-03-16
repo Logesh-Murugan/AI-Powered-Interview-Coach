@@ -4,8 +4,8 @@
  */
 
 export const API_CONFIG = {
-  BASE_URL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
-  TIMEOUT: 10000,
+  BASE_URL: import.meta.env.VITE_API_URL || '/api/v1',
+  TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
 } as const;
@@ -21,13 +21,13 @@ export const API_ENDPOINTS = {
     PASSWORD_RESET_REQUEST: '/auth/password-reset-request',
     PASSWORD_RESET: '/auth/password-reset',
   },
-  
+
   // Users
   USERS: {
     ME: '/users/me',
     UPDATE_PROFILE: '/users/me',
   },
-  
+
   // Interviews
   INTERVIEWS: {
     LIST: '/interviews',
@@ -39,7 +39,7 @@ export const API_ENDPOINTS = {
     SUBMIT_ANSWER: (id: string) => `/interviews/${id}/answer`,
     COMPLETE: (id: string) => `/interviews/${id}/complete`,
   },
-  
+
   // Resumes
   RESUMES: {
     LIST: '/resumes',
@@ -48,14 +48,14 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/resumes/${id}`,
     PARSE: (id: string) => `/resumes/${id}/parse`,
   },
-  
+
   // Analytics
   ANALYTICS: {
     DASHBOARD: '/analytics/dashboard',
     PERFORMANCE: '/analytics/performance',
     PROGRESS: '/analytics/progress',
   },
-  
+
   // Health
   HEALTH: '/health',
 } as const;

@@ -7,7 +7,7 @@ Requirements: 29.9
 """
 from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, Index
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from sqlalchemy.sql import func
 from app.models.base import Base
 
 
@@ -56,8 +56,10 @@ class CompanyCoachingSession(Base):
     agent_reasoning = Column(JSON, nullable=True)  # Agent's reasoning steps
     execution_time_ms = Column(Integer, nullable=False)  # Execution time in milliseconds
     
-    # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    # Timestamps - match database schema exactly
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     
     # Relationships
     user = relationship("User", back_populates="company_coaching_sessions")

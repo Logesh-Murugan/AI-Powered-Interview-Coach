@@ -16,7 +16,6 @@ import {
   MenuItem,
   Stack,
   Grid,
-  Alert,
   Tabs,
   Tab,
   Accordion,
@@ -46,13 +45,13 @@ import {
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   createSession,
+  fetchSession,
   fetchUserSessions,
   setCurrentSession,
   clearError,
 } from '../../store/slices/companyCoachingSlice';
 import CoachingSessionCard from '../../components/ai/CoachingSessionCard';
 
-// Target roles for dropdown
 const TARGET_ROLES = [
   'Software Engineer',
   'Frontend Developer',
@@ -99,22 +98,14 @@ function CompanyCoachingPage() {
     (state) => state.companyCoaching
   );
 
-  // Form state
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [targetRole, setTargetRole] = useState('');
-
-  // Filter state
   const [companyFilter, setCompanyFilter] = useState('');
-
-  // Tab state for session details view
   const [tabValue, setTabValue] = useState(0);
-
-  // Checklist state (local UI state)
   const [checklistState, setChecklistState] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
-    // Fetch user sessions on mount
     dispatch(fetchUserSessions());
   }, [dispatch]);
 
@@ -130,42 +121,44 @@ function CompanyCoachingPage() {
       })
     );
 
-    // Reset form and hide it
     setShowCreateForm(false);
     setCompanyName('');
     setTargetRole('');
-    setTabValue(0); // Switch to first tab to show new session
+    setTabValue(0);
   };
 
-  const handleViewDetails = (session: typeof userSessions[0]) => {
-    dispatch(setCurrentSession(session));
-    setTabValue(0); // Reset to first tab
-    // Initialize checklist state
+  const handleViewDetails = async (session: typeof userSessions[0]) => {
+    const result = await dispatch(fetchSession(session.id));
+    if (!fetchSession.fulfilled.match(result)) {
+      return;
+    }
+
+    const fullSession = result.payload;
+    dispatch(setCurrentSession(fullSession));
+    setTabValue(0);
+
+    // Safe initialization of checklist state with null checks
     const initialChecklistState: Record<number, boolean> = {};
-    session.pre_interview_checklist.forEach((_, idx) => {
+    const checklist = fullSession?.pre_interview_checklist ?? [];
+    checklist.forEach((_, idx) => {
       initialChecklistState[idx] = false;
     });
     setChecklistState(initialChecklistState);
   };
 
   const handleChecklistToggle = (index: number) => {
-    setChecklistState(prev => ({
+    setChecklistState((prev) => ({
       ...prev,
       [index]: !prev[index],
     }));
   };
 
-  // Get unique company names for filter
-  const uniqueCompanies = Array.from(
-    new Set(userSessions.map(s => s.company_name))
-  ).sort();
+  const uniqueCompanies = Array.from(new Set(userSessions.map((s) => s.company_name))).sort();
 
-  // Filter sessions by company
   const filteredSessions = companyFilter
-    ? userSessions.filter(s => s.company_name === companyFilter)
+    ? userSessions.filter((s) => s.company_name === companyFilter)
     : userSessions;
 
-  // Difficulty color mapping
   const getDifficultyColor = (difficulty: string): 'success' | 'warning' | 'error' => {
     switch (difficulty.toLowerCase()) {
       case 'easy':
@@ -182,7 +175,6 @@ function CompanyCoachingPage() {
   return (
     <Container maxWidth="lg">
       <Box sx={{ mt: 4, mb: 4 }}>
-        {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Box>
             <Typography variant="h4" gutterBottom>
@@ -194,17 +186,12 @@ function CompanyCoachingPage() {
             </Typography>
           </Box>
           {!showCreateForm && (
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setShowCreateForm(true)}
-            >
+            <Button variant="contained" startIcon={<Add />} onClick={() => setShowCreateForm(true)}>
               New Session
             </Button>
           )}
         </Box>
 
-        {/* Error Alert */}
         {error && (
           <ErrorAlert
             message={error}
@@ -213,7 +200,6 @@ function CompanyCoachingPage() {
           />
         )}
 
-        {/* Create Session Form */}
         {showCreateForm && (
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
@@ -258,11 +244,7 @@ function CompanyCoachingPage() {
                 >
                   {isGenerating ? 'Generating Session...' : 'Generate Coaching Session'}
                 </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => setShowCreateForm(false)}
-                  fullWidth
-                >
+                <Button variant="outlined" onClick={() => setShowCreateForm(false)} fullWidth>
                   Cancel
                 </Button>
               </Stack>
@@ -270,22 +252,17 @@ function CompanyCoachingPage() {
           </Paper>
         )}
 
-        {/* Loading State */}
         {isLoading && userSessions.length === 0 && (
           <LoadingSpinner variant="fullPage" text="Loading coaching sessions..." />
         )}
 
-        {/* Session List or Detail View */}
         {!isLoading && userSessions.length > 0 && (
           <Grid container spacing={3}>
-            {/* Session List */}
             <Grid size={{ xs: 12, md: currentSession ? 4 : 12 }}>
               <Paper sx={{ p: 3 }}>
                 <Stack spacing={2}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6">
-                      Your Sessions ({filteredSessions.length})
-                    </Typography>
+                    <Typography variant="h6">Your Sessions ({filteredSessions.length})</Typography>
                     {uniqueCompanies.length > 1 && (
                       <TextField
                         select
@@ -312,7 +289,7 @@ function CompanyCoachingPage() {
                       <CoachingSessionCard
                         key={session.id}
                         session={session}
-                        onViewDetails={() => handleViewDetails(session)}
+                        onViewDetails={() => void handleViewDetails(session)}
                       />
                     ))}
                   </Stack>
@@ -320,7 +297,6 @@ function CompanyCoachingPage() {
               </Paper>
             </Grid>
 
-            {/* Session Details */}
             {currentSession && (
               <Grid size={{ xs: 12, md: 8 }}>
                 <Paper sx={{ p: 3 }}>
@@ -335,12 +311,9 @@ function CompanyCoachingPage() {
                   >
                     <Tab label="Company Overview" />
                     <Tab label="Predicted Questions" />
-                    <Tab label="STAR Examples" />
-                    <Tab label="Confidence Tips" />
                     <Tab label="Checklist" />
                   </Tabs>
 
-                  {/* Company Overview Tab */}
                   <TabPanel value={tabValue} index={0}>
                     <Stack spacing={3}>
                       <Box>
@@ -348,7 +321,7 @@ function CompanyCoachingPage() {
                           Company Culture
                         </Typography>
                         <Typography variant="body1" paragraph>
-                          {currentSession.company_overview.culture}
+                          {currentSession?.company_overview?.culture || 'No culture information available'}
                         </Typography>
                       </Box>
 
@@ -357,9 +330,15 @@ function CompanyCoachingPage() {
                           Core Values
                         </Typography>
                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                          {currentSession.company_overview.values.map((value, idx) => (
+                          {/* Safe array access with default empty array */}
+                          {(currentSession?.company_overview?.values ?? []).map((value, idx) => (
                             <Chip key={idx} label={value} color="primary" />
                           ))}
+                          {(!currentSession?.company_overview?.values || currentSession.company_overview.values.length === 0) && (
+                            <Typography variant="body2" color="text.secondary">
+                              No core values information available
+                            </Typography>
+                          )}
                         </Box>
                       </Box>
 
@@ -368,28 +347,22 @@ function CompanyCoachingPage() {
                           Interview Process
                         </Typography>
                         <Typography variant="body1">
-                          {currentSession.company_overview.interview_process}
+                          {currentSession?.company_overview?.interview_process || 'No interview process information available'}
                         </Typography>
                       </Box>
                     </Stack>
                   </TabPanel>
 
-                  {/* Predicted Questions Tab */}
                   <TabPanel value={tabValue} index={1}>
                     <Stack spacing={2}>
-                      {currentSession.predicted_questions.map((q, idx) => (
+                      {/* Safe array access with default empty array */}
+                      {(currentSession?.predicted_questions ?? []).map((q, idx) => (
                         <Accordion key={idx}>
                           <AccordionSummary expandIcon={<ExpandMore />}>
                             <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
                               <QuestionAnswer fontSize="small" />
-                              <Typography sx={{ flexGrow: 1 }}>
-                                {q.question}
-                              </Typography>
-                              <Chip
-                                label={q.difficulty}
-                                size="small"
-                                color={getDifficultyColor(q.difficulty)}
-                              />
+                              <Typography sx={{ flexGrow: 1 }}>{q?.question || 'Question not available'}</Typography>
+                              <Chip label={q?.difficulty || 'medium'} size="small" color={getDifficultyColor(q?.difficulty || 'medium')} />
                             </Stack>
                           </AccordionSummary>
                           <AccordionDetails>
@@ -398,122 +371,36 @@ function CompanyCoachingPage() {
                                 <Typography variant="subtitle2" color="text.secondary">
                                   Category
                                 </Typography>
-                                <Chip label={q.category} size="small" />
+                                <Chip label={q?.category || 'General'} size="small" />
                               </Box>
                               <Box>
                                 <Typography variant="subtitle2" color="text.secondary" gutterBottom>
                                   Why This Question?
                                 </Typography>
-                                <Typography variant="body2">
-                                  {q.why_asked}
-                                </Typography>
+                                <Typography variant="body2">{q?.why_asked || 'No explanation available'}</Typography>
                               </Box>
                             </Stack>
                           </AccordionDetails>
                         </Accordion>
                       ))}
-                    </Stack>
-                  </TabPanel>
-
-                  {/* STAR Examples Tab */}
-                  <TabPanel value={tabValue} index={2}>
-                    <Stack spacing={3}>
-                      {currentSession.star_examples.map((example, idx) => (
-                        <Card key={idx} sx={{ p: 2 }}>
-                          <Stack spacing={2}>
-                            <Box>
-                              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                                <Star color="primary" />
-                                <Typography variant="h6">
-                                  Example {idx + 1}
-                                </Typography>
-                              </Stack>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                {example.relevant_skills.map((skill, skillIdx) => (
-                                  <Chip key={skillIdx} label={skill} size="small" variant="outlined" />
-                                ))}
-                              </Box>
-                            </Box>
-
-                            <Box>
-                              <Typography variant="subtitle2" color="primary" gutterBottom>
-                                Situation
-                              </Typography>
-                              <Typography variant="body2">
-                                {example.situation}
-                              </Typography>
-                            </Box>
-
-                            <Box>
-                              <Typography variant="subtitle2" color="primary" gutterBottom>
-                                Task
-                              </Typography>
-                              <Typography variant="body2">
-                                {example.task}
-                              </Typography>
-                            </Box>
-
-                            <Box>
-                              <Typography variant="subtitle2" color="primary" gutterBottom>
-                                Action
-                              </Typography>
-                              <Typography variant="body2">
-                                {example.action}
-                              </Typography>
-                            </Box>
-
-                            <Box>
-                              <Typography variant="subtitle2" color="primary" gutterBottom>
-                                Result
-                              </Typography>
-                              <Typography variant="body2">
-                                {example.result}
-                              </Typography>
-                            </Box>
-                          </Stack>
-                        </Card>
-                      ))}
-                    </Stack>
-                  </TabPanel>
-
-                  {/* Confidence Tips Tab */}
-                  <TabPanel value={tabValue} index={3}>
-                    <Stack spacing={2}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <TipsAndUpdates color="primary" />
-                        <Typography variant="h6">
-                          Confidence Building Tips
+                      {(!currentSession?.predicted_questions || currentSession.predicted_questions.length === 0) && (
+                        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                          No predicted questions available
                         </Typography>
-                      </Stack>
-                      <List>
-                        {currentSession.confidence_tips.map((tip, idx) => (
-                          <ListItem key={idx}>
-                            <ListItemText
-                              primary={
-                                <Stack direction="row" spacing={1} alignItems="flex-start">
-                                  <CheckCircle fontSize="small" color="success" sx={{ mt: 0.5 }} />
-                                  <Typography variant="body1">{tip}</Typography>
-                                </Stack>
-                              }
-                            />
-                          </ListItem>
-                        ))}
-                      </List>
+                      )}
                     </Stack>
                   </TabPanel>
 
-                  {/* Checklist Tab */}
-                  <TabPanel value={tabValue} index={4}>
+                  <TabPanel value={tabValue} index={2}>
                     <Stack spacing={2}>
                       <Stack direction="row" spacing={1} alignItems="center">
                         <Checklist color="primary" />
-                        <Typography variant="h6">
-                          Pre-Interview Checklist
-                        </Typography>
+                        <Typography variant="h6">Pre-Interview Checklist</Typography>
                       </Stack>
                       <Paper variant="outlined" sx={{ p: 2 }}>
                         <Stack spacing={1}>
-                          {currentSession.pre_interview_checklist.map((item, idx) => (
+                          {/* Safe array access with default empty array */}
+                          {(currentSession?.pre_interview_checklist ?? []).map((item, idx) => (
                             <FormControlLabel
                               key={idx}
                               control={
@@ -522,9 +409,14 @@ function CompanyCoachingPage() {
                                   onChange={() => handleChecklistToggle(idx)}
                                 />
                               }
-                              label={item}
+                              label={item || 'Checklist item not available'}
                             />
                           ))}
+                          {(!currentSession?.pre_interview_checklist || currentSession.pre_interview_checklist.length === 0) && (
+                            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                              No checklist items available
+                            </Typography>
+                          )}
                         </Stack>
                       </Paper>
                     </Stack>
@@ -535,7 +427,6 @@ function CompanyCoachingPage() {
           </Grid>
         )}
 
-        {/* Empty State */}
         {!isLoading && userSessions.length === 0 && !showCreateForm && (
           <Paper sx={{ p: 6, textAlign: 'center' }}>
             <Business sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
@@ -545,12 +436,7 @@ function CompanyCoachingPage() {
             <Typography variant="body1" color="text.secondary" paragraph>
               Create your first coaching session to get company-specific interview preparation
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setShowCreateForm(true)}
-              size="large"
-            >
+            <Button variant="contained" startIcon={<Add />} onClick={() => setShowCreateForm(true)} size="large">
               Create Coaching Session
             </Button>
           </Paper>

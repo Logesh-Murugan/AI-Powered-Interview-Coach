@@ -4,7 +4,8 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Tooltip, CircularProgress, Alert, Grid } from '@mui/material';
+import { Box, Typography, Paper, Tooltip, CircularProgress, Alert } from '@mui/material';
+import Grid from '@mui/material/GridLegacy';
 import { getStreakHistory } from '../../services/streaksService';
 import type { StreakHistoryResponse } from '../../services/streaksService';
 

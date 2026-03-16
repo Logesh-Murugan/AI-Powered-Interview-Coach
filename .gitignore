@@ -1,340 +1,277 @@
-# ============================================
-# KIRO DEVELOPMENT FILES (PERSONAL IDE)
-# ============================================
-.kiro/
-.kiro-dev-files/
-**/*.kiro.md
-**/spec-*.md
+# AI-Powered Interview Coach - Git Ignore File
 
-# ============================================
-# PERSONAL DEVELOPMENT DOCUMENTATION
-# ============================================
-# Task tracking and completion files
-TASK-*.md
-*-COMPLETE.md
-*-PROGRESS.md
-*-START.md
-*-SUMMARY.md
-*-STATUS.md
-*-FIX.md
-*-FIXES.md
-*-FIXED.md
-
-# Personal guides and documentation
-*-GUIDE.md
-*-CHECKLIST.md
-*-PLAN.md
-*-EXPLANATION.md
-*-ASSESSMENT.md
-*-INSTRUCTIONS.md
-*-DIAGNOSIS.md
-*-TROUBLESHOOTING.md
-*-DEBUG.md
-*-SOLUTION.md
-*-ANALYSIS.md
-*-REPORT.md
-
-# Specific personal files
-ALL_FIXES_APPLIED.md
-ALL_ISSUES_FIXED_SUMMARY.md
-APPLICATION_FULLY_WORKING.md
-APPLICATION_STARTED_SUCCESS.md
-BACKEND_FRONTEND_INTEGRATION_REPORT.md
-CODEBASE-INTEGRATION-COMPLETE.md
-COMPLETE_FIX_SUMMARY.md
-FINAL_FIX_SUMMARY.md
-FINAL_STATUS.md
-FINAL-INTEGRATION-STATUS.md
-FIXES_COMPLETE_SUMMARY.md
-FIXES_SUMMARY.md
-FRONTEND_FEATURES_CONNECTED.md
-HOW_TO_TEST_FEATURES.md
-INSTALL_REDIS.md
-MILESTONE_2_PRESENTATION_DOCUMENT.md
-MISSING_FEATURES_ANALYSIS.md
-PHASE-*-*.md
-PROFILE_AND_ACHIEVEMENTS_STATUS.md
-QUICK_ACCESS_GUIDE.md
-README_FIXES.md
-START_APPLICATION.md
-TEST_ALL_FEATURES.md
-TEST_ANSWER_SUBMISSION.md
-TEST_ERRORS_FIXED_SUMMARY.md
-TEST_FIXES_COMPLETE.md
-TEST_FIXES_PROGRESS.md
-TEST_FIXES_SUMMARY.md
-TEAM_LEADER_DEMO_GUIDE.md
-
-# Backend personal docs
-backend/*-COMPLETE.md
-backend/*-SUMMARY.md
-backend/*-GUIDE.md
-backend/*-STATUS.md
-backend/TASK-*.md
-backend/PHASE-*.md
-backend/QUICK-REFERENCE.md
-backend/POSTGRES-INSTALLATION-GUIDE.md
-backend/POSTGRESQL-SETUP-COMPLETE.md
-backend/REDIS-INSTALLATION-GUIDE.md
-backend/QUICK-START-REDIS.md
-backend/SETUP-POSTGRES-*.md
-
-# Frontend personal docs
-frontend/*-COMPLETE.md
-frontend/*-GUIDE.md
-frontend/IMPLEMENTATION-PLAN.md
-frontend/PHASE-*.md
-frontend/TASK-*.md
-frontend/QUICK-START.md
-
-# Personal backup folder
-.personal-backup/
-
-# ============================================
-# DEVELOPMENT SCRIPTS (PERSONAL UTILITIES)
-# ============================================
-# PowerShell scripts
-*.ps1
-!.github/**/*.ps1
-
-# Python development scripts (not tests)
-check_*.py
-test_*.py
-!backend/tests/test_*.py
-!backend/tests/**/test_*.py
-!frontend/src/**/*.test.ts
-!frontend/src/**/*.test.tsx
-trigger_*.py
-fix_*.py
-create_test_data.py
-create_database.py
-setup_database.py
-setup_database_auto.ps1
-process_resume_manually.py
-clear_*.py
-validate_config.py
-
-# SQL scripts (setup only)
-backend/setup_postgres.sql
-backend/fix_permissions.sql
-backend/grant_permissions*.ps1
-
-# Batch files
-*.bat
-
-# Temporary files
-backend/trigger_reload.txt
-backend/temp_quota.txt
-
-# Test HTML files
-test-*.html
-frontend/test-*.html
-
-# Test output files
-test-output.txt
-test-results.json
-test-results.txt
-frontend/test-output.txt
-frontend/test-results.json
-frontend/test-results.txt
-frontend/package-additions.txt
-
-# ============================================
-# ENVIRONMENT & SECRETS
-# ============================================
+# Environment Variables
 .env
 .env.local
-.env.*.local
-backend/.env
-frontend/.env
-*.pem
-*.key
-config/secrets.yml
-**/*_SECRET*
-**/*_KEY*
-**/*_PASSWORD*
+.env.development
+.env.test
+.env.production
 
-# Keep example files
-!.env.example
-!backend/.env.example
-!frontend/.env.example
+# Database
+*.db
+*.sqlite
+*.sqlite3
+test_*.db
 
-# ============================================
-# PYTHON
-# ============================================
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
 venv/
 env/
 ENV/
+env.bak/
+venv.bak/
 .venv/
-backend/venv/
-backend/env/
-pip-log.txt
-pip-delete-this-directory.txt
-*.egg-info/
-dist/
-build/
-*.egg
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pytest
 .pytest_cache/
 .coverage
 htmlcov/
 .tox/
-.hypothesis/
-backend/.pytest_cache/
-backend/htmlcov/
-backend/.coverage
-backend/.hypothesis/
+.nox/
 
-# ============================================
-# NODE / JAVASCRIPT
-# ============================================
+# Node.js
 node_modules/
-frontend/node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
-.pnpm-debug.log*
 
-# Lock files (optional - uncomment if you want to exclude)
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
-
-# Build outputs
-dist/
-build/
-frontend/dist/
+# React Build
 frontend/build/
-.next/
-out/
-.nuxt/
+frontend/dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
 .cache/
+public
 
-# ============================================
-# IDEs & EDITORS
-# ============================================
-# VSCode
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# Media Files (uploaded content)
+backend/media/
+backend/uploads/
+frontend/public/uploads/
+
+# AI Models (large files)
+*.model
+*.bin
+models/
+whisper_models/
+
+# Audio/Video test files
+*.wav
+*.mp3
+*.mp4
+*.webm
+*.ogg
+test_recording.*
+
+# Redis dump
+dump.rdb
+
+# PostgreSQL
+*.pgsql
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+*.lnk
+
+# Linux
+*~
+
+# Personal backup folder
+.personal-backup/
+
+# Test files and debugging
+test_*.py
+debug_*.py
+*_test.py
+*_debug.py
+
+# Documentation builds
+docs/_build/
+site/
+
+# Alembic
+alembic.ini.bak
+
+# Redis
+redis.conf
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.csr
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Kubernetes
+*.yaml.bak
+*.yml.bak
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Local configuration
+config.local.json
+settings.local.json
+
+# Performance monitoring
+.profiling/
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# Editor directories and files
 .vscode/
-*.code-workspace
-
-# IntelliJ IDEA
 .idea/
-*.iml
-*.ipr
-*.iws
-
-# Vim
 *.swp
 *.swo
 *~
 
-# Emacs
-\#*\#
-.\#*
-
-# Sublime Text
-*.sublime-project
-*.sublime-workspace
-
-# ============================================
-# OPERATING SYSTEMS
-# ============================================
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-Icon
-._*
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-
-# Linux
-.directory
-.Trash-*
-
-# ============================================
-# DATABASES
-# ============================================
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-
-# PostgreSQL
-*.dump
-*.backup
-
-# ============================================
-# LOGS
-# ============================================
-*.log
-logs/
-*.log.*
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-backend/logs/
-
-# ============================================
-# TESTING & COVERAGE
-# ============================================
-coverage/
-*.cover
-.coverage
-.coverage.*
-htmlcov/
-.pytest_cache/
-.hypothesis/
-junit.xml
-test-results/
-
-# ============================================
-# UPLOADS & USER DATA
-# ============================================
-uploads/
-backend/uploads/
-frontend/uploads/
-user-data/
-media/
-static/uploads/
-
-# ============================================
-# TEMPORARY FILES
-# ============================================
-temp/
-tmp/
+# Temporary files
 *.tmp
-*.bak
-*.swp
-.temp/
+*.temp
 
-# ============================================
-# DOCKER
-# ============================================
-docker-compose.override.yml
+# Package files
+*.tar.gz
+*.zip
+*.rar
 
-# ============================================
-# REDIS
-# ============================================
-dump.rdb
-*.rdb
-redis-windows/
+# Application specific
+interview_sessions.db
+user_uploads/
+processed_audio/
+transcriptions/
+voice_analysis/
 
-# ============================================
-# CERTIFICATES & KEYS
-# ============================================
-*.pem
-*.key
-*.crt
-*.cer
-*.p12
-*.pfx
+# Development tools
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/

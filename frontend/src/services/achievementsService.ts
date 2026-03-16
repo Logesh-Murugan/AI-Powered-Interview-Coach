@@ -6,37 +6,31 @@
 import apiService from './api.service';
 import { logError } from '../utils/errorMessages';
 
-export interface Achievement {
-  id: number;
+export interface AchievementDefinition {
+  type: string;
   name: string;
   description: string;
   icon: string;
-  category: string;
-  points: number;
-  requirement_type: string;
-  requirement_value: number;
-  is_hidden: boolean;
-  created_at: string;
+  rarity: string;
 }
 
 export interface UserAchievement {
   id: number;
   user_id: number;
-  achievement_id: number;
-  unlocked_at: string;
-  progress: number;
-  achievement: Achievement;
+  achievement_type: string;
+  earned_at: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface AllAchievementsResponse {
-  achievements: Achievement[];
-  total: number;
+  achievements: AchievementDefinition[];
+  total_count: number;
 }
 
 export interface UserAchievementsResponse {
   achievements: UserAchievement[];
-  total_unlocked: number;
-  total_points: number;
+  total_earned: number;
+  total_available: number;
   completion_percentage: number;
 }
 
@@ -45,7 +39,7 @@ export interface UserAchievementsResponse {
  */
 export async function getAllAchievements(): Promise<AllAchievementsResponse> {
   try {
-    const response = await apiService.get('/achievements/');
+    const response = await apiService.get<AllAchievementsResponse>('/achievements/');
     return response.data;
   } catch (error) {
     logError(error, 'achievementsService.getAllAchievements');
@@ -58,10 +52,11 @@ export async function getAllAchievements(): Promise<AllAchievementsResponse> {
  */
 export async function getUserAchievements(): Promise<UserAchievementsResponse> {
   try {
-    const response = await apiService.get('/achievements/user');
+    const response = await apiService.get<UserAchievementsResponse>('/achievements/user');
     return response.data;
   } catch (error) {
     logError(error, 'achievementsService.getUserAchievements');
     throw error;
   }
 }
+

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, desc
 from app.models.leaderboard_entry import LeaderboardEntry
 from app.models.user import User
-from app.models.interview_session import InterviewSession
+from app.models.interview_session import InterviewSession, SessionStatus
 from app.models.session_summary import SessionSummary
 from app.services.cache_service import CacheService
 from app.utils.cache_keys import CacheKeys
@@ -58,7 +58,7 @@ class LeaderboardService:
                 User, InterviewSession.user_id == User.id
             ).filter(
                 and_(
-                    InterviewSession.status == 'completed',
+                    InterviewSession.status == SessionStatus.COMPLETED,
                     InterviewSession.deleted_at.is_(None),
                     SessionSummary.deleted_at.is_(None),
                     User.deleted_at.is_(None),

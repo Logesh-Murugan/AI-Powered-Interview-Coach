@@ -21,10 +21,10 @@ class Question(BaseModel):
     question_text = Column(Text, nullable=False)
     category = Column(String(50), nullable=False)  # Technical, Behavioral, Domain_Specific, System_Design, Coding
     difficulty = Column(String(20), nullable=False)  # Easy, Medium, Hard, Expert
-    role = Column(String(100), nullable=False)  # Target role for this question
+    role = Column(String(100), default="General", nullable=False)  # Target role for this question
     
     # Answer guidance
-    expected_answer_points = Column(JSONB, nullable=False)  # Array of key points expected in answer
+    expected_answer_points = Column(JSONB, default=list, nullable=False)  # Array of key points expected in answer
     time_limit_seconds = Column(Integer, nullable=False, default=300)  # Time limit for answering
     
     # Metadata
@@ -55,3 +55,4 @@ class Question(BaseModel):
             'usage_count': self.usage_count,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+

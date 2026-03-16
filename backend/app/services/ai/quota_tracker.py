@@ -16,43 +16,42 @@ from app.models.ai_provider_usage import AIProviderUsage
 logger = logging.getLogger(__name__)
 
 
-# Provider quota limits (characters per day)
+# Provider quota limits (requests per day)
 PROVIDER_QUOTAS = {
-    'groq_1': 14400,      # Groq API key 1
-    'groq_2': 14400,      # Groq API key 2
-    'groq_3': 14400,      # Groq API key 3
-    'huggingface_1': 30000,  # HuggingFace API key 1
-    'huggingface_2': 30000,  # HuggingFace API key 2
+    # Legacy entries retained for backward compatibility
+    'groq_1': 14400,
+    'groq_2': 14400,
+    'groq_3': 14400,
+    'huggingface_1': 30000,
+    'huggingface_2': 30000,
+    'gemini_1': 1500,
+    'gemini_2': 1500,
+    'gemini_3': 1500,
+
+    # Active HuggingFace providers (treat as high/unlimited for our use)
+    'hf_primary': 1000000,
+    'hf_secondary': 1000000,
+    'hf_tertiary': 1000000,
 }
 
 
 class QuotaTracker:
-    """
-    Track and enforce API quota limits for AI providers.
-    
-    This class monitors daily usage, calculates remaining quota percentages,
-    and triggers alerts when thresholds are reached.
-    
-    Requirements: 26.1, 26.2, 26.3, 26.4, 26.5, 26.6, 26.7, 26.8, 26.9, 26.10, 26.11
-    """
-    
+    """Track and enforce API quota limits for AI providers."""
+
     def __init__(self, db: Session):
-        """Initialize QuotaTracker with database session."""
         self.db = db
         self.alert_thresholds = {
-            'warning': 0.80,   # 80% usage
-            'critical': 0.90,  # 90% usage
-            'disabled': 1.00   # 100% usage
+            'warning': 0.80,
+            'critical': 0.90,
+            'disabled': 1.00
         }
 
     def record_usage(self, provider_name: str, character_count: int, request_count: int = 1) -> None:
-        """Record API usage for a provider."""
-        # Validate inputs
         if character_count < 0:
             raise ValueError(f"character_count must be non-negative, got {character_count}")
         if request_count < 0:
             raise ValueError(f"request_count must be non-negative, got {request_count}")
-        
+
         today = date.today()
         try:
             usage = self.db.query(AIProviderUsage).filter(
@@ -80,7 +79,6 @@ class QuotaTracker:
             raise
 
     def get_remaining_percentage(self, provider_name: str) -> float:
-        """Calculate remaining quota percentage for a provider."""
         today = date.today()
         quota_limit = PROVIDER_QUOTAS.get(provider_name)
         if not quota_limit:
@@ -93,11 +91,9 @@ class QuotaTracker:
         if not usage:
             return 1.0
         used_percentage = usage.character_count / quota_limit
-        remaining_percentage = max(0.0, 1.0 - used_percentage)
-        return remaining_percentage
-    
+        return max(0.0, 1.0 - used_percentage)
+
     def get_usage_stats(self, provider_name: str) -> Dict:
-        """Get detailed usage statistics for a provider."""
         today = date.today()
         quota_limit = PROVIDER_QUOTAS.get(provider_name, 0)
         usage = self.db.query(AIProviderUsage).filter(
@@ -134,38 +130,21 @@ class QuotaTracker:
         }
 
     def is_provider_available(self, provider_name: str) -> bool:
-        """Check if provider has available quota."""
-        remaining = self.get_remaining_percentage(provider_name)
-        return remaining > 0.0
-    
+        return self.get_remaining_percentage(provider_name) > 0.0
+
     def _check_and_alert(self, provider_name: str, usage: AIProviderUsage) -> None:
-        """Check usage thresholds and send alerts if needed."""
         remaining_pct = self.get_remaining_percentage(provider_name)
         if remaining_pct <= 0.0:
-            logger.error(
-                f"🚨 QUOTA EXCEEDED: {provider_name} has reached 100% usage. "
-                f"Provider disabled until tomorrow."
-            )
+            logger.error(f"?? QUOTA EXCEEDED: {provider_name} has reached 100% usage. Provider disabled until tomorrow.")
         elif remaining_pct <= 0.10:
-            logger.warning(
-                f"⚠️  CRITICAL: {provider_name} has reached 90% quota usage. "
-                f"Only {remaining_pct:.1%} remaining."
-            )
+            logger.warning(f"??  CRITICAL: {provider_name} has reached 90% quota usage. Only {remaining_pct:.1%} remaining.")
         elif remaining_pct <= 0.20:
-            logger.warning(
-                f"⚠️  WARNING: {provider_name} has reached 80% quota usage. "
-                f"{remaining_pct:.1%} remaining."
-            )
-    
+            logger.warning(f"??  WARNING: {provider_name} has reached 80% quota usage. {remaining_pct:.1%} remaining.")
+
     def get_all_provider_stats(self) -> Dict[str, Dict]:
-        """Get usage statistics for all providers."""
-        stats = {}
-        for provider_name in PROVIDER_QUOTAS.keys():
-            stats[provider_name] = self.get_usage_stats(provider_name)
-        return stats
-    
+        return {name: self.get_usage_stats(name) for name in PROVIDER_QUOTAS.keys()}
+
     def reset_daily_usage(self, provider_name: Optional[str] = None) -> None:
-        """Reset daily usage counters (for testing purposes)."""
         today = date.today()
         if provider_name:
             self.db.query(AIProviderUsage).filter(

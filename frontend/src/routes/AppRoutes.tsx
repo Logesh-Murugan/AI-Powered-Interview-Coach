@@ -27,6 +27,7 @@ import InterviewSessionPage from '../pages/interview/InterviewSessionPage';
 import InterviewSummaryPage from '../pages/interview/InterviewSummaryPage';
 import AnswerEvaluationPage from '../pages/interview/AnswerEvaluationPage';
 import SessionHistoryPage from '../pages/interview/SessionHistoryPage';
+import ResumeInterviewPage from '../pages/interview/ResumeInterviewPage';
 import ResumeListPage from '../pages/resume/ResumeListPage';
 import ResumeUploadPage from '../pages/resume/ResumeUploadPage';
 import ResumeDetailPage from '../pages/resume/ResumeDetailPage';
@@ -41,16 +42,17 @@ const ResumeAnalysisPage = lazy(() => import('../pages/ai/ResumeAnalysisPage'));
 const StudyPlansPage = lazy(() => import('../pages/ai/StudyPlansPage'));
 const CompanyCoachingPage = lazy(() => import('../pages/ai/CompanyCoachingPage'));
 const CacheStatsPage = lazy(() => import('../pages/admin/CacheStatsPage'));
+const AdminDashboardPage = lazy(() => import('../pages/admin/AdminDashboardPage'));
 import NotFoundPage from '../pages/NotFoundPage';
 
 // Landing Page Wrapper Component
 function LandingPageWrapper() {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
-  
+
   if (isAuthenticated) {
     return <Navigate to={ROUTES.DASHBOARD} replace />;
   }
-  
+
   return <LandingPage />;
 }
 
@@ -77,6 +79,7 @@ function AppRoutes() {
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path={ROUTES.INTERVIEWS} element={<InterviewStartPage />} />
+          <Route path="/interviews/:sessionId/resume" element={<ResumeInterviewPage />} />
           <Route path={ROUTES.INTERVIEW_SESSION} element={<InterviewSessionPage />} />
           <Route path="/interviews/:id/summary" element={<InterviewSummaryPage />} />
           <Route path="/interviews/:sessionId/answers/:answerId/evaluation" element={<AnswerEvaluationPage />} />
@@ -92,6 +95,7 @@ function AppRoutes() {
           <Route path="/ai/study-plans" element={<StudyPlansPage />} />
           <Route path="/ai/company-coaching" element={<CompanyCoachingPage />} />
           <Route path="/admin/cache-stats" element={<CacheStatsPage />} />
+          <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
         </Route>
       </Route>
 

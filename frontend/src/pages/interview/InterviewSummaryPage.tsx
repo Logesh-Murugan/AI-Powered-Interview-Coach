@@ -60,7 +60,7 @@ interface SessionSummary {
 function InterviewSummaryPage() {
   const { id: sessionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  
+
   const [summary, setSummary] = useState<SessionSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,15 +69,15 @@ function InterviewSummaryPage() {
   useEffect(() => {
     const loadSummary = async () => {
       if (!sessionId) return;
-      
+
       setLoading(true);
       setError(null);
-      
+
       try {
         const response = await apiService.get(`/interviews/${sessionId}/summary`);
         const summaryData = response.data as SessionSummary;
         setSummary(summaryData);
-        
+
         // Show confetti if score is good
         if (summaryData.overall_session_score >= 70) {
           setShowConfetti(true);
@@ -88,7 +88,7 @@ function InterviewSummaryPage() {
         setLoading(false);
       }
     };
-    
+
     loadSummary();
   }, [sessionId]);
 
@@ -142,7 +142,7 @@ function InterviewSummaryPage() {
     <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Confetti Animation */}
       {showConfetti && <SuccessConfetti show={showConfetti} />}
-      
+
       {/* Header */}
       <FadeIn delay={0.1}>
         <Paper elevation={3} sx={{ p: 4, mb: 3, textAlign: 'center' }}>
@@ -153,20 +153,20 @@ function InterviewSummaryPage() {
           >
             <EmojiEvents sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
           </motion.div>
-          
+
           <Typography variant="h3" gutterBottom>
             Session Complete!
           </Typography>
-          
+
           <Typography variant="h4" color="primary" gutterBottom>
-            Overall Score: <CountUp 
-              end={summary.overall_session_score} 
-              duration={2} 
+            Overall Score: <CountUp
+              end={summary.overall_session_score}
+              duration={2}
               decimals={1}
               suffix="%"
             />
           </Typography>
-          
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -177,7 +177,7 @@ function InterviewSummaryPage() {
               color={getScoreColor(summary.overall_session_score)}
             />
           </motion.div>
-        
+
           {/* Score Trend */}
           {summary.score_trend !== null && (
             <motion.div
@@ -278,76 +278,76 @@ function InterviewSummaryPage() {
             Performance Breakdown
           </Typography>
           <Divider sx={{ mb: 3 }} />
-        
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="body2" gutterBottom>
-              Content Quality
-            </Typography>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <LinearProgress
-                variant="determinate"
-                value={summary.avg_content_quality}
-                color={getScoreColor(summary.avg_content_quality)}
-                sx={{ flex: 1, height: 8, borderRadius: 4 }}
-              />
-              <Typography variant="body1" fontWeight="bold">
-                <CountUp end={summary.avg_content_quality} duration={2} decimals={1} suffix="%" />
+
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="body2" gutterBottom>
+                Content Quality
               </Typography>
-            </Stack>
-          </Grid>
-          
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="body2" gutterBottom>
-              Clarity
-            </Typography>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <LinearProgress
-                variant="determinate"
-                value={summary.avg_clarity}
-                color={getScoreColor(summary.avg_clarity)}
-                sx={{ flex: 1, height: 8, borderRadius: 4 }}
-              />
-              <Typography variant="body1" fontWeight="bold">
-                <CountUp end={summary.avg_clarity} duration={2} decimals={1} suffix="%" />
+              <Stack direction="row" spacing={2} alignItems="center">
+                <LinearProgress
+                  variant="determinate"
+                  value={summary.avg_content_quality}
+                  color={getScoreColor(summary.avg_content_quality)}
+                  sx={{ flex: 1, height: 8, borderRadius: 4 }}
+                />
+                <Typography variant="body1" fontWeight="bold">
+                  <CountUp end={summary.avg_content_quality} duration={2} decimals={1} suffix="%" />
+                </Typography>
+              </Stack>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="body2" gutterBottom>
+                Clarity
               </Typography>
-            </Stack>
-          </Grid>
-          
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="body2" gutterBottom>
-              Confidence
-            </Typography>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <LinearProgress
-                variant="determinate"
-                value={summary.avg_confidence}
-                color={getScoreColor(summary.avg_confidence)}
-                sx={{ flex: 1, height: 8, borderRadius: 4 }}
-              />
-              <Typography variant="body1" fontWeight="bold">
-                <CountUp end={summary.avg_confidence} duration={2} decimals={1} suffix="%" />
+              <Stack direction="row" spacing={2} alignItems="center">
+                <LinearProgress
+                  variant="determinate"
+                  value={summary.avg_clarity}
+                  color={getScoreColor(summary.avg_clarity)}
+                  sx={{ flex: 1, height: 8, borderRadius: 4 }}
+                />
+                <Typography variant="body1" fontWeight="bold">
+                  <CountUp end={summary.avg_clarity} duration={2} decimals={1} suffix="%" />
+                </Typography>
+              </Stack>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="body2" gutterBottom>
+                Confidence
               </Typography>
-            </Stack>
-          </Grid>
-          
-          <Grid size={{ xs: 12, sm: 6 }}>
-            <Typography variant="body2" gutterBottom>
-              Technical Accuracy
-            </Typography>
-            <Stack direction="row" spacing={2} alignItems="center">
-              <LinearProgress
-                variant="determinate"
-                value={summary.avg_technical_accuracy}
-                color={getScoreColor(summary.avg_technical_accuracy)}
-                sx={{ flex: 1, height: 8, borderRadius: 4 }}
-              />
-              <Typography variant="body1" fontWeight="bold">
-                <CountUp end={summary.avg_technical_accuracy} duration={2} decimals={1} suffix="%" />
+              <Stack direction="row" spacing={2} alignItems="center">
+                <LinearProgress
+                  variant="determinate"
+                  value={summary.avg_confidence}
+                  color={getScoreColor(summary.avg_confidence)}
+                  sx={{ flex: 1, height: 8, borderRadius: 4 }}
+                />
+                <Typography variant="body1" fontWeight="bold">
+                  <CountUp end={summary.avg_confidence} duration={2} decimals={1} suffix="%" />
+                </Typography>
+              </Stack>
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <Typography variant="body2" gutterBottom>
+                Technical Accuracy
               </Typography>
-            </Stack>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <LinearProgress
+                  variant="determinate"
+                  value={summary.avg_technical_accuracy}
+                  color={getScoreColor(summary.avg_technical_accuracy)}
+                  sx={{ flex: 1, height: 8, borderRadius: 4 }}
+                />
+                <Typography variant="body1" fontWeight="bold">
+                  <CountUp end={summary.avg_technical_accuracy} duration={2} decimals={1} suffix="%" />
+                </Typography>
+              </Stack>
+            </Grid>
           </Grid>
-        </Grid>
         </Paper>
       </FadeIn>
 
@@ -355,27 +355,27 @@ function InterviewSummaryPage() {
       {Object.keys(summary.category_performance).length > 0 && (
         <FadeIn delay={0.7}>
           <Paper elevation={3} sx={{ p: 4, mb: 3 }}>
-          <Typography variant="h5" gutterBottom>
-            Category Performance
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-          
-          <Grid container spacing={2}>
-            {Object.entries(summary.category_performance).map(([category, score]) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={category}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      {category.replace('_', ' ')}
-                    </Typography>
-                    <Typography variant="h5" color={getScoreColor(score)}>
-                      {score.toFixed(1)}%
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+            <Typography variant="h5" gutterBottom>
+              Category Performance
+            </Typography>
+            <Divider sx={{ mb: 3 }} />
+
+            <Grid container spacing={2}>
+              {Object.entries(summary.category_performance).map(([category, score]) => (
+                <Grid size={{ xs: 12, sm: 6, md: 4 }} key={category}>
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        {category.replace('_', ' ')}
+                      </Typography>
+                      <Typography variant="h5" color={getScoreColor(score)}>
+                        {score.toFixed(1)}%
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
           </Paper>
         </FadeIn>
       )}
@@ -385,45 +385,45 @@ function InterviewSummaryPage() {
         <Grid size={{ xs: 12, md: 6 }}>
           <FadeIn delay={0.8}>
             <Paper elevation={3} sx={{ p: 4, height: '100%' }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-              <CheckCircle color="success" />
-              <Typography variant="h5">Top Strengths</Typography>
-            </Stack>
-            <Divider sx={{ mb: 2 }} />
-            <Stack spacing={1}>
-              {summary.top_strengths.map((strength, index) => (
-                <Chip
-                  key={index}
-                  label={strength}
-                  color="success"
-                  variant="outlined"
-                  sx={{ justifyContent: 'flex-start' }}
-                />
-              ))}
-            </Stack>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                <CheckCircle color="success" />
+                <Typography variant="h5">Top Strengths</Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+              <Stack spacing={1}>
+                {summary.top_strengths.map((strength, index) => (
+                  <Chip
+                    key={index}
+                    label={strength}
+                    color="success"
+                    variant="outlined"
+                    sx={{ justifyContent: 'flex-start' }}
+                  />
+                ))}
+              </Stack>
             </Paper>
           </FadeIn>
         </Grid>
-        
+
         <Grid size={{ xs: 12, md: 6 }}>
           <FadeIn delay={0.9}>
             <Paper elevation={3} sx={{ p: 4, height: '100%' }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-              <TrendingUp color="primary" />
-              <Typography variant="h5">Areas to Improve</Typography>
-            </Stack>
-            <Divider sx={{ mb: 2 }} />
-            <Stack spacing={1}>
-              {summary.top_improvements.map((improvement, index) => (
-                <Chip
-                  key={index}
-                  label={improvement}
-                  color="primary"
-                  variant="outlined"
-                  sx={{ justifyContent: 'flex-start' }}
-                />
-              ))}
-            </Stack>
+              <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                <TrendingUp color="primary" />
+                <Typography variant="h5">Areas to Improve</Typography>
+              </Stack>
+              <Divider sx={{ mb: 2 }} />
+              <Stack spacing={1}>
+                {summary.top_improvements.map((improvement, index) => (
+                  <Chip
+                    key={index}
+                    label={improvement}
+                    color="primary"
+                    variant="outlined"
+                    sx={{ justifyContent: 'flex-start' }}
+                  />
+                ))}
+              </Stack>
             </Paper>
           </FadeIn>
         </Grid>
@@ -431,7 +431,7 @@ function InterviewSummaryPage() {
 
       {/* Actions */}
       <FadeIn delay={1.0}>
-        <Stack direction="row" spacing={2} justifyContent="center">
+        <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap">
           <ScaleButton>
             <Button
               variant="outlined"
@@ -440,6 +440,56 @@ function InterviewSummaryPage() {
               onClick={() => navigate('/dashboard')}
             >
               Back to Dashboard
+            </Button>
+          </ScaleButton>
+          <ScaleButton>
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={async () => {
+                try {
+                  const response = await apiService.get('/export/analytics', {
+                    responseType: 'blob',
+                  });
+                  const url = window.URL.createObjectURL(new Blob([response.data as BlobPart]));
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', `interview_report_${new Date().toISOString().split('T')[0]}.pdf`);
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  window.URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error('PDF export failed:', err);
+                }
+              }}
+            >
+              📄 Download PDF
+            </Button>
+          </ScaleButton>
+          <ScaleButton>
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={async () => {
+                try {
+                  const response = await apiService.get('/export/sessions', {
+                    responseType: 'blob',
+                  });
+                  const url = window.URL.createObjectURL(new Blob([response.data as BlobPart]));
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.setAttribute('download', `sessions_${new Date().toISOString().split('T')[0]}.csv`);
+                  document.body.appendChild(link);
+                  link.click();
+                  link.remove();
+                  window.URL.revokeObjectURL(url);
+                } catch (err) {
+                  console.error('CSV export failed:', err);
+                }
+              }}
+            >
+              📊 Download CSV
             </Button>
           </ScaleButton>
           <ScaleButton>

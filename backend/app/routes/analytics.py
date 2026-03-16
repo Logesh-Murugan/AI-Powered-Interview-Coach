@@ -59,7 +59,7 @@ async def get_analytics_overview(
 @router.get("/sessions", response_model=SessionStatistics)
 async def get_session_analytics(
     date_range: Optional[int] = 30,
-    status: Optional[str] = None,
+    status_filter: Optional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -86,7 +86,7 @@ async def get_session_analytics(
         stats = analytics_service.get_session_statistics(
             current_user.id,
             date_range=date_range,
-            status_filter=status
+            status_filter=status_filter
         )
         
         logger.info(

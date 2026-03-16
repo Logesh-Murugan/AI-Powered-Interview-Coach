@@ -4,7 +4,7 @@ Provides get/set/delete operations with TTL support and cache metrics.
 """
 import json
 import redis
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from datetime import timedelta
 from loguru import logger
 
@@ -79,7 +79,7 @@ class CacheService:
             self._track_miss(key)
             return None
     
-    def set(self, key: str, value: Any, ttl: timedelta) -> bool:
+    def set(self, key: str, value: Any, ttl: Union[timedelta, int, float]) -> bool:
         """
         Set value in cache with TTL.
         
@@ -97,12 +97,13 @@ class CacheService:
         
         try:
             serialized = json.dumps(value)
+            ttl_seconds = int(ttl.total_seconds()) if isinstance(ttl, timedelta) else int(ttl)
             self.redis_client.setex(
                 key,
-                int(ttl.total_seconds()),
+                ttl_seconds,
                 serialized
             )
-            logger.debug(f"Cache set: {key} (TTL: {ttl.total_seconds()}s)")
+            logger.debug(f"Cache set: {key} (TTL: {ttl_seconds}s)")
             return True
         except Exception as e:
             logger.error(f"Cache set error for key {key}: {e}")

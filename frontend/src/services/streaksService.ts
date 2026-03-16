@@ -30,13 +30,24 @@ export interface StreakStatsResponse {
   last_practice_date: string | null;
 }
 
+interface BackendEnvelope<T> {
+  success: boolean;
+  data: T;
+}
+
+interface BackendStreakHistoryEntry {
+  date: string;
+  streak_count?: number;
+  practiced?: boolean;
+}
+
 /**
  * Get current streak information
  */
 export async function getCurrentStreak(): Promise<CurrentStreakResponse> {
   try {
-    const response = await apiService.get('/streaks/current');
-    return response.data;
+    const response = await apiService.get<BackendEnvelope<CurrentStreakResponse>>('/streaks/current');
+    return response.data.data;
   } catch (error) {
     logError(error, 'streaksService.getCurrentStreak');
     throw error;
@@ -48,8 +59,16 @@ export async function getCurrentStreak(): Promise<CurrentStreakResponse> {
  */
 export async function getStreakHistory(days: number = 30): Promise<StreakHistoryResponse> {
   try {
-    const response = await apiService.get(`/streaks/history?days=${days}`);
-    return response.data;
+    const response = await apiService.get<BackendEnvelope<{ history: BackendStreakHistoryEntry[] }>>(`/streaks/history?days=${days}`);
+    const history = response.data.data.history || [];
+    return {
+      history: history.map((entry) => ({
+        date: entry.date,
+        practiced: entry.practiced ?? Boolean(entry.streak_count && entry.streak_count > 0),
+      })),
+      current_streak: 0,
+      longest_streak: 0,
+    };
   } catch (error) {
     logError(error, 'streaksService.getStreakHistory');
     throw error;
@@ -61,8 +80,8 @@ export async function getStreakHistory(days: number = 30): Promise<StreakHistory
  */
 export async function getStreakStats(): Promise<StreakStatsResponse> {
   try {
-    const response = await apiService.get('/streaks/stats');
-    return response.data;
+    const response = await apiService.get<BackendEnvelope<StreakStatsResponse>>('/streaks/stats');
+    return response.data.data;
   } catch (error) {
     logError(error, 'streaksService.getStreakStats');
     throw error;

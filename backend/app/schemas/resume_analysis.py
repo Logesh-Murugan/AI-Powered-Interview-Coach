@@ -3,7 +3,7 @@ Pydantic schemas for resume analysis API
 
 Requirements: 27.10
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -88,8 +88,7 @@ class ResumeAnalysisResponse(BaseModel):
     from_cache: bool
     cache_age_days: int
     
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(json_schema_extra={
             "example": {
                 "analysis_id": 1,
                 "resume_id": 42,
@@ -132,7 +131,7 @@ class ResumeAnalysisResponse(BaseModel):
                 "from_cache": False,
                 "cache_age_days": 0
             }
-        }
+        })
 
 
 class AnalysisHistoryResponse(BaseModel):

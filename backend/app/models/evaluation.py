@@ -6,7 +6,7 @@ This model stores AI-generated evaluations of user answers.
 Requirements: 18.1-18.14
 """
 from sqlalchemy import Column, Integer, Float, Text, ForeignKey, DateTime, JSON, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, synonym
 from datetime import datetime
 
 from app.models.base import Base
@@ -24,16 +24,16 @@ class Evaluation(Base):
     answer_id = Column(Integer, ForeignKey("answers.id", ondelete="CASCADE"), nullable=False, index=True, unique=True)
     
     # Scores (0-100)
-    content_quality = Column(Float, nullable=False)
-    clarity = Column(Float, nullable=False)
-    confidence = Column(Float, nullable=False)
-    technical_accuracy = Column(Float, nullable=False)
-    overall_score = Column(Float, nullable=False)  # Weighted average
+    content_quality = Column(Float, default=0.0, nullable=False)
+    clarity = Column(Float, default=0.0, nullable=False)
+    confidence = Column(Float, default=0.0, nullable=False)
+    technical_accuracy = Column(Float, default=0.0, nullable=False)
+    overall_score = Column(Float, default=0.0, nullable=False)  # Weighted average
     
     # Feedback sections
-    strengths = Column(JSON, nullable=False)  # Array of strength points
-    improvements = Column(JSON, nullable=False)  # Array of improvement suggestions
-    suggestions = Column(JSON, nullable=False)  # Array of actionable suggestions
+    strengths = Column(JSON, default=list, nullable=False)  # Array of strength points
+    improvements = Column(JSON, default=list, nullable=False)  # Array of improvement suggestions
+    suggestions = Column(JSON, default=list, nullable=False)  # Array of actionable suggestions
     example_answer = Column(Text, nullable=True)  # Optional example answer
     
     # Metadata
@@ -43,6 +43,12 @@ class Evaluation(Base):
     # Timing
     evaluated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
+    communication_clarity = synonym('clarity')
+    problem_solving = synonym('technical_accuracy')
+    weaknesses = synonym('improvements')
+    improvement_suggestions = synonym('suggestions')
+    evaluation_text = synonym('example_answer')
+
     # Relationships
     answer = relationship("Answer", back_populates="evaluation")
     
@@ -72,3 +78,5 @@ class Evaluation(Base):
             'evaluated_at': self.evaluated_at.isoformat() if self.evaluated_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+

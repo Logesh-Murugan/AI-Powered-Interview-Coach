@@ -117,13 +117,17 @@ export const studyPlanService = {
    * Get the active study plan
    * GET /api/v1/study-plans/active/current
    */
-  async getActiveStudyPlan(): Promise<StudyPlan> {
+  async getActiveStudyPlan(): Promise<StudyPlan | null> {
     try {
       const response = await apiService.get<StudyPlan>(
         '/study-plans/active/current'
       );
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
+      // Handle 404 gracefully - no active study plan exists
+      if (error?.response?.status === 404) {
+        return null;
+      }
       logError(error, 'studyPlanService.getActiveStudyPlan');
       throw error;
     }

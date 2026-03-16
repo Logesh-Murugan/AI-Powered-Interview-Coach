@@ -1,6 +1,6 @@
 /**
- * Resume Analysis Card Component
- * Display analysis summary with generate/regenerate functionality
+ * Resume Analysis Card Component - Redesigned for AI Agent Response
+ * Display analysis summary with enhanced UI for AI-generated insights
  * 
  * Requirements: INT-1.6, INT-1.7, INT-1.10
  */
@@ -16,7 +16,7 @@ import {
   CircularProgress,
   Alert,
   Divider,
-  Grid,
+  LinearProgress,
 } from '@mui/material';
 import {
   Psychology,
@@ -25,6 +25,8 @@ import {
   CheckCircle,
   Schedule,
   Speed,
+  AutoAwesome,
+  Warning,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import type { ResumeAnalysis } from '../../services/resumeAnalysisService';
@@ -48,6 +50,38 @@ function ResumeAnalysisCard({
   onRegenerate,
   onViewDetails,
 }: ResumeAnalysisCardProps) {
+  // In-progress state (analysis queued/running)
+  if (!analysis && (isGenerating || isLoading)) {
+    return (
+      <Card sx={{ border: '2px solid', borderColor: 'primary.light' }}>
+        <CardContent>
+          <Stack spacing={3} alignItems="center" sx={{ py: 4 }}>
+            <Box sx={{ position: 'relative' }}>
+              <CircularProgress size={48} thickness={4} />
+              <AutoAwesome 
+                sx={{ 
+                  position: 'absolute', 
+                  top: '50%', 
+                  left: '50%', 
+                  transform: 'translate(-50%, -50%)',
+                  fontSize: 20,
+                  color: 'primary.main'
+                }} 
+              />
+            </Box>
+            <Typography variant="h6" color="primary.main">
+              🤖 AI Analysis in Progress
+            </Typography>
+            <Typography variant="body2" color="text.secondary" align="center">
+              Our AI agent is analyzing your resume. This usually takes 10–20 seconds. 
+              We'll show results automatically when ready.
+            </Typography>
+            <LinearProgress sx={{ width: '100%', height: 8, borderRadius: 4 }} />
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  }
   // Loading state
   if (isLoading) {
     return (
@@ -67,7 +101,7 @@ function ResumeAnalysisCard({
   // Error state
   if (error) {
     return (
-      <Card>
+      <Card sx={{ border: '2px solid', borderColor: 'error.light' }}>
         <CardContent>
           <Alert severity="error" sx={{ mb: 2 }}>
             {error}
@@ -88,15 +122,27 @@ function ResumeAnalysisCard({
   // No analysis state
   if (!analysis) {
     return (
-      <Card>
+      <Card sx={{ border: '2px dashed', borderColor: 'primary.light', bgcolor: 'primary.lighter' }}>
         <CardContent>
-          <Stack spacing={2} alignItems="center" sx={{ py: 3 }}>
-            <Psychology sx={{ fontSize: 60, color: 'primary.main' }} />
-            <Typography variant="h6" align="center">
-              AI-Powered Resume Analysis
+          <Stack spacing={3} alignItems="center" sx={{ py: 4 }}>
+            <Box sx={{ position: 'relative' }}>
+              <Psychology sx={{ fontSize: 80, color: 'primary.main' }} />
+              <AutoAwesome 
+                sx={{ 
+                  position: 'absolute', 
+                  top: -5, 
+                  right: -5,
+                  fontSize: 24,
+                  color: 'secondary.main'
+                }} 
+              />
+            </Box>
+            <Typography variant="h6" align="center" color="primary.main">
+              🚀 AI-Powered Resume Analysis
             </Typography>
             <Typography variant="body2" color="text.secondary" align="center">
-              Get insights on your skills, experience, and improvement areas
+              Get personalized insights on your skills, experience gaps, and career growth opportunities 
+              powered by advanced AI technology.
             </Typography>
             <Button
               variant="contained"
@@ -104,18 +150,21 @@ function ResumeAnalysisCard({
               onClick={onGenerate}
               disabled={isGenerating}
               size="large"
+              sx={{ minWidth: 200 }}
             >
-              {isGenerating ? 'Generating Analysis...' : 'Generate Analysis'}
+              {isGenerating ? 'Generating Analysis...' : '🤖 Generate AI Analysis'}
             </Button>
           </Stack>
         </CardContent>
       </Card>
     );
   }
-
   // Analysis exists - show summary
-  const { analysis_data, analyzed_at, from_cache, cache_age_days, execution_time_ms } = analysis;
+  const { analysis_data, analyzed_at, from_cache, cache_age_days, execution_time_ms, status } = analysis;
   const { skill_inventory, skill_gaps, improvement_roadmap } = analysis_data;
+
+  // Check if this is AI-generated or fallback
+  const isAIGenerated = status === 'success' && !(analysis_data as any).fallback_used;
 
   const totalSkills =
     (skill_inventory.technical_skills?.length || 0) +
@@ -127,18 +176,49 @@ function ResumeAnalysisCard({
     (skill_gaps.required_missing?.length || 0) +
     (skill_gaps.preferred_missing?.length || 0);
 
-  const matchPercentage = skill_gaps.match_percentage || 0;
+  const matchPercentage = skill_gaps.match_percentage !== undefined && skill_gaps.match_percentage !== null 
+    ? skill_gaps.match_percentage 
+    : 0;
+  
+  const milestonesCount = improvement_roadmap.milestones?.length || 
+    (improvement_roadmap.recommendations ? 1 : 0);
+  
+  const timelineWeeks = improvement_roadmap.timeline_weeks || 0;
 
   return (
-    <Card>
+    <Card 
+      sx={{ 
+        border: '2px solid', 
+        borderColor: isAIGenerated ? 'success.light' : 'warning.light',
+        bgcolor: isAIGenerated ? 'success.lighter' : 'warning.lighter'
+      }}
+    >
       <CardContent>
         <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
           <Box>
-            <Typography variant="h6" gutterBottom>
-              <Psychology sx={{ mr: 1, verticalAlign: 'middle' }} />
-              Resume Analysis
-            </Typography>
-            <Stack direction="row" spacing={1} alignItems="center">
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+              <Psychology sx={{ color: isAIGenerated ? 'success.main' : 'warning.main' }} />
+              <Typography variant="h6" color={isAIGenerated ? 'success.main' : 'warning.main'}>
+                Resume Analysis
+              </Typography>
+              {isAIGenerated && (
+                <Chip 
+                  label="🤖 AI Generated" 
+                  color="success" 
+                  variant="filled"
+                  size="small"
+                />
+              )}
+              {(analysis_data as any).fallback_used && (
+                <Chip 
+                  label="⚠️ Fallback" 
+                  color="warning" 
+                  variant="filled"
+                  size="small"
+                />
+              )}
+            </Stack>
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
               <Typography variant="caption" color="text.secondary">
                 Analyzed: {format(new Date(analyzed_at), 'MMM dd, yyyy HH:mm')}
               </Typography>
@@ -151,7 +231,7 @@ function ResumeAnalysisCard({
                 />
               )}
               <Chip
-                label={`${execution_time_ms}ms`}
+                label={`⚡ ${execution_time_ms}ms`}
                 size="small"
                 icon={<Speed />}
                 variant="outlined"
@@ -164,6 +244,10 @@ function ResumeAnalysisCard({
             startIcon={isGenerating ? <CircularProgress size={16} /> : <Refresh />}
             onClick={onRegenerate}
             disabled={isGenerating}
+            sx={{ 
+              color: isAIGenerated ? 'success.main' : 'warning.main',
+              borderColor: isAIGenerated ? 'success.main' : 'warning.main'
+            }}
           >
             {isGenerating ? 'Regenerating...' : 'Regenerate'}
           </Button>
@@ -171,60 +255,99 @@ function ResumeAnalysisCard({
 
         <Divider sx={{ my: 2 }} />
 
-        {/* Summary Stats */}
-        <Grid container spacing={2} sx={{ mb: 2 }}>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'primary.lighter', borderRadius: 1 }}>
-              <Typography variant="h4" color="primary.main">
-                {totalSkills}
+        {/* AI Analysis Summary */}
+        {(analysis_data as any).analysis_summary && (
+          <>
+            <Alert 
+              severity={isAIGenerated ? "success" : "warning"} 
+              icon={isAIGenerated ? <AutoAwesome /> : <Warning />}
+              sx={{ mb: 2 }}
+            >
+              <Typography variant="body2">
+                <strong>{isAIGenerated ? '🧠 AI Insight:' : '⚠️ Fallback Analysis:'}</strong> {(analysis_data as any).analysis_summary}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Skills Identified
-              </Typography>
-            </Box>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'warning.lighter', borderRadius: 1 }}>
-              <Typography variant="h4" color="warning.main">
-                {totalGaps}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Skill Gaps
-              </Typography>
-            </Box>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 4 }}>
-            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'success.lighter', borderRadius: 1 }}>
-              <Typography variant="h4" color="success.main">
-                {matchPercentage}%
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Role Match
-              </Typography>
-            </Box>
-          </Grid>
-        </Grid>
+            </Alert>
+          </>
+        )}
 
+        {/* Summary Stats */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 2 }}>
+          <Box sx={{ 
+            textAlign: 'center', 
+            p: 2, 
+            bgcolor: 'primary.lighter', 
+            borderRadius: 2,
+            border: '2px solid',
+            borderColor: 'primary.light'
+          }}>
+            <Typography variant="h4" color="primary.main" fontWeight="bold">
+              {totalSkills}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" fontWeight="medium">
+              Skills Identified
+            </Typography>
+          </Box>
+          <Box sx={{ 
+            textAlign: 'center', 
+            p: 2, 
+            bgcolor: 'warning.lighter', 
+            borderRadius: 2,
+            border: '2px solid',
+            borderColor: 'warning.light'
+          }}>
+            <Typography variant="h4" color="warning.main" fontWeight="bold">
+              {totalGaps}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" fontWeight="medium">
+              Skill Gaps
+            </Typography>
+          </Box>
+          <Box sx={{ 
+            textAlign: 'center', 
+            p: 2, 
+            bgcolor: 'success.lighter', 
+            borderRadius: 2,
+            border: '2px solid',
+            borderColor: 'success.light'
+          }}>
+            <Typography variant="h4" color="success.main" fontWeight="bold">
+              {matchPercentage}%
+            </Typography>
+            <Typography variant="body2" color="text.secondary" fontWeight="medium">
+              Role Match
+            </Typography>
+          </Box>
+        </Box>
         {/* Quick Insights */}
-        <Stack spacing={1} sx={{ mb: 2 }}>
+        <Stack spacing={1} sx={{ mb: 3 }}>
           <Stack direction="row" spacing={1} alignItems="center">
             <CheckCircle fontSize="small" color="success" />
             <Typography variant="body2">
-              <strong>{skill_inventory.technical_skills?.length || 0}</strong> technical skills
+              <strong>{skill_inventory.technical_skills?.length || 0}</strong> technical skills identified
             </Typography>
           </Stack>
           <Stack direction="row" spacing={1} alignItems="center">
             <TrendingUp fontSize="small" color="primary" />
             <Typography variant="body2">
-              <strong>{improvement_roadmap.milestones?.length || 0}</strong> learning milestones
+              <strong>{milestonesCount}</strong> {milestonesCount === 1 ? 'improvement recommendation' : 'learning milestones'}
             </Typography>
           </Stack>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Schedule fontSize="small" color="info" />
-            <Typography variant="body2">
-              <strong>{improvement_roadmap.timeline_weeks || 0}</strong> weeks roadmap
-            </Typography>
-          </Stack>
+          {timelineWeeks > 0 && (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Schedule fontSize="small" color="info" />
+              <Typography variant="body2">
+                <strong>{timelineWeeks}</strong> weeks development roadmap
+              </Typography>
+            </Stack>
+          )}
+          {isAIGenerated && (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <AutoAwesome fontSize="small" color="secondary" />
+              <Typography variant="body2" color="secondary.main" fontWeight="medium">
+                Powered by advanced AI analysis
+              </Typography>
+            </Stack>
+          )}
         </Stack>
 
         {onViewDetails && (
@@ -232,8 +355,15 @@ function ResumeAnalysisCard({
             variant="contained"
             fullWidth
             onClick={onViewDetails}
+            size="large"
+            sx={{ 
+              bgcolor: isAIGenerated ? 'success.main' : 'warning.main',
+              '&:hover': {
+                bgcolor: isAIGenerated ? 'success.dark' : 'warning.dark'
+              }
+            }}
           >
-            View Full Analysis
+            {isAIGenerated ? '🚀 View Full AI Analysis' : '📊 View Analysis Details'}
           </Button>
         )}
       </CardContent>

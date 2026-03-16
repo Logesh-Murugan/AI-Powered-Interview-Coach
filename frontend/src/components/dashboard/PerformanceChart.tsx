@@ -143,11 +143,12 @@ function PerformanceChart() {
                   borderRadius: 4,
                 }}
                 labelStyle={{ color: theme.palette.text.primary }}
-                formatter={(value: number | undefined, name: string) => {
-                  if (value === undefined) return ['N/A', name];
+                formatter={(value: number | string | undefined, name?: string) => {
+                  const safeName = name ?? 'Value';
+                  if (value === undefined) return ['N/A', safeName];
                   if (name === 'score') return [`${value}%`, 'Score'];
                   if (name === 'sessions') return [value, 'Sessions'];
-                  return [value, name];
+                  return [value, safeName];
                 }}
               />
               {averageScore !== null && (

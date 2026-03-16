@@ -33,7 +33,8 @@ class AgentExecutor:
         self,
         agent: BaseAgent,
         fallback_function: Optional[Callable] = None,
-        validate_output: Optional[Callable] = None
+        validate_output: Optional[Callable] = None,
+        **_: Any,
     ):
         """
         Initialize agent executor.
@@ -180,3 +181,15 @@ class AgentExecutor:
             'status': 'error',
             'error': 'No result from agent execution'
         }
+
+    def run(self, input_data: Any) -> Dict[str, Any]:
+        """
+        Backward-compatible run interface used by existing agent services.
+
+        Accepts either a raw prompt string or the full input dictionary and
+        delegates to the underlying agent execution path.
+        """
+        normalized_input = (
+            input_data if isinstance(input_data, dict) else {"input": input_data}
+        )
+        return self.agent.execute(normalized_input)

@@ -25,7 +25,7 @@ router = APIRouter()
 
 @router.get("", response_model=LeaderboardResponse)
 async def get_leaderboard(
-    period: str = Query('weekly', regex='^(weekly|all_time)$', description="Leaderboard period"),
+    period: str = Query('weekly', pattern='^(weekly|all_time)$', description="Leaderboard period"),
     db: Session = Depends(get_db)
 ):
     """
