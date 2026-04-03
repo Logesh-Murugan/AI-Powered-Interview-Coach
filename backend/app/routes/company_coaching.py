@@ -129,7 +129,7 @@ def get_user_coaching_sessions(
             company_name=session.company_name,
             target_role=session.target_role,
             created_at=session.created_at,
-            question_count=len(session.coaching_data.get('predicted_questions', [])),
+            question_count=len((session.coaching_data or {}).get('predicted_questions', [])),
             star_example_count=0  # Not used in new schema
         )
         for session in sessions
@@ -158,7 +158,7 @@ def get_sessions_by_company(
             company_name=session.company_name,
             target_role=session.target_role,
             created_at=session.created_at,
-            question_count=len(session.coaching_data.get('predicted_questions', [])),
+            question_count=len((session.coaching_data or {}).get('predicted_questions', [])),
             star_example_count=0  # Not used in new schema
         )
         for session in sessions

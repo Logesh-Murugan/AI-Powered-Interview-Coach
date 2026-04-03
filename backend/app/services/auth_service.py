@@ -127,7 +127,8 @@ class AuthService:
         
         # Reset failed login attempts on successful login
         user.failed_login_attempts = "0"
-        user.last_login_at = datetime.utcnow().isoformat()
+        from datetime import timezone
+        user.last_login_at = datetime.now(timezone.utc).isoformat()
         db.commit()
         
         return user
@@ -170,7 +171,8 @@ class AuthService:
             ).hexdigest()[:32] if user_agent else None
         
         # Calculate expiry (7 days from now)
-        expires_at = (datetime.utcnow() + timedelta(days=7)).isoformat()
+        from datetime import timezone
+        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
         
         # Store refresh token in database
         refresh_token_record = RefreshToken(
@@ -289,9 +291,21 @@ class AuthService:
             )
         
         # Check if token is expired
-        from datetime import datetime
-        expires_at = datetime.fromisoformat(token_record.expires_at)
-        if datetime.utcnow() > expires_at:
+        from datetime import timezone
+        
+        expires_at = token_record.expires_at
+        if isinstance(expires_at, str):
+            try:
+                # SQLite might return datetime as string
+                expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
+            except ValueError:
+                pass
+                
+        # Ensure we have a timezone-aware object for comparison
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            
+        if datetime.now(timezone.utc) > expires_at:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Refresh token has expired"
@@ -416,7 +430,8 @@ class AuthService:
         token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
         
         # Calculate expiry (1 hour from now)
-        expires_at = (datetime.utcnow() + timedelta(hours=1)).isoformat()
+        from datetime import timezone
+        expires_at = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
         
         # Create password reset token record
         reset_token_record = PasswordResetToken(
@@ -503,8 +518,16 @@ class AuthService:
             )
         
         # Check if token is expired
-        expires_at = datetime.fromisoformat(token_record.expires_at)
-        if datetime.utcnow() > expires_at:
+        from datetime import timezone
+        expires_at = token_record.expires_at
+        if isinstance(expires_at, str):
+            expires_at = datetime.fromisoformat(expires_at)
+        
+        # Ensure timezone awareness
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+            
+        if datetime.now(timezone.utc) > expires_at:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired reset link"

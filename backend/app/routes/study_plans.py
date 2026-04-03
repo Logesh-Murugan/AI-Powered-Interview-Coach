@@ -60,6 +60,15 @@ def _derive_completed_milestones(plan_data: dict[str, Any]) -> int:
 
 def _to_response(study_plan: Any) -> StudyPlanResponse:
     plan_data = _primitive_or_default(_get_attr(study_plan, 'plan_data', {}), dict, {})
+    
+    # Ensure mandatory arrays are actually arrays for the frontend
+    if not isinstance(plan_data.get('weekly_milestones'), list):
+        plan_data['weekly_milestones'] = []
+    if not isinstance(plan_data.get('daily_tasks'), list):
+        plan_data['daily_tasks'] = []
+    if not isinstance(plan_data.get('resource_links'), (dict, list)):
+        plan_data['resource_links'] = {}
+
     total_tasks = _primitive_or_default(_get_attr(study_plan, 'total_tasks'), int, _derive_total_tasks(plan_data))
     completed_tasks = _primitive_or_default(_get_attr(study_plan, 'completed_tasks'), int, _derive_completed_tasks(plan_data))
     total_milestones = _primitive_or_default(_get_attr(study_plan, 'total_milestones'), int, _derive_total_milestones(plan_data))
@@ -120,7 +129,7 @@ async def create_study_plan(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f'Failed to generate study plan: {str(e)}')
 
 
-@router.get('/active', response_model=StudyPlanResponse)
+# FIXED: Remove double decorator and put specific routes BEFORE generic ones
 @router.get('/active/current', response_model=StudyPlanResponse)
 async def get_active_study_plan(
     current_user: User = Depends(get_current_user),

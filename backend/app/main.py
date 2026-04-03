@@ -23,6 +23,7 @@ from app.logging_config import setup_logging
 from app.database import get_db
 from app.services.cache_service import cache_service
 from app.startup_validation import validate_startup
+from app.middleware.validation import ValidationMiddleware
 
 # Initialize logging
 setup_logging()
@@ -69,6 +70,9 @@ app.add_middleware(
     expose_headers=["*"],
     max_age=3600,
 )
+
+# Request Validation Middleware
+app.add_middleware(ValidationMiddleware)
 
 
 # Request ID Middleware
@@ -228,6 +232,7 @@ from app.routes import company_coaching
 from app.routes import export
 from app.routes import admin
 from app.routes import media
+from app.routes import health
 
 app.include_router(auth_router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
@@ -246,6 +251,7 @@ app.include_router(company_coaching.router)
 app.include_router(export.router, prefix="/api/v1/export", tags=["export"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["admin"])
 app.include_router(media.router, prefix="/api/v1/media", tags=["media"])
+app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
 
 # Mount static files for uploaded resumes and media
 from fastapi.staticfiles import StaticFiles

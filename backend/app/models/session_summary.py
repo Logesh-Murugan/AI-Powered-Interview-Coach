@@ -7,6 +7,7 @@ Requirements: 19.1-19.12
 """
 from sqlalchemy import Column, Integer, Float, ForeignKey, DateTime, JSON
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from datetime import datetime
 
 from app.models.base import Base
@@ -52,15 +53,15 @@ class SessionSummary(Base):
     total_time_seconds = Column(Integer, nullable=False)
     
     # Timing
-    generated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    generated_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
     
     # Relationships
     session = relationship("InterviewSession", back_populates="session_summary")
     
     # Timestamps from base
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    deleted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=func.now(), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     
     def __repr__(self):
         return f"<SessionSummary(id={self.id}, session_id={self.session_id}, overall_score={self.overall_session_score})>"

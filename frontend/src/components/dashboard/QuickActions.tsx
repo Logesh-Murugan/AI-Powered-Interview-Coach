@@ -1,111 +1,73 @@
 /**
- * Quick Actions Component
- * Provides quick navigation buttons for common actions
+ * Premium Quick Actions Component
+ * High-end interactive grid for commonly used features
  */
 
-import { Button, Grid, Paper, Typography } from '@mui/material';
+import { Typography, Grid, Box, alpha, useTheme } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+
+// Icons
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import HistoryIcon from '@mui/icons-material/History';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import PsychologyIcon from '@mui/icons-material/Psychology';
 import SchoolIcon from '@mui/icons-material/School';
 import BusinessIcon from '@mui/icons-material/Business';
 
+import { GlassCard } from '../common/PremiumComponents';
+
+const MotionBox = motion.create(Box);
+
 function QuickActions() {
   const navigate = useNavigate();
+  const theme = useTheme();
 
   const actions = [
-    {
-      label: 'Start Interview',
-      icon: <PlayArrowIcon />,
-      color: 'primary' as const,
-      variant: 'contained' as const,
-      onClick: () => navigate('/interviews'),
-    },
-    {
-      label: 'Upload Resume',
-      icon: <UploadFileIcon />,
-      color: 'secondary' as const,
-      variant: 'outlined' as const,
-      onClick: () => navigate('/resumes/upload'),
-    },
-    {
-      label: 'Study Plans',
-      icon: <SchoolIcon />,
-      color: 'primary' as const,
-      variant: 'outlined' as const,
-      onClick: () => navigate('/ai/study-plans'),
-    },
-    {
-      label: 'Company Coaching',
-      icon: <BusinessIcon />,
-      color: 'info' as const,
-      variant: 'outlined' as const,
-      onClick: () => navigate('/ai/company-coaching'),
-    },
-    {
-      label: 'View History',
-      icon: <HistoryIcon />,
-      color: 'primary' as const,
-      variant: 'outlined' as const,
-      onClick: () => navigate('/interviews/history'),
-    },
-    {
-      label: 'View Resumes',
-      icon: <UploadFileIcon />,
-      color: 'info' as const,
-      variant: 'outlined' as const,
-      onClick: () => navigate('/resumes'),
-    },
-    {
-      label: 'Analytics',
-      icon: <BarChartIcon />,
-      color: 'success' as const,
-      variant: 'outlined' as const,
-      onClick: () => navigate('/analytics'),
-    },
-    {
-      label: 'Leaderboard',
-      icon: <TrendingUpIcon />,
-      color: 'warning' as const,
-      variant: 'outlined' as const,
-      onClick: () => navigate('/leaderboard'),
-    },
-    {
-      label: 'Achievements',
-      icon: <EmojiEventsIcon />,
-      color: 'secondary' as const,
-      variant: 'outlined' as const,
-      onClick: () => navigate('/achievements'),
-    },
+    { label: 'SIMULATE', sub: 'New Interview', icon: <PlayArrowIcon />, color: '#6366f1', path: '/interviews' },
+    { label: 'PARSE', sub: 'Resume Analysis', icon: <PsychologyIcon />, color: '#ec4899', path: '/resumes' },
+    { label: 'STRATEGIZE', sub: 'Study Plans', icon: <SchoolIcon />, color: '#f59e0b', path: '/ai/study-plans' },
+    { label: 'COACH', sub: 'Company Intel', icon: <BusinessIcon />, color: '#10b981', path: '/ai/company-coaching' },
+    { label: 'ARCHIVE', sub: 'History', icon: <HistoryIcon />, color: '#0ea5e9', path: '/interviews/history' },
+    { label: 'REPOSITORY', sub: 'All Resumes', icon: <UploadFileIcon />, color: '#8b5cf6', path: '/resumes' },
   ];
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Quick Actions
-      </Typography>
-      <Grid container spacing={2} sx={{ mt: 1 }}>
-        {actions.map((action) => (
-          <Grid key={action.label} size={{ xs: 12, sm: 6, md: 3 }}>
-            <Button
-              fullWidth
-              variant={action.variant}
-              color={action.color}
-              startIcon={action.icon}
-              onClick={action.onClick}
-              sx={{ py: 1.5 }}
+    <GlassCard sx={{ p: 4, height: '100%' }}>
+      <Typography variant="h6" fontWeight="900" sx={{ mb: 3 }}>TACTICAL COMMAND</Typography>
+      <Grid container spacing={2}>
+        {actions.map((action, idx) => (
+          <Grid key={idx} size={{ xs: 6, sm: 4 }}>
+            <MotionBox
+              whileHover={{ scale: 1.05, y: -5 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate(action.path)}
+              sx={{ cursor: 'pointer' }}
             >
-              {action.label}
-            </Button>
+              <Box sx={{ 
+                p: 2, 
+                borderRadius: 4, 
+                textAlign: 'center',
+                bgcolor: alpha(action.color, 0.05),
+                border: `1px solid ${alpha(action.color, 0.1)}`,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  bgcolor: alpha(action.color, 0.1),
+                  borderColor: action.color,
+                  boxShadow: `0 0 20px ${alpha(action.color, 0.2)}`
+                }
+              }}>
+                <Box sx={{ color: action.color, mb: 1, display: 'flex', justifyContent: 'center' }}>
+                    {action.icon}
+                </Box>
+                <Typography variant="caption" display="block" sx={{ fontWeight: 900, mb: 0.2, color: 'text.primary' }}>{action.label}</Typography>
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', fontWeight: 600 }}>{action.sub}</Typography>
+              </Box>
+            </MotionBox>
           </Grid>
         ))}
       </Grid>
-    </Paper>
+    </GlassCard>
   );
 }
 

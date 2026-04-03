@@ -1,6 +1,6 @@
 /**
- * Login Page Component
- * User login form with validation
+ * Premium Login Page
+ * High-end identity verification interface with secure access modules
  */
 
 import { useEffect } from 'react';
@@ -15,13 +15,20 @@ import {
   Typography,
   Link,
   Alert,
+  alpha,
+  useTheme,
+  Stack,
+  CircularProgress,
 } from '@mui/material';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { login, clearError } from '../../store/slices/authSlice';
 import { ROUTES } from '../../config/app.config';
-import FadeIn from '../../components/animations/FadeIn';
-import ScaleButton from '../../components/animations/ScaleButton';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GradientButton, GradientText } from '../../components/common/PremiumComponents';
+import { Send, Lock } from '@mui/icons-material';
+
+const MotionBox = motion.create(Box);
 
 interface LoginFormData {
   email: string;
@@ -31,18 +38,20 @@ interface LoginFormData {
 const loginSchema = yup.object().shape({
   email: yup
     .string()
-    .required('Email is required')
-    .email('Please enter a valid email address'),
+    .required('EMAIL IS REQUIRED')
+    .email('INVALID EMAIL FORMAT'),
   password: yup
     .string()
-    .required('Password is required')
-    .min(8, 'Password must be at least 8 characters'),
+    .required('PASSWORD IS REQUIRED')
+    .min(8, 'MINIMUM 8 CHARACTERS'),
+
 });
 
 function LoginPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector((state) => state.auth);
+  const theme = useTheme();
+  const { isLoading, error, isAuthenticated } = useAppSelector((state) => state.auth);
 
   const {
     control,
@@ -57,118 +66,103 @@ function LoginPage() {
   });
 
   useEffect(() => {
-    // Clear error when component unmounts
-    return () => {
-      dispatch(clearError());
-    };
+    if (isAuthenticated) navigate(ROUTES.DASHBOARD, { replace: true });
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    return () => { dispatch(clearError()); };
   }, [dispatch]);
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       await dispatch(login(data)).unwrap();
-      navigate(ROUTES.DASHBOARD);
-    } catch {
-      // Error handled by Redux and displayed in UI
-    }
+    } catch (error) {}
   };
 
   return (
     <Box>
-      <FadeIn delay={0.1}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          Welcome Back
+      <MotionBox
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        sx={{ textAlign: 'center', mb: 4 }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'Orbitron', mb: 1 }}>WELCOME <GradientText>BACK</GradientText></Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+           SIGN IN TO YOUR ACCOUNT
         </Typography>
-        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-          Sign in to continue to InterviewMaster AI
-        </Typography>
-      </FadeIn>
+      </MotionBox>
 
-      {error && (
-        <FadeIn delay={0.2}>
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch(clearError())}>
-            {error}
-          </Alert>
-        </FadeIn>
-      )}
+      <AnimatePresence>
+        {error && (
+          <MotionBox initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} sx={{ overflow: 'hidden' }}>
+            <Alert severity="error" sx={{ mb: 3, border: `1px solid ${theme.palette.error.main}66`, bgcolor: `${theme.palette.error.main}11`, fontWeight: 800 }} onClose={() => dispatch(clearError())}>
+              {error.toUpperCase()}
+            </Alert>
+          </MotionBox>
+        )}
+      </AnimatePresence>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <FadeIn delay={0.3}>
-          <Controller
-            name="email"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Email"
-                type="email"
-                margin="normal"
-                autoComplete="email"
-                autoFocus
-                error={!!errors.email}
-                helperText={errors.email?.message}
-              />
-            )}
-          />
-        </FadeIn>
+        <Stack spacing={3}>
+           <Controller
+             name="email"
+             control={control}
+             render={({ field }) => (
+               <TextField
+                 {...field}
+                 fullWidth
+                 label="EMAIL ADDRESS"
+                 type="email"
+                 placeholder="name@example.com"
+                 error={!!errors.email}
+                 helperText={errors.email?.message}
+                 InputProps={{ 
+                   sx: { borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.4) },
+                   startAdornment: <Box sx={{ mr: 1, color: 'primary.main', opacity: 0.5 }}>@</Box>
+                 }}
+               />
+             )}
+           />
 
-        <FadeIn delay={0.4}>
-          <Controller
-            name="password"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Password"
-                type="password"
-                margin="normal"
-                autoComplete="current-password"
-                error={!!errors.password}
-                helperText={errors.password?.message}
-              />
-            )}
-          />
-        </FadeIn>
+           <Controller
+             name="password"
+             control={control}
+             render={({ field }) => (
+               <TextField
+                 {...field}
+                 fullWidth
+                 label="PASSWORD"
+                 type="password"
+                 placeholder="••••••••••••"
+                 error={!!errors.password}
+                 helperText={errors.password?.message}
+                 InputProps={{ 
+                   sx: { borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.4) },
+                   startAdornment: <Lock sx={{ mr: 1, color: 'primary.main', opacity: 0.5, fontSize: 18 }} />
+                 }}
+               />
+             )}
+           />
 
-        <FadeIn delay={0.5}>
-          <Box sx={{ textAlign: 'right', mt: 1 }}>
-            <Link
-              component={RouterLink}
-              to={ROUTES.PASSWORD_RESET}
-              variant="body2"
-              sx={{ textDecoration: 'none' }}
-            >
-              Forgot password?
-            </Link>
-          </Box>
-        </FadeIn>
-
-        <FadeIn delay={0.6}>
-          <ScaleButton fullWidth>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              disabled={isLoading}
-              sx={{ mt: 3, mb: 2 }}
-            >
-              {isLoading ? <LoadingSpinner size="small" /> : 'Sign In'}
-            </Button>
-          </ScaleButton>
-        </FadeIn>
-
-        <FadeIn delay={0.7}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2">
-              Don't have an account?{' '}
-              <Link component={RouterLink} to={ROUTES.REGISTER}>
-                Sign up
+           <Box sx={{ textAlign: 'right' }}>
+              <Link component={RouterLink} to={ROUTES.PASSWORD_RESET} variant="caption" sx={{ textDecoration: 'none', fontWeight: 900, color: 'primary.main', '&:hover': { opacity: 0.8 } }}>
+                KEY RECOVERY
               </Link>
-            </Typography>
-          </Box>
-        </FadeIn>
+           </Box>
+
+           <GradientButton type="submit" fullWidth size="large" disabled={isLoading} sx={{ py: 2 }}>
+              {isLoading ? <CircularProgress size={20} color="inherit" /> : 'SIGN IN'}
+           </GradientButton>
+
+           <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                DON'T HAVE AN ACCOUNT?{' '}
+                <Link component={RouterLink} to={ROUTES.REGISTER} sx={{ color: 'primary.main', fontWeight: 900, textDecoration: 'none' }}>
+                  CREATE ONE
+                </Link>
+              </Typography>
+           </Box>
+        </Stack>
       </form>
     </Box>
   );

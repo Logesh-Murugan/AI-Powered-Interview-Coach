@@ -56,8 +56,8 @@ class ResumeParserTool:
         match = re.search(r"(\d+)", raw_input)
         return int(match.group(1)) if match else None
 
-    MAX_EXTRACTED_TEXT_LENGTH = 768
-    MAX_SUMMARY_LENGTH = 256
+    MAX_EXTRACTED_TEXT_LENGTH = 8192
+    MAX_SUMMARY_LENGTH = 1024
 
     @staticmethod
     def _run(resume_id: str) -> str:
@@ -72,38 +72,39 @@ class ResumeParserTool:
         """
         try:
             db = SessionLocal()
-            
-            resume_id_int = ResumeParserTool._parse_resume_id(resume_id)
-            if resume_id_int is None:
-                raise ValueError("No valid resume_id found in input")
-            
-            # Get resume
-            resume = db.query(Resume).filter(Resume.id == resume_id_int).first()
-            
-            if not resume:
-                return json.dumps({
-                    'error': f'Resume {resume_id} not found'
-                })
-            
-            # Extract data
-            extracted_text = resume.extracted_text or ''
-            if len(extracted_text) > ResumeParserTool.MAX_EXTRACTED_TEXT_LENGTH:
-                extracted_text = extracted_text[:ResumeParserTool.MAX_EXTRACTED_TEXT_LENGTH]
+            try:
+                resume_id_int = ResumeParserTool._parse_resume_id(resume_id)
+                if resume_id_int is None:
+                    raise ValueError("No valid resume_id found in input")
+                
+                # Get resume
+                resume = db.query(Resume).filter(Resume.id == resume_id_int).first()
+                
+                if not resume:
+                    return json.dumps({
+                        'error': f'Resume {resume_id} not found'
+                    })
+                
+                # Extract data
+                extracted_text = resume.extracted_text or ''
+                if len(extracted_text) > ResumeParserTool.MAX_EXTRACTED_TEXT_LENGTH:
+                    extracted_text = extracted_text[:ResumeParserTool.MAX_EXTRACTED_TEXT_LENGTH]
 
-            result = {
-                'resume_id': resume.id,
-                'filename': resume.filename,
-                'text_summary': extracted_text[:ResumeParserTool.MAX_SUMMARY_LENGTH],
-                'skills': resume.skills or {},
-                'experience': resume.experience or {},
-                'education': resume.education or {},
-                'status': resume.status
-            }
-            
-            db.close()
-            
-            return json.dumps(result, separators=(",", ":"))
-            
+                result = {
+                    'resume_id': resume.id,
+                    'filename': resume.filename,
+                    'text_summary': extracted_text[:ResumeParserTool.MAX_SUMMARY_LENGTH],
+                    'full_text': extracted_text,
+                    'skills': resume.skills or {},
+                    'experience': resume.experience or {},
+                    'education': resume.education or {},
+                    'status': resume.status
+                }
+                
+                return json.dumps(result, separators=(",", ":"))
+                
+            finally:
+                db.close()  # Always close the session
         except Exception as e:
             logger.error(f"ResumeParserTool error: {e}")
             return json.dumps({'error': str(e)})
@@ -146,6 +147,7 @@ class SkillExtractorTool:
         Returns:
             JSON string with categorized skills
         """
+        db = None
         try:
             text_to_parse = resume_text
 
@@ -156,7 +158,7 @@ class SkillExtractorTool:
                 if cleaned.isdigit():
                     resume_id_guess = int(cleaned)
                 else:
-                    match = re.search(r"(\\d+)", cleaned)
+                    match = re.search(r"(\d+)", cleaned)
                     if match and len(cleaned) <= 6:
                         resume_id_guess = int(match.group(1))
 
@@ -165,7 +167,6 @@ class SkillExtractorTool:
                 resume_record = db.query(Resume).filter(Resume.id == resume_id_guess).first()
                 if resume_record:
                     text_to_parse = resume_record.extracted_text or ''
-                db.close()
 
             # Use existing skill extraction utility
             skills_detailed = extract_skills_from_text(text_to_parse)
@@ -190,6 +191,9 @@ class SkillExtractorTool:
         except Exception as e:
             logger.error(f"SkillExtractorTool error: {e}")
             return json.dumps({'error': str(e)})
+        finally:
+            if db:
+                db.close()
     
     @classmethod
     def as_tool(cls) -> Tool:
@@ -543,6 +547,7 @@ class AnalysisFormatterTool:
 
         raise ValueError("Unbalanced JSON braces in payload")
 
+    @staticmethod  # FIX: Added missing decorator
     def _run(payload: Union[str, Dict[str, Any]]) -> str:
         try:
             if isinstance(payload, str):

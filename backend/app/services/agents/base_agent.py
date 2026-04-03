@@ -300,7 +300,7 @@ Thought: {agent_scratchpad}"""
             if AgentExecutor is None:
                 result = self.agent_executor.invoke(input_data)
                 messages = result.get("messages", [])
-                output = messages[-1].content if messages else ""
+                output = messages[-1].content if messages and len(messages) > 0 else ""
                 intermediate_steps = []
             else:
                 result = self.agent_executor.invoke(input_data)
@@ -511,46 +511,46 @@ Thought: {agent_scratchpad}"""
                                 except json.JSONDecodeError:
                                     continue
                 
-                # If we found valid JSON output, this is likely a ReAct format error, not a real failure
-                if output:
-                    logger.warning(f"ReAct format error but valid JSON extracted - treating as partial success")
-                    
+                    # Also try looking for the pattern "Parsing LLM output produced both a final answer and a parse-able action"
+                    if not output and ("both a final answer and a parse-able action" in error_str or "Could not parse LLM output" in error_str):
+                        logger.debug("Found ReAct conflicting output/parsing pattern")
+                        # Try to find any JSON object in the entire error string
+                        import re
+                        # This matches the outermost JSON object
+                        json_matches = list(re.finditer(r'\{.*\}', error_str, re.DOTALL))
+                        if json_matches:
+                            # Try from the last match backwards as it's more likely to be the final answer
+                            for match in reversed(json_matches):
+                                potential_json = match.group(0)
+                                # Validate matching braces manually to handle nested JSON
+                                brace_count = 0
+                                first_brace = potential_json.find('{')
+                                last_brace = -1
+                                for i in range(first_brace, len(potential_json)):
+                                    if potential_json[i] == '{':
+                                        brace_count += 1
+                                    elif potential_json[i] == '}':
+                                        brace_count -= 1
+                                        if brace_count == 0:
+                                            last_brace = i + 1
+                                            break
+                                
+                                if last_brace > first_brace:
+                                    clean_json = potential_json[first_brace:last_brace]
+                                    try:
+                                        import json
+                                        json.loads(clean_json)
+                                        output = clean_json
+                                        logger.info(f"✅ Extracted valid JSON from conflicted ReAct output: {output[:100]}...")
+                                        break
+                                    except json.JSONDecodeError:
+                                        continue
             except Exception as extract_error:
                 logger.debug(f"Could not extract output from error: {extract_error}")
 
-            # NEW: Handle case where both final answer and parse-able action exist
-            # Extract from "Final Answer:" section if present
-            if not output and "Final Answer:" in error_str:
-                logger.debug("Found 'Final Answer:' in error, attempting extraction")
-                final_answer_part = error_str.split("Final Answer:", 1)[-1]
-                # Find JSON in the final answer section
-                if "{" in final_answer_part and "}" in final_answer_part:
-                    start_idx = final_answer_part.find("{")
-                    # Find matching closing brace
-                    brace_count = 0
-                    end_idx = -1
-                    for i in range(start_idx, len(final_answer_part)):
-                        if final_answer_part[i] == "{":
-                            brace_count += 1
-                        elif final_answer_part[i] == "}":
-                            brace_count -= 1
-                            if brace_count == 0:
-                                end_idx = i + 1
-                                break
-                    
-                    if end_idx > start_idx:
-                        potential_json = final_answer_part[start_idx:end_idx]
-                        try:
-                            import json
-                            json.loads(potential_json)
-                            output = potential_json
-                            logger.info(f"✅ Extracted valid JSON from Final Answer section: {output[:100]}...")
-                        except json.JSONDecodeError:
-                            logger.debug("Final Answer section JSON decode failed")
-
             return {
                 "output": output,
-                "reasoning_steps": self.reasoning_steps,
+                "reasoning_steps": getattr(self, 'reasoning_steps', []),
                 "execution_time_ms": execution_time_ms,
                 "status": "error",
                 "error": str(e),

@@ -26,6 +26,7 @@ import {
   Button,
   Menu,
   MenuItem,
+  alpha,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -44,6 +45,7 @@ import {
   School as StudyPlanIcon,
   Business as CompanyCoachingIcon,
 } from '@mui/icons-material';
+import PageTransition from '../animations/PageTransition';
 
 const drawerWidth = 260;
 
@@ -95,7 +97,7 @@ const navigationSections: NavigationSection[] = [
 
 function MainLayout() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // < 768px
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
@@ -125,77 +127,82 @@ function MainLayout() {
   const handleLogout = async () => {
     handleUserMenuClose();
     await dispatch(logout());
-    navigate('/login');
+    navigate('/');
+
   };
 
   const isActiveRoute = (path: string): boolean => {
-    // Special handling for Resume Analysis - it's accessed via resumes page
     if (path === '/resumes' && location.pathname.startsWith('/ai/resume-analysis')) {
       return false;
     }
-    // Check if current path starts with the navigation path
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
   const drawerContent = (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Logo/Brand */}
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-        <AIIcon color="primary" sx={{ fontSize: 32 }} />
-        <Typography variant="h6" noWrap component="div" color="primary">
-          InterviewMaster AI
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.default' }}>
+      <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ 
+          p: 1, 
+          borderRadius: 2, 
+          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+          display: 'flex',
+          boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.4)}`
+        }}>
+          <AIIcon sx={{ fontSize: 28, color: 'white' }} />
+        </Box>
+        <Typography variant="h6" fontWeight="900" sx={{ fontFamily: 'Orbitron', fontSize: '1.1rem', letterSpacing: '0.05em' }}>
+          INTERVIEW<span style={{ color: theme.palette.primary.main }}>AI</span>
         </Typography>
       </Box>
-      <Divider />
+      
+      <Divider sx={{ opacity: 0.1 }} />
 
-      {/* Navigation Sections */}
-      <Box sx={{ flex: 1, overflow: 'auto' }}>
+      <Box sx={{ flex: 1, overflow: 'auto', py: 2 }}>
         {navigationSections.map((section) => (
-          <Box key={section.title}>
+          <Box key={section.title} sx={{ mb: 2 }}>
             <Typography
               variant="overline"
-              sx={{ px: 2, pt: 2, pb: 1, display: 'block', color: 'text.secondary' }}
+              sx={{ px: 3, mb: 1, display: 'block', color: 'text.secondary', fontWeight: 700, fontSize: '0.7rem' }}
             >
               {section.title}
             </Typography>
-            <List>
+            <List sx={{ px: 1 }}>
               {section.items.map((item) => {
                 const isActive = isActiveRoute(item.path);
                 return (
-                  <ListItem key={item.text} disablePadding>
+                  <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
                     <ListItemButton
                       selected={isActive}
                       onClick={() => handleNavigation(item.path)}
                       sx={{
-                        mx: 1,
-                        borderRadius: 1,
+                        borderRadius: 3,
+                        py: 1,
+                        px: 2,
+                        transition: 'all 0.3s ease',
                         '&.Mui-selected': {
-                          backgroundColor: 'primary.main',
-                          color: 'primary.contrastText',
-                          '&:hover': {
-                            backgroundColor: 'primary.dark',
-                          },
-                          '& .MuiListItemIcon-root': {
-                            color: 'primary.contrastText',
-                          },
+                          background: `linear-gradient(90deg, ${alpha(theme.palette.primary.main, 0.2)} 0%, transparent 100%)`,
+                          borderLeft: `4px solid ${theme.palette.primary.main}`,
+                          '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+                          '& .MuiListItemText-primary': { fontWeight: 700, color: theme.palette.primary.main },
                         },
+                        '&:hover': {
+                          backgroundColor: alpha(theme.palette.primary.main, 0.05),
+                          transform: 'translateX(4px)',
+                        }
                       }}
                     >
-                      <ListItemIcon
-                        sx={{
-                          color: isActive ? 'inherit' : 'text.secondary',
-                          minWidth: 40,
-                        }}
-                      >
+                      <ListItemIcon sx={{ minWidth: 40, color: isActive ? 'primary.main' : 'text.secondary' }}>
                         {item.icon}
                       </ListItemIcon>
-                      <ListItemText primary={item.text} />
+                      <ListItemText 
+                        primary={item.text} 
+                        primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: isActive ? 700 : 500 }} 
+                      />
                     </ListItemButton>
                   </ListItem>
                 );
               })}
             </List>
-            <Divider sx={{ my: 1 }} />
           </Box>
         ))}
       </Box>
@@ -203,98 +210,87 @@ function MainLayout() {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* App Bar */}
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar
         position="fixed"
+        elevation={0}
         sx={{
           width: { md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
           zIndex: (theme) => theme.zIndex.drawer + 1,
+          bgcolor: alpha(theme.palette.background.default, 0.8),
+          backdropFilter: 'blur(12px)',
+          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
         }}
       >
-        <Toolbar>
-          {/* Mobile Menu Button */}
-          {isMobile && (
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2 }}
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {isMobile && (
+              <IconButton color="inherit" onClick={handleDrawerToggle} sx={{ mr: 2 }}>
+                <MenuIcon />
+              </IconButton>
+            )}
+            <Typography variant="h6" fontWeight="800" sx={{ letterSpacing: '-0.02em' }}>
+              {navigationSections
+                .flatMap((section) => section.items)
+                .find((item) => isActiveRoute(item.path))?.text || 'Dashboard'}
+            </Typography>
+          </Box>
 
-          {/* Page Title */}
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            {navigationSections
-              .flatMap((section) => section.items)
-              .find((item) => isActiveRoute(item.path))?.text || 'InterviewMaster AI'}
-          </Typography>
-
-          {/* User Menu */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Button
-              color="inherit"
               onClick={handleUserMenuOpen}
-              startIcon={
-                <Avatar
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    bgcolor: 'secondary.main',
-                    fontSize: '0.875rem',
-                  }}
-                >
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
-                </Avatar>
-              }
-              sx={{ textTransform: 'none' }}
+              sx={{ 
+                borderRadius: 10,
+                px: 2,
+                py: 0.5,
+                bgcolor: alpha(theme.palette.primary.main, 0.05),
+                border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+                '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.1) }
+              }}
             >
-              {user?.name || 'User'}
+              <Avatar
+                sx={{
+                  width: 32,
+                  height: 32,
+                  mr: 1.5,
+                  background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                  fontSize: '0.8rem',
+                  fontWeight: 700
+                }}
+              >
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
+              </Avatar>
+              <Typography variant="body2" fontWeight="700" color="text.primary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                {user?.name || 'User'}
+              </Typography>
             </Button>
+            
             <Menu
               anchorEl={anchorEl}
               open={Boolean(anchorEl)}
               onClose={handleUserMenuClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
+              PaperProps={{
+                sx: {
+                  mt: 1.5,
+                  borderRadius: 3,
+                  minWidth: 180,
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.1)',
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                }
               }}
             >
-              <MenuItem
-                onClick={() => {
-                  handleUserMenuClose();
-                  navigate('/profile');
-                }}
-              >
-                <ListItemIcon>
-                  <PersonIcon fontSize="small" />
-                </ListItemIcon>
+              <MenuItem onClick={() => { handleUserMenuClose(); navigate('/profile'); }}>
+                <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
                 Profile
               </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  handleUserMenuClose();
-                  navigate('/settings');
-                }}
-              >
-                <ListItemIcon>
-                  <SettingsIcon fontSize="small" />
-                </ListItemIcon>
+              <MenuItem onClick={() => { handleUserMenuClose(); navigate('/settings'); }}>
+                <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
                 Settings
               </MenuItem>
               <Divider />
-              <MenuItem onClick={handleLogout}>
-                <ListItemIcon>
-                  <LogoutIcon fontSize="small" />
-                </ListItemIcon>
+              <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
+                <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon>
                 Logout
               </MenuItem>
             </Menu>
@@ -302,58 +298,44 @@ function MainLayout() {
         </Toolbar>
       </AppBar>
 
-      {/* Navigation Drawer */}
       <Box
         component="nav"
         sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
-        aria-label="navigation menu"
       >
-        {/* Mobile Drawer */}
-        {isMobile ? (
-          <Drawer
-            variant="temporary"
-            open={mobileOpen}
-            onClose={handleDrawerToggle}
-            ModalProps={{
-              keepMounted: true, // Better mobile performance
-            }}
-            sx={{
-              '& .MuiDrawer-paper': {
-                boxSizing: 'border-box',
-                width: drawerWidth,
-              },
-            }}
-          >
-            {drawerContent}
-          </Drawer>
-        ) : (
-          // Desktop Drawer
-          <Drawer
-            variant="permanent"
-            sx={{
-              '& .MuiDrawer-paper': {
-                boxSizing: 'border-box',
-                width: drawerWidth,
-              },
-            }}
-            open
-          >
-            {drawerContent}
-          </Drawer>
-        )}
+        <Drawer
+          variant={isMobile ? "temporary" : "permanent"}
+          open={isMobile ? mobileOpen : true}
+          onClose={handleDrawerToggle}
+          sx={{
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
+              width: drawerWidth,
+              borderRight: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+              boxShadow: 'none',
+              bgcolor: 'background.default'
+            },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
       </Box>
 
-      {/* Main Content */}
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: { xs: 2, md: 4 },
           width: { md: `calc(100% - ${drawerWidth}px)` },
-          mt: 8, // Account for AppBar height
+          mt: 8,
+          minHeight: '100vh',
+          background: theme.palette.mode === 'dark' 
+            ? 'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 50%)'
+            : 'radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.03) 0%, transparent 50%)',
         }}
       >
-        <Outlet />
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
       </Box>
     </Box>
   );

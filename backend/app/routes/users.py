@@ -1,7 +1,9 @@
 """User profile routes."""
 
-from fastapi import APIRouter, Depends, status
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from loguru import logger
 
 from app.database import get_db
 from app.middleware.auth import get_current_user
@@ -180,4 +182,46 @@ async def update_current_user_profile(
         created_at=user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else str(user.created_at),
         updated_at=user.updated_at.isoformat() if hasattr(user.updated_at, 'isoformat') else str(user.updated_at)
     )
+
+
+@router.delete(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    summary="Delete current user account",
+    description="Soft-delete the authenticated user's account."
+)
+async def delete_account(
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete user account (soft delete).
+
+    Sets account_status to deleted and records deletion timestamp.
+    User data is retained for 30 days before permanent deletion.
+    """
+    try:
+        from app.models.user import User, AccountStatus
+
+        user = db.query(User).filter(User.id == current_user.id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Soft delete
+        from datetime import timezone
+        user.deleted_at = datetime.now(timezone.utc)
+        user.account_status = AccountStatus.DELETED
+
+        db.commit()
+
+        logger.info(f"User {user.id} account deleted")
+
+        return {"success": True, "message": "Account deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Account deletion failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete account")
 

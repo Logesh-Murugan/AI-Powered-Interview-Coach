@@ -18,9 +18,22 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime
 
-import librosa
-import soundfile as sf
-import numpy as np
+try:
+    import librosa
+    import soundfile as sf
+    import numpy as np
+    AUDIO_LIBS_AVAILABLE = True
+except ImportError:
+    librosa = None
+    sf = None
+    np = None
+    AUDIO_LIBS_AVAILABLE = False
+    import logging as _log
+    _log.getLogger(__name__).warning(
+        "librosa/soundfile/numpy not installed - audio analysis features disabled. "
+        "Install with: pip install librosa soundfile numpy"
+    )
+
 from fastapi import UploadFile, HTTPException
 
 # Try faster-whisper first, fallback to openai-whisper
@@ -445,46 +458,250 @@ class MediaService:
                 "analysis_metadata": {"error": str(e)}
             }
     
+    async def analyze_video(self, video_path: str, duration: float) -> Dict[str, Any]:
+        """
+        Analyze video characteristics
+        
+        Args:
+            video_path: Path to video file
+            duration: Video duration in seconds
+            
+        Returns:
+            Video analysis results including frame analysis
+        """
+        try:
+            import cv2
+            
+            logger.info(f"Analyzing video: {video_path}")
+            
+            # Open video file
+            cap = cv2.VideoCapture(video_path)
+            
+            if not cap.isOpened():
+                raise Exception("Failed to open video file")
+            
+            # Get video properties
+            fps = cap.get(cv2.CAP_PROP_FPS)
+            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            
+            # Sample frames for analysis (every 2 seconds)
+            sample_interval = int(fps * 2) if fps > 0 else 30
+            frames_analyzed = 0
+            brightness_values = []
+            motion_values = []
+            prev_frame = None
+            
+            # Analyze sampled frames
+            frame_idx = 0
+            while cap.isOpened() and frames_analyzed < 30:  # Limit to 30 samples
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                
+                if frame_idx % sample_interval == 0:
+                    # Convert to grayscale for analysis
+                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    
+                    # Calculate brightness (mean pixel value)
+                    brightness = np.mean(gray)
+                    brightness_values.append(brightness)
+                    
+                    # Calculate motion (frame difference)
+                    if prev_frame is not None:
+                        frame_diff = cv2.absdiff(gray, prev_frame)
+                        motion = np.mean(frame_diff)
+                        motion_values.append(motion)
+                    
+                    prev_frame = gray
+                    frames_analyzed += 1
+                
+                frame_idx += 1
+            
+            cap.release()
+            
+            # Calculate statistics
+            avg_brightness = np.mean(brightness_values) if brightness_values else 0
+            brightness_consistency = 1 - (np.std(brightness_values) / np.mean(brightness_values)) if brightness_values and np.mean(brightness_values) > 0 else 0
+            brightness_consistency = max(0, min(1, brightness_consistency))
+            
+            avg_motion = np.mean(motion_values) if motion_values else 0
+            
+            # Determine lighting quality
+            if avg_brightness < 50:
+                lighting_quality = "poor"
+                lighting_feedback = "Video is too dark. Improve lighting for better visibility."
+            elif avg_brightness < 100:
+                lighting_quality = "fair"
+                lighting_feedback = "Lighting could be improved for better video quality."
+            elif avg_brightness < 180:
+                lighting_quality = "good"
+                lighting_feedback = "Good lighting quality."
+            else:
+                lighting_quality = "excellent"
+                lighting_feedback = "Excellent lighting quality."
+            
+            # Determine stability
+            if avg_motion < 5:
+                stability = "excellent"
+                stability_feedback = "Very stable video - excellent camera positioning."
+            elif avg_motion < 15:
+                stability = "good"
+                stability_feedback = "Good video stability."
+            elif avg_motion < 30:
+                stability = "fair"
+                stability_feedback = "Some camera movement detected. Try to keep camera more stable."
+            else:
+                stability = "poor"
+                stability_feedback = "Significant camera movement. Use a tripod or stable surface."
+            
+            # Calculate overall video quality score
+            brightness_score = min(1.0, avg_brightness / 150)  # Optimal around 150
+            stability_score = max(0, 1 - (avg_motion / 50))  # Lower motion is better
+            consistency_score = brightness_consistency
+            
+            quality_score = (brightness_score + stability_score + consistency_score) / 3
+            
+            analysis_result = {
+                "video_properties": {
+                    "width": width,
+                    "height": height,
+                    "fps": round(fps, 2),
+                    "frame_count": frame_count,
+                    "duration": round(duration, 2),
+                    "resolution": f"{width}x{height}"
+                },
+                "lighting": {
+                    "average_brightness": round(avg_brightness, 2),
+                    "brightness_consistency": round(brightness_consistency, 3),
+                    "quality": lighting_quality,
+                    "feedback": lighting_feedback
+                },
+                "stability": {
+                    "average_motion": round(avg_motion, 2),
+                    "quality": stability,
+                    "feedback": stability_feedback
+                },
+                "overall_quality": {
+                    "score": round(quality_score, 3),
+                    "rating": "excellent" if quality_score >= 0.8 else "good" if quality_score >= 0.6 else "fair" if quality_score >= 0.4 else "poor"
+                },
+                "analysis_metadata": {
+                    "frames_analyzed": frames_analyzed,
+                    "sample_interval_frames": sample_interval,
+                    "analysis_method": "opencv_frame_analysis"
+                }
+            }
+            
+            logger.info(f"Video analysis completed: quality={quality_score:.3f}, lighting={lighting_quality}, stability={stability}")
+            return analysis_result
+            
+        except ImportError:
+            logger.warning("OpenCV not available - video analysis skipped")
+            return {
+                "error": "Video analysis requires opencv-python package",
+                "video_properties": {
+                    "duration": round(duration, 2)
+                },
+                "analysis_metadata": {
+                    "analysis_available": False,
+                    "reason": "opencv-python not installed"
+                }
+            }
+        except Exception as e:
+            logger.error(f"Video analysis failed: {e}")
+            return {
+                "error": str(e),
+                "video_properties": {
+                    "duration": round(duration, 2)
+                },
+                "analysis_metadata": {
+                    "analysis_available": False,
+                    "reason": str(e)
+                }
+            }
+    
     async def process_recording(
         self,
-        audio_file: UploadFile,
+        audio_file: Optional[UploadFile],
         user_id: int,
         question_id: int,
         video_file: Optional[UploadFile] = None
     ) -> Dict[str, Any]:
         """
-        Complete recording processing pipeline
+        Complete recording processing pipeline with video support
         
         Args:
-            audio_file: Audio recording file
+            audio_file: Audio recording file (optional if video provided)
             user_id: User ID
             question_id: Question ID
             video_file: Optional video recording file
             
         Returns:
-            Complete processing results
+            Complete processing results including video analysis
         """
         temp_files = []  # Track temporary files for cleanup
         
         try:
             logger.info(f"Processing recording for user {user_id}, question {question_id}")
             
-            # Save audio file
-            audio_path, audio_url = await self.save_file(audio_file, user_id, question_id, 'audio')
+            # Validate that at least one file is provided
+            if not audio_file and not video_file:
+                raise HTTPException(
+                    status_code=400,
+                    detail="At least one recording file (audio or video) must be provided"
+                )
             
-            # Save video file if provided
+            audio_path = None
+            audio_url = None
             video_path = None
             video_url = None
-            if video_file:
+            
+            # Save audio file if provided
+            if audio_file and audio_file.filename:
+                audio_path, audio_url = await self.save_file(audio_file, user_id, question_id, 'audio')
+                logger.info(f"Audio file saved: {audio_url}")
+            
+            # Save video file if provided
+            if video_file and video_file.filename:
                 video_path, video_url = await self.save_file(video_file, user_id, question_id, 'video')
+                logger.info(f"Video file saved: {video_url}")
             
             # Determine audio file for processing
             processing_audio_path = audio_path
+            video_audio_extracted = False
             
-            # If we have video but no separate audio, extract audio from video
-            if video_file and not audio_file.filename:
-                processing_audio_path = self.extract_audio_from_video(video_path)
-                temp_files.append(processing_audio_path)
+            # If we have video, extract audio from it for analysis
+            if video_path:
+                try:
+                    video_audio_path = self.extract_audio_from_video(video_path)
+                    temp_files.append(video_audio_path)
+                    video_audio_extracted = True
+                    logger.info(f"Audio extracted from video: {video_audio_path}")
+                    
+                    # Use video audio if no separate audio file provided
+                    if not processing_audio_path:
+                        processing_audio_path = video_audio_path
+                        logger.info("Using video audio for transcription")
+                    else:
+                        # We have both - use the dedicated audio file for better quality
+                        logger.info("Using dedicated audio file for transcription")
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to extract audio from video: {e}")
+                    # Continue without video audio extraction
+                    if not processing_audio_path:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Failed to extract audio from video. Please provide a separate audio file."
+                        )
+            
+            if not processing_audio_path:
+                raise HTTPException(
+                    status_code=400,
+                    detail="No audio available for processing"
+                )
             
             # Get recording duration
             try:
@@ -502,13 +719,33 @@ class MediaService:
                 )
             
             # Transcribe audio
+            logger.info("Starting transcription...")
             transcription_result = await self.transcribe_audio(processing_audio_path)
+            logger.info(f"Transcription completed: {len(transcription_result.get('text', ''))} characters")
             
             # Analyze voice characteristics
+            logger.info("Starting voice analysis...")
             voice_analysis = self.analyze_voice(processing_audio_path, transcription_result.get('text', ''))
+            logger.info("Voice analysis completed")
+            
+            # Analyze video if provided
+            video_analysis = None
+            if video_path:
+                try:
+                    logger.info("Starting video analysis...")
+                    video_analysis = await self.analyze_video(video_path, duration)
+                    logger.info("Video analysis completed")
+                except Exception as e:
+                    logger.warning(f"Video analysis failed: {e}")
+                    # Continue without video analysis
             
             # Determine recording format
-            recording_format = Path(audio_file.filename).suffix.lower().lstrip('.') if audio_file.filename else 'unknown'
+            if audio_file and audio_file.filename:
+                recording_format = Path(audio_file.filename).suffix.lower().lstrip('.')
+            elif video_file and video_file.filename:
+                recording_format = Path(video_file.filename).suffix.lower().lstrip('.')
+            else:
+                recording_format = 'unknown'
             
             result = {
                 "audio_url": audio_url,
@@ -517,6 +754,7 @@ class MediaService:
                 "recording_format": recording_format,
                 "transcription": transcription_result.get('text', ''),
                 "voice_analysis": voice_analysis,
+                "video_analysis": video_analysis,
                 "processing_metadata": {
                     "transcription_info": {
                         "language": transcription_result.get('language', 'unknown'),
@@ -525,7 +763,9 @@ class MediaService:
                     },
                     "processed_at": datetime.utcnow().isoformat(),
                     "whisper_model": "small",
-                    "processing_duration": duration
+                    "processing_duration": duration,
+                    "video_audio_extracted": video_audio_extracted,
+                    "has_video_analysis": video_analysis is not None
                 }
             }
             
@@ -535,8 +775,8 @@ class MediaService:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Recording processing failed: {e}")
-            raise HTTPException(status_code=500, detail="Recording processing failed")
+            logger.error(f"Recording processing failed: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Recording processing failed: {str(e)}")
         
         finally:
             # Clean up temporary files

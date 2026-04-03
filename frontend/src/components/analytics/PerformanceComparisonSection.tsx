@@ -1,359 +1,185 @@
 import React from 'react';
 import {
-  Paper,
-  Typography,
   Box,
+  Typography,
   Grid,
-  Card,
-  CardContent,
   Chip,
   LinearProgress,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
+  Stack,
+  alpha,
+  useTheme,
 } from '@mui/material';
 import {
   EmojiEvents,
   TrendingUp,
   People,
   Star,
-  CheckCircle,
   BarChart,
+  FlashOn,
+  CheckCircle,
 } from '@mui/icons-material';
 import { type PerformanceComparison } from '../../services/analyticsService';
+import { GlassCard } from '../common/PremiumComponents';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion.create(Box);
 
 interface Props {
   comparison: PerformanceComparison;
 }
 
 const PerformanceComparisonSection: React.FC<Props> = ({ comparison }) => {
-  const getPerformanceLevelColor = (level: string) => {
-    switch (level) {
-      case 'expert':
-        return '#9c27b0';
-      case 'advanced':
-        return '#2196f3';
-      case 'intermediate':
-        return '#ff9800';
-      case 'beginner':
-        return '#f44336';
-      default:
-        return '#757575';
-    }
-  };
+  const theme = useTheme();
 
-  const getPerformanceLevelLabel = (level: string) => {
-    return level.charAt(0).toUpperCase() + level.slice(1);
-  };
-
-  const getPercentileColor = (percentile: number): string => {
-    if (percentile >= 90) return '#4caf50';
-    if (percentile >= 75) return '#2196f3';
-    if (percentile >= 50) return '#ff9800';
-    if (percentile >= 25) return '#ff5722';
-    return '#f44336';
+  const getPercentileColor = (p: number): string => {
+    if (p >= 90) return theme.palette.success.main;
+    if (p >= 75) return theme.palette.primary.main;
+    if (p >= 50) return theme.palette.warning.main;
+    return theme.palette.error.main;
   };
 
   return (
     <Box>
-      {/* Percentile Rank Card */}
-      <Paper
-        elevation={3}
-        sx={{
-          p: 4,
-          mb: 3,
-          background: `linear-gradient(135deg, ${getPercentileColor(comparison.user_percentile)}15 0%, ${getPercentileColor(comparison.user_percentile)}05 100%)`,
-          border: '2px solid',
-          borderColor: getPercentileColor(comparison.user_percentile),
-        }}
+      {/* Premium Hero Percentile Card */}
+      <MotionBox
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8 }}
       >
-        <Box textAlign="center">
-          <EmojiEvents
-            sx={{
-              fontSize: 60,
-              color: getPercentileColor(comparison.user_percentile),
-              mb: 2,
-            }}
-          />
-          <Typography variant="h3" fontWeight="bold" gutterBottom>
-            {comparison.user_percentile.toFixed(0)}th
-          </Typography>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            Percentile
-          </Typography>
+        <GlassCard
+          sx={{
+            p: 6,
+            mb: 4,
+            textAlign: 'center',
+            background: `linear-gradient(135deg, ${alpha(getPercentileColor(comparison.user_percentile), 0.1)} 0%, ${alpha(theme.palette.background.paper, 0.4)} 100%)`,
+            border: `2px solid ${alpha(getPercentileColor(comparison.user_percentile), 0.3)}`,
+            boxShadow: `0 0 40px ${alpha(getPercentileColor(comparison.user_percentile), 0.1)}`,
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          <Box sx={{ position: 'absolute', top: -100, left: '50%', transform: 'translateX(-50%)', width: 300, height: 300, bgcolor: getPercentileColor(comparison.user_percentile), opacity: 0.1, filter: 'blur(100px)', borderRadius: '50%' }} />
+          
+          <EmojiEvents sx={{ fontSize: 80, color: getPercentileColor(comparison.user_percentile), mb: 3 }} />
+          <Typography variant="h1" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', mb: 1 }}>{Math.round(comparison.user_percentile)}TH</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.2em', mb: 4 }}>GLOBAL PERCENTILE</Typography>
+          
           <Chip
-            label={getPerformanceLevelLabel(comparison.performance_level)}
+            label={comparison.performance_level.toUpperCase()}
             sx={{
-              mt: 2,
-              bgcolor: getPerformanceLevelColor(comparison.performance_level),
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '1rem',
-              px: 2,
-              py: 3,
+              fontWeight: 1000,
+              fontFamily: 'Orbitron',
+              fontSize: '1.2rem',
+              px: 4,
+              py: 4,
+              borderRadius: 3,
+              bgcolor: alpha(getPercentileColor(comparison.user_percentile), 0.2),
+              color: getPercentileColor(comparison.user_percentile),
+              border: `1px solid ${getPercentileColor(comparison.user_percentile)}`
             }}
           />
-          <Typography variant="body1" sx={{ mt: 3, fontStyle: 'italic' }}>
-            {comparison.user_rank_description}
+          <Typography variant="body1" sx={{ mt: 4, fontStyle: 'italic', fontWeight: 600, color: 'text.secondary', maxWidth: 600, mx: 'auto' }}>
+            "{comparison.user_rank_description && comparison.user_rank_description.toUpperCase()}"
           </Typography>
-        </Box>
-      </Paper>
+        </GlassCard>
+      </MotionBox>
 
-      <Grid container spacing={3}>
-        {/* Your Performance */}
+      <Grid container spacing={4}>
+        {/* Metric Sector: Personal vs Cohort */}
         <Grid size={{ xs: 12, md: 6 }}>
-          <Card elevation={2}>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <Star sx={{ mr: 1, color: 'primary.main' }} />
-                <Typography variant="h6" fontWeight="bold">
-                  Your Performance
-                </Typography>
-              </Box>
+          <GlassCard sx={{ p: 4, height: '100%', borderLeft: `6px solid ${theme.palette.primary.main}` }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" mb={4}>
+              <Star sx={{ color: 'primary.main' }} />
+              <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron' }}>PERSONAL RANKING</Typography>
+            </Stack>
 
-              <Box mb={3}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Average Score
-                </Typography>
-                <Typography variant="h4" fontWeight="bold" color="primary">
-                  {comparison.user_average_score.toFixed(1)}
-                </Typography>
-              </Box>
-
-              <Box>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Difference from Cohort Average
-                </Typography>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Typography
-                    variant="h5"
-                    fontWeight="bold"
-                    color={comparison.score_difference >= 0 ? 'success.main' : 'error.main'}
-                  >
-                    {comparison.score_difference >= 0 ? '+' : ''}
-                    {comparison.score_difference.toFixed(1)}
-                  </Typography>
-                  <TrendingUp
-                    sx={{
-                      color: comparison.score_difference >= 0 ? 'success.main' : 'error.main',
-                      transform: comparison.score_difference < 0 ? 'rotate(180deg)' : 'none',
-                    }}
-                  />
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Cohort Statistics */}
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card elevation={2}>
-            <CardContent>
-              <Box display="flex" alignItems="center" mb={2}>
-                <People sx={{ mr: 1, color: 'secondary.main' }} />
-                <Typography variant="h6" fontWeight="bold">
-                  Cohort Statistics
-                </Typography>
-              </Box>
-
-              <Typography variant="body2" color="text.secondary" gutterBottom>
-                {comparison.cohort_stats.target_role}
-              </Typography>
-
-              <Box mb={2}>
-                <Typography variant="caption" color="text.secondary">
-                  Total Users: {comparison.cohort_stats.total_users}
-                </Typography>
-              </Box>
-
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Average
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {comparison.cohort_stats.cohort_average_score.toFixed(1)}
-                  </Typography>
-                </Grid>
-                <Grid size={{ xs: 6 }}>
-                  <Typography variant="caption" color="text.secondary">
-                    Median
-                  </Typography>
-                  <Typography variant="h6" fontWeight="bold">
-                    {comparison.cohort_stats.cohort_median_score.toFixed(1)}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Score Distribution */}
-        <Grid size={{ xs: 12 }}>
-          <Paper elevation={2} sx={{ p: 3 }}>
-            <Box display="flex" alignItems="center" mb={3}>
-              <BarChart sx={{ mr: 1, color: 'primary.main' }} />
-              <Typography variant="h6" fontWeight="bold">
-                Score Distribution in Cohort
-              </Typography>
+            <Box mb={4}>
+              <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary', letterSpacing: '0.1em' }}>AVERAGE MASTERY</Typography>
+              <Typography variant="h3" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', color: 'primary.main' }}>{comparison.user_average_score.toFixed(1)}%</Typography>
             </Box>
 
-            <Grid container spacing={2}>
-              {Object.entries(comparison.cohort_stats.score_distribution).map(([range, count]) => {
-                const total = comparison.cohort_stats.total_users;
-                const percentage = (count / total) * 100;
-                
-                return (
-                  <Grid size={{ xs: 12, sm: 6, md: 2.4 }} key={range}>
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        {range}
-                      </Typography>
-                      <Typography variant="h6" fontWeight="bold">
-                        {count}
-                      </Typography>
-                      <LinearProgress
-                        variant="determinate"
-                        value={percentage}
-                        sx={{
-                          mt: 1,
-                          height: 6,
-                          borderRadius: 3,
-                        }}
-                      />
-                      <Typography variant="caption" color="text.secondary">
-                        {percentage.toFixed(0)}%
-                      </Typography>
-                    </Box>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          </Paper>
+            <Box>
+              <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary', letterSpacing: '0.1em' }}>COHORT VARIANCE</Typography>
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Typography variant="h4" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', color: comparison.score_difference >= 0 ? 'success.main' : 'error.main' }}>
+                  {comparison.score_difference >= 0 ? '+' : ''}{comparison.score_difference.toFixed(1)}%
+                </Typography>
+                <TrendingUp sx={{ color: comparison.score_difference >= 0 ? 'success.main' : 'error.main', transform: comparison.score_difference < 0 ? 'rotate(180deg)' : 'none' }} />
+              </Stack>
+            </Box>
+          </GlassCard>
         </Grid>
 
-        {/* Top Performer Habits */}
-        <Grid size={{ xs: 12 }}>
-          <Paper elevation={2} sx={{ p: 3 }}>
-            <Box display="flex" alignItems="center" mb={3}>
-              <EmojiEvents sx={{ mr: 1, color: 'warning.main' }} />
-              <Typography variant="h6" fontWeight="bold">
-                Top 10% Performer Habits
-              </Typography>
-            </Box>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <GlassCard sx={{ p: 4, height: '100%', borderLeft: `6px solid ${theme.palette.secondary.main}` }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" mb={4}>
+              <People sx={{ color: 'secondary.main' }} />
+              <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron' }}>COHORT STATISTICS</Typography>
+            </Stack>
+
+            <Typography variant="body2" sx={{ fontWeight: 800, mb: 1 }}>{comparison.cohort_stats.target_role.toUpperCase()}</Typography>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 3 }}>SYSTEM NODES: {comparison.cohort_stats.total_users}</Typography>
 
             <Grid container spacing={3}>
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="caption" color="text.secondary">
-                      Sessions per Week
-                    </Typography>
-                    <Typography variant="h5" fontWeight="bold" color="primary">
-                      {comparison.top_performer_habits.avg_sessions_per_week.toFixed(1)}
-                    </Typography>
-                  </CardContent>
-                </Card>
+              <Grid size={6}>
+                <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary' }}>AVERAGE</Typography>
+                <Typography variant="h5" sx={{ fontWeight: 1000, fontFamily: 'Orbitron' }}>{comparison.cohort_stats.cohort_average_score.toFixed(1)}%</Typography>
               </Grid>
-
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="caption" color="text.secondary">
-                      Practice Hours
-                    </Typography>
-                    <Typography variant="h5" fontWeight="bold" color="primary">
-                      {comparison.top_performer_habits.avg_practice_hours.toFixed(1)}h
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="caption" color="text.secondary">
-                      Questions per Session
-                    </Typography>
-                    <Typography variant="h5" fontWeight="bold" color="primary">
-                      {comparison.top_performer_habits.avg_questions_per_session.toFixed(1)}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                <Card variant="outlined">
-                  <CardContent>
-                    <Typography variant="caption" color="text.secondary">
-                      Consistency Score
-                    </Typography>
-                    <Typography variant="h5" fontWeight="bold" color="primary">
-                      {comparison.top_performer_habits.consistency_score.toFixed(0)}
-                    </Typography>
-                  </CardContent>
-                </Card>
+              <Grid size={6}>
+                <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary' }}>MEDIAN</Typography>
+                <Typography variant="h5" sx={{ fontWeight: 1000, fontFamily: 'Orbitron' }}>{comparison.cohort_stats.cohort_median_score.toFixed(1)}%</Typography>
               </Grid>
             </Grid>
-
-            {comparison.top_performer_habits.most_practiced_categories.length > 0 && (
-              <Box mt={3}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Most Practiced Categories:
-                </Typography>
-                <Box display="flex" gap={1} flexWrap="wrap">
-                  {comparison.top_performer_habits.most_practiced_categories.map((cat) => (
-                    <Chip
-                      key={cat}
-                      label={cat.replace(/_/g, ' ')}
-                      color="primary"
-                      variant="outlined"
-                    />
-                  ))}
-                </Box>
-              </Box>
-            )}
-          </Paper>
+          </GlassCard>
         </Grid>
 
-        {/* Improvement Suggestions */}
-        {comparison.improvement_suggestions.length > 0 && (
-          <Grid size={{ xs: 12 }}>
-            <Paper elevation={2} sx={{ p: 3, bgcolor: 'info.light' }}>
-              <Box display="flex" alignItems="center" mb={2}>
-                <TrendingUp sx={{ mr: 1, color: 'info.dark' }} />
-                <Typography variant="h6" fontWeight="bold" color="info.dark">
-                  Personalized Improvement Suggestions
-                </Typography>
-              </Box>
+        {/* Tactical Habit Matrix */}
+        <Grid size={12}>
+          <GlassCard sx={{ p: 4 }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" mb={4}>
+               <FlashOn sx={{ color: 'warning.main' }} />
+               <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron' }}>TOP 10% TACTICAL HABITS</Typography>
+            </Stack>
+            <Grid container spacing={3}>
+              {[
+                { label: 'WEEKLY CYCLES', value: comparison.top_performer_habits.avg_sessions_per_week.toFixed(1) },
+                { label: 'PRACTICE FLUX', value: `${comparison.top_performer_habits.avg_practice_hours.toFixed(1)}H` },
+                { label: 'VECTOR DENSITY', value: comparison.top_performer_habits.avg_questions_per_session.toFixed(1) },
+                { label: 'CONSISTENCY RATIO', value: comparison.top_performer_habits.consistency_score.toFixed(0) }
+              ].map((habit, idx) => (
+                <Grid size={{ xs: 12, sm: 3 }} key={idx}>
+                   <Box sx={{ p: 2, borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.3), border: `1px solid ${alpha(theme.palette.divider, 0.05)}`, textAlign: 'center' }}>
+                      <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary', display: 'block', mb: 1 }}>{habit.label}</Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', color: 'primary.main' }}>{habit.value}</Typography>
+                   </Box>
+                </Grid>
+              ))}
+            </Grid>
+          </GlassCard>
+        </Grid>
 
-              <List>
-                {comparison.improvement_suggestions.map((suggestion, index) => (
-                  <ListItem key={index} sx={{ px: 0 }}>
-                    <ListItemIcon>
-                      <CheckCircle sx={{ color: 'info.dark' }} />
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={suggestion}
-                      primaryTypographyProps={{
-                        variant: 'body2',
-                        color: 'info.dark',
-                      }}
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
+        {/* Personalized Improvement Vectors */}
+        {comparison.improvement_suggestions.length > 0 && (
+          <Grid size={12}>
+            <GlassCard sx={{ p: 4, bgcolor: alpha(theme.palette.info.main, 0.05), border: `1px solid ${alpha(theme.palette.info.main, 0.2)}` }}>
+               <Stack direction="row" spacing={1.5} alignItems="center" mb={3}>
+                  <TrendingUp sx={{ color: 'info.main' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', color: 'info.main' }}>ADAPTIVE VECTORS</Typography>
+               </Stack>
+               <Grid container spacing={2}>
+                 {comparison.improvement_suggestions.map((suggestion, idx) => (
+                   <Grid size={{ xs: 12, md: 6 }} key={idx}>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                         <CheckCircle sx={{ color: 'info.main', fontSize: 18 }} />
+                         <Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.9 }}>{suggestion.toUpperCase()}</Typography>
+                      </Stack>
+                   </Grid>
+                 ))}
+               </Grid>
+            </GlassCard>
           </Grid>
         )}
       </Grid>
-
-      <Box mt={3} p={2} bgcolor="grey.100" borderRadius={1}>
-        <Typography variant="caption" color="text.secondary">
-          <strong>Privacy Note:</strong> All comparison data is completely anonymous. No individual user identities are exposed.
-        </Typography>
-      </Box>
     </Box>
   );
 };

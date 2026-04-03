@@ -1,10 +1,9 @@
 /**
  * Milestone Accordion Component
- * Display study plan milestones with task checklists
- * 
- * Requirements: INT-1.8
+ * Displays study plan milestones and daily tasks in an expandable format
  */
 
+import React from 'react';
 import {
   Accordion,
   AccordionSummary,
@@ -12,20 +11,21 @@ import {
   Typography,
   Box,
   Chip,
-  Checkbox,
-  FormControlLabel,
-  Stack,
   List,
   ListItem,
-  Link,
+  ListItemIcon,
+  ListItemText,
+  Checkbox,
   LinearProgress,
+  Stack,
+  Divider,
 } from '@mui/material';
 import {
   ExpandMore,
   CheckCircle,
+  RadioButtonUnchecked,
   Schedule,
-  School,
-  Link as LinkIcon,
+  MenuBook,
 } from '@mui/icons-material';
 import type { WeeklyMilestone, DayTasks } from '../../services/studyPlanService';
 
@@ -33,181 +33,145 @@ interface MilestoneAccordionProps {
   milestones: WeeklyMilestone[];
   dailyTasks: DayTasks[];
   onTaskToggle: (day: number, taskIndex: number, completed: boolean) => void;
-  isUpdating?: boolean;
+  isUpdating: boolean;
 }
 
-function MilestoneAccordion({
-  milestones,
-  dailyTasks,
+const MilestoneAccordion: React.FC<MilestoneAccordionProps> = ({
+  milestones = [],
+  dailyTasks = [],
   onTaskToggle,
-  isUpdating = false,
-}: MilestoneAccordionProps) {
+  isUpdating,
+}) => {
   // Group daily tasks by week
-  const getTasksForWeek = (weekNumber: number): DayTasks[] => {
+  const getTasksForWeek = (weekNumber: number) => {
+    if (!dailyTasks || !Array.isArray(dailyTasks)) return [];
     const startDay = (weekNumber - 1) * 7 + 1;
     const endDay = weekNumber * 7;
-    return dailyTasks.filter(dt => dt.day >= startDay && dt.day <= endDay);
+    return dailyTasks.filter(day => day && day.day >= startDay && day.day <= endDay);
   };
 
-  // Calculate completion percentage for a week
-  const getWeekProgress = (weekNumber: number): number => {
+  // Calculate progress for a week
+  const getWeekProgress = (weekNumber: number) => {
     const weekTasks = getTasksForWeek(weekNumber);
-    if (weekTasks.length === 0) return 0;
-    
-    const totalTasks = weekTasks.reduce((sum, dt) => sum + dt.tasks.length, 0);
+    const totalTasks = weekTasks.reduce((sum, day) => sum + (day.tasks ? day.tasks.length : 0), 0);
     const completedTasks = weekTasks.reduce(
-      (sum, dt) => sum + dt.tasks.filter(t => t.completed).length,
+      (sum, day) => sum + (day.tasks ? day.tasks.filter(task => task.completed).length : 0),
       0
     );
-    
-    return totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    return totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
   };
 
   return (
     <Box>
       {milestones.map((milestone, index) => {
-        const weekTasks = getTasksForWeek(milestone.week);
         const weekProgress = getWeekProgress(milestone.week);
-        const isCompleted = milestone.completed;
+        const weekTasks = getTasksForWeek(milestone.week);
 
         return (
-          <Accordion key={index} defaultExpanded={index === 0}>
-            <AccordionSummary
-              expandIcon={<ExpandMore />}
-              sx={{
-                bgcolor: isCompleted ? 'success.lighter' : 'background.paper',
-              }}
-            >
-              <Box sx={{ width: '100%', pr: 2 }}>
+          <Accordion key={milestone.week} defaultExpanded={index === 0}>
+            <AccordionSummary expandIcon={<ExpandMore />}>
+              <Box sx={{ width: '100%' }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography variant="subtitle1" fontWeight="medium">
-                      Week {milestone.week}
-                    </Typography>
-                    {isCompleted && (
-                      <CheckCircle fontSize="small" color="success" />
-                    )}
-                  </Stack>
+                  <Typography variant="h6">
+                    Week {milestone.week}: {milestone.milestone}
+                  </Typography>
                   <Chip
-                    label={`${weekProgress}%`}
+                    icon={milestone.completed ? <CheckCircle /> : <RadioButtonUnchecked />}
+                    label={milestone.completed ? 'Completed' : 'In Progress'}
+                    color={milestone.completed ? 'success' : 'default'}
                     size="small"
-                    color={weekProgress === 100 ? 'success' : 'default'}
                   />
                 </Stack>
-                <Typography variant="body2" color="text.secondary">
-                  {milestone.milestone}
-                </Typography>
+                
                 <LinearProgress
                   variant="determinate"
                   value={weekProgress}
-                  sx={{ mt: 1, height: 4, borderRadius: 1 }}
+                  sx={{ mb: 1, height: 6, borderRadius: 3 }}
                 />
+                
+                <Typography variant="body2" color="text.secondary">
+                  {Math.round(weekProgress)}% complete • {milestone.skills_covered.join(', ')}
+                </Typography>
               </Box>
             </AccordionSummary>
+            
             <AccordionDetails>
-              <Stack spacing={3}>
-                {/* Skills Covered */}
+              <Stack spacing={2}>
+                {/* Assessment */}
                 <Box>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                    <School fontSize="small" color="primary" />
-                    <Typography variant="subtitle2">Skills Covered</Typography>
-                  </Stack>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {milestone.skills_covered.map((skill, idx) => (
-                      <Chip key={idx} label={skill} size="small" color="primary" variant="outlined" />
-                    ))}
-                  </Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Assessment
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {milestone.assessment}
+                  </Typography>
                 </Box>
 
+                <Divider />
+
                 {/* Daily Tasks */}
-                {weekTasks.map((dayTask) => (
-                  <Box key={dayTask.day}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Day {dayTask.day} - {dayTask.date}
-                    </Typography>
-                    <List dense disablePadding>
-                      {dayTask.tasks.map((task, taskIdx) => (
-                        <ListItem
-                          key={taskIdx}
-                          disablePadding
-                          sx={{
-                            mb: 1,
-                            p: 1,
-                            bgcolor: 'background.default',
-                            borderRadius: 1,
-                          }}
-                        >
-                          <FormControlLabel
-                            control={
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Daily Tasks
+                  </Typography>
+                  
+                  {weekTasks.map((dayData) => (
+                    <Box key={dayData.day} sx={{ mb: 2 }}>
+                      <Typography variant="body2" fontWeight="medium" sx={{ mb: 1 }}>
+                        Day {dayData.day} - {dayData.date}
+                      </Typography>
+                      
+                      <List dense>
+                        {dayData.tasks && dayData.tasks.map((task, taskIndex) => (
+                          <ListItem
+                            key={taskIndex}
+                            sx={{
+                              pl: 0,
+                              opacity: task.completed ? 0.7 : 1,
+                              textDecoration: task.completed ? 'line-through' : 'none',
+                            }}
+                          >
+                            <ListItemIcon sx={{ minWidth: 36 }}>
                               <Checkbox
                                 checked={task.completed}
-                                onChange={(e) => onTaskToggle(dayTask.day, taskIdx, e.target.checked)}
+                                onChange={(e) => onTaskToggle(dayData.day, taskIndex, e.target.checked)}
                                 disabled={isUpdating}
+                                size="small"
                               />
-                            }
-                            label={
-                              <Box sx={{ width: '100%' }}>
-                                <Typography
-                                  variant="body2"
-                                  fontWeight="medium"
-                                  sx={{
-                                    textDecoration: task.completed ? 'line-through' : 'none',
-                                    color: task.completed ? 'text.secondary' : 'text.primary',
-                                  }}
-                                >
-                                  {task.skill}: {task.activity}
-                                </Typography>
+                            </ListItemIcon>
+                            
+                            <ListItemText
+                              primary={task.activity}
+                              secondary={
                                 <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.5 }}>
-                                  <Schedule fontSize="small" sx={{ fontSize: 14 }} />
-                                  <Typography variant="caption" color="text.secondary">
-                                    {task.duration_minutes} minutes
-                                  </Typography>
-                                </Stack>
-                                {task.resources && task.resources.length > 0 && (
-                                  <Box sx={{ mt: 0.5 }}>
-                                    <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                                      {task.resources.map((resource, resIdx) => (
-                                        <Link
-                                          key={resIdx}
-                                          href={resource}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          sx={{
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            fontSize: '0.75rem',
-                                            textDecoration: 'none',
-                                            '&:hover': { textDecoration: 'underline' },
-                                          }}
-                                        >
-                                          <LinkIcon sx={{ fontSize: 12, mr: 0.25 }} />
-                                          Resource {resIdx + 1}
-                                        </Link>
-                                      ))}
-                                    </Stack>
+                                  <Chip
+                                    label={task.skill}
+                                    size="small"
+                                    variant="outlined"
+                                  />
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Schedule fontSize="small" />
+                                    <Typography variant="caption">
+                                      {task.duration_minutes} min
+                                    </Typography>
                                   </Box>
-                                )}
-                              </Box>
-                            }
-                            sx={{ width: '100%', m: 0 }}
-                          />
-                        </ListItem>
-                      ))}
-                    </List>
-                  </Box>
-                ))}
-
-                {/* Assessment */}
-                {milestone.assessment && (
-                  <Box sx={{ p: 2, bgcolor: 'info.lighter', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" color="info.main" gutterBottom>
-                      Week Assessment
-                    </Typography>
-                    <Typography variant="body2">
-                      {milestone.assessment}
-                    </Typography>
-                  </Box>
-                )}
+                                  {task.resources.length > 0 && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                      <MenuBook fontSize="small" />
+                                      <Typography variant="caption">
+                                        {task.resources.length} resource{task.resources.length > 1 ? 's' : ''}
+                                      </Typography>
+                                    </Box>
+                                  )}
+                                </Stack>
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Box>
+                  ))}
+                </Box>
               </Stack>
             </AccordionDetails>
           </Accordion>
@@ -215,6 +179,6 @@ function MilestoneAccordion({
       })}
     </Box>
   );
-}
+};
 
 export default MilestoneAccordion;

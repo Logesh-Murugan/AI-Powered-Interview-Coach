@@ -1,6 +1,6 @@
 /**
- * Register Page Component
- * User registration form with validation and password strength indicator
+ * Premium Register Page
+ * High-end identity initialization interface with secure onboarding modules
  */
 
 import { useEffect } from 'react';
@@ -10,19 +10,24 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import {
   Box,
-  Button,
   TextField,
   Typography,
   Link,
   Alert,
+  alpha,
+  useTheme,
+  Stack,
+  CircularProgress,
 } from '@mui/material';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { register as registerUser, clearError } from '../../store/slices/authSlice';
+import { register as registerUser, clearError, resetRegistrationSuccess } from '../../store/slices/authSlice';
 import { ROUTES } from '../../config/app.config';
 import PasswordStrengthIndicator from '../../components/auth/PasswordStrengthIndicator';
-import FadeIn from '../../components/animations/FadeIn';
-import ScaleButton from '../../components/animations/ScaleButton';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GradientButton, GradientText } from '../../components/common/PremiumComponents';
+import { Person, Email, Lock, Shield } from '@mui/icons-material';
+
+const MotionBox = motion.create(Box);
 
 interface RegisterFormData {
   name: string;
@@ -34,31 +39,30 @@ interface RegisterFormData {
 const registerSchema = yup.object().shape({
   name: yup
     .string()
-    .required('Name is required')
-    .min(2, 'Name must be at least 2 characters')
-    .max(100, 'Name must not exceed 100 characters'),
+    .required('FULL NAME IS REQUIRED')
+    .min(2, 'MINIMUM 2 CHARACTERS'),
   email: yup
     .string()
-    .required('Email is required')
-    .email('Please enter a valid email address'),
+    .required('EMAIL IS REQUIRED')
+    .email('INVALID EMAIL FORMAT'),
   password: yup
     .string()
-    .required('Password is required')
-    .min(8, 'Password must be at least 8 characters')
-    .matches(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .matches(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .matches(/[0-9]/, 'Password must contain at least one number')
-    .matches(/[^a-zA-Z0-9]/, 'Password must contain at least one special character'),
+    .required('PASSWORD IS REQUIRED')
+    .min(8, 'MINIMUM 8 CHARACTERS')
+    .matches(/[A-Z]/, 'UPPERCASE LETTER REQUIRED')
+    .matches(/[0-9]/, 'NUMBER REQUIRED'),
   confirmPassword: yup
     .string()
-    .required('Please confirm your password')
-    .oneOf([yup.ref('password')], 'Passwords must match'),
+    .required('CONFIRM PASSWORD IS REQUIRED')
+    .oneOf([yup.ref('password')], 'PASSWORDS MUST MATCH'),
+
 });
 
 function RegisterPage() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { isLoading, error } = useAppSelector((state) => state.auth);
+  const theme = useTheme();
+  const { isLoading, error, isAuthenticated, registrationSuccess } = useAppSelector((state) => state.auth);
 
   const {
     control,
@@ -78,9 +82,13 @@ function RegisterPage() {
   const password = watch('password');
 
   useEffect(() => {
-    // Clear error when component unmounts
-    return () => {
-      dispatch(clearError());
+    if (isAuthenticated) navigate(ROUTES.DASHBOARD, { replace: true });
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    return () => { 
+      dispatch(clearError()); 
+      dispatch(resetRegistrationSuccess());
     };
   }, [dispatch]);
 
@@ -91,137 +99,149 @@ function RegisterPage() {
         email: data.email,
         password: data.password,
       })).unwrap();
-      navigate(ROUTES.DASHBOARD);
-    } catch {
-      // Error handled by Redux and displayed in UI
-    }
+    } catch (error) {}
   };
 
   return (
     <Box>
-      <FadeIn delay={0.1}>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          Create Account
+      <MotionBox
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        sx={{ textAlign: 'center', mb: 4 }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'Orbitron', mb: 1 }}>CREATE <GradientText>ACCOUNT</GradientText></Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+           JOIN INTERVIEWMASTER TODAY
         </Typography>
-        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-          Sign up to start your interview preparation journey
-        </Typography>
-      </FadeIn>
+      </MotionBox>
 
-      {error && (
-        <FadeIn delay={0.2}>
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => dispatch(clearError())}>
-            {error}
-          </Alert>
-        </FadeIn>
-      )}
+      <AnimatePresence>
+        {error && (
+          <MotionBox initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} sx={{ overflow: 'hidden' }}>
+            <Alert severity="error" sx={{ mb: 3, border: `1px solid ${theme.palette.error.main}66`, bgcolor: `${theme.palette.error.main}11`, fontWeight: 800 }} onClose={() => dispatch(clearError())}>
+              {error.toUpperCase()}
+            </Alert>
+          </MotionBox>
+        )}
+      </AnimatePresence>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <FadeIn delay={0.3}>
-          <Controller
-            name="name"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Full Name"
-                margin="normal"
-                autoComplete="name"
-                autoFocus
-                error={!!errors.name}
-                helperText={errors.name?.message}
-              />
-            )}
-          />
-        </FadeIn>
-
-        <FadeIn delay={0.4}>
-          <Controller
-            name="email"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Email"
-                type="email"
-                margin="normal"
-                autoComplete="email"
-                error={!!errors.email}
-                helperText={errors.email?.message}
-              />
-            )}
-          />
-        </FadeIn>
-
-        <FadeIn delay={0.5}>
-          <Controller
-            name="password"
-            control={control}
-            render={({ field }) => (
-              <Box>
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Password"
-                  type="password"
-                  margin="normal"
-                  autoComplete="new-password"
-                  error={!!errors.password}
-                  helperText={errors.password?.message}
-                />
-                <PasswordStrengthIndicator password={password} />
-              </Box>
-            )}
-          />
-        </FadeIn>
-
-        <FadeIn delay={0.6}>
-          <Controller
-            name="confirmPassword"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Confirm Password"
-                type="password"
-                margin="normal"
-                autoComplete="new-password"
-                error={!!errors.confirmPassword}
-                helperText={errors.confirmPassword?.message}
-              />
-            )}
-          />
-        </FadeIn>
-
-        <FadeIn delay={0.7}>
-          <ScaleButton fullWidth>
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              size="large"
-              disabled={isLoading}
-              sx={{ mt: 3, mb: 2 }}
-            >
-              {isLoading ? <LoadingSpinner size="small" /> : 'Sign Up'}
-            </Button>
-          </ScaleButton>
-        </FadeIn>
-
-        <FadeIn delay={0.8}>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2">
-              Already have an account?{' '}
-              <Link component={RouterLink} to={ROUTES.LOGIN}>
-                Sign in
-              </Link>
-            </Typography>
+      {registrationSuccess ? (
+        <MotionBox
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          sx={{ textAlign: 'center', py: 4 }}
+        >
+          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
+             <Box sx={{ width: 80, height: 80, borderRadius: '50%', bgcolor: alpha(theme.palette.success.main, 0.1), display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Shield sx={{ fontSize: 40, color: 'success.main' }} />
+             </Box>
           </Box>
-        </FadeIn>
-      </form>
+          <Typography variant="h5" sx={{ fontWeight: 900, mb: 1 }}>REGISTRATION SUCCESSFUL</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, fontWeight: 500 }}>
+             WE'VE SENT A VERIFICATION EMAIL TO YOUR ADDRESS. PLEASE VERIFY YOUR ACCOUNT TO ACCESS ALL PREMIUM FEATURES.
+          </Typography>
+          <GradientButton component={RouterLink} to={ROUTES.LOGIN} fullWidth size="large">
+            PROCEED TO LOGIN
+          </GradientButton>
+        </MotionBox>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Stack spacing={2.5}>
+             <Controller
+               name="name"
+               control={control}
+               render={({ field }) => (
+                 <TextField
+                   {...field}
+                   fullWidth
+                   label="FULL NAME"
+                   error={!!errors.name}
+                   helperText={errors.name?.message}
+                   InputProps={{ 
+                     sx: { borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.4) },
+                     startAdornment: <Person sx={{ mr: 1, color: 'primary.main', opacity: 0.5, fontSize: 18 }} />
+                   }}
+                 />
+               )}
+             />
+
+             <Controller
+               name="email"
+               control={control}
+               render={({ field }) => (
+                 <TextField
+                   {...field}
+                   fullWidth
+                   label="EMAIL ADDRESS"
+                   type="email"
+                   error={!!errors.email}
+                   helperText={errors.email?.message}
+                   InputProps={{ 
+                     sx: { borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.4) },
+                     startAdornment: <Email sx={{ mr: 1, color: 'primary.main', opacity: 0.5, fontSize: 18 }} />
+                   }}
+                 />
+               )}
+             />
+
+             <Controller
+               name="password"
+               control={control}
+               render={({ field }) => (
+                 <Box>
+                   <TextField
+                     {...field}
+                     fullWidth
+                     label="PASSWORD"
+                     type="password"
+                     error={!!errors.password}
+                     helperText={errors.password?.message}
+                     InputProps={{ 
+                       sx: { borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.4) },
+                       startAdornment: <Lock sx={{ mr: 1, color: 'primary.main', opacity: 0.5, fontSize: 18 }} />
+                     }}
+                   />
+                   <Box sx={{ mt: 1 }}>
+                      <PasswordStrengthIndicator password={password} />
+                   </Box>
+                 </Box>
+               )}
+             />
+
+             <Controller
+               name="confirmPassword"
+               control={control}
+               render={({ field }) => (
+                 <TextField
+                   {...field}
+                   fullWidth
+                   label="CONFIRM PASSWORD"
+                   type="password"
+                   error={!!errors.confirmPassword}
+                   helperText={errors.confirmPassword?.message}
+                   InputProps={{ 
+                     sx: { borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.4) },
+                     startAdornment: <Shield sx={{ mr: 1, color: 'primary.main', opacity: 0.5, fontSize: 18 }} />
+                   }}
+                 />
+               )}
+             />
+
+             <GradientButton type="submit" fullWidth size="large" disabled={isLoading} sx={{ py: 2, mt: 2 }}>
+                {isLoading ? <CircularProgress size={20} color="inherit" /> : 'SIGN UP'}
+             </GradientButton>
+
+             <Box sx={{ textAlign: 'center', mt: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  ALREADY HAVE AN ACCOUNT?{' '}
+                  <Link component={RouterLink} to={ROUTES.LOGIN} sx={{ color: 'primary.main', fontWeight: 900, textDecoration: 'none' }}>
+                    SIGN IN
+                  </Link>
+                </Typography>
+             </Box>
+          </Stack>
+        </form>
+      )}
     </Box>
   );
 }

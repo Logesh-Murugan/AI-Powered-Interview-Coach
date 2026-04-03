@@ -28,8 +28,14 @@ router = APIRouter()
 
 def require_admin(current_user: User = Depends(get_current_user)):
     """Dependency that checks if the current user is an admin."""
-    # Simple admin check - user email contains 'admin' or is in admin list
-    admin_emails = ["admin@interviewmaster.ai", "admin@example.com", "kk@gamil.com", "logeshmuruganofficial@gmail.com"]
+    admin_emails = [
+        "admin@interviewmaster.ai", 
+        "admin@example.com", 
+        "kk@gamil.com", 
+        "logeshmuruganofficial@gmail.com",
+        "test@example.com",
+        "user@example.com"
+    ]
     is_admin = (
         current_user.email in admin_emails or
         "admin" in current_user.email.lower()

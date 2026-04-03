@@ -5,7 +5,7 @@
  */
 
 import { Alert, AlertTitle, Button, Box } from '@mui/material';
-import type { AlertColor } from '@mui/material';
+import type { AlertColor, SxProps, Theme } from '@mui/material';
 
 interface ErrorAlertProps {
   message: string;
@@ -13,6 +13,7 @@ interface ErrorAlertProps {
   severity?: AlertColor;
   onRetry?: () => void;
   onDismiss?: () => void;
+  sx?: SxProps<Theme>;
 }
 
 function ErrorAlert({ 
@@ -20,13 +21,14 @@ function ErrorAlert({
   title,
   severity = 'error',
   onRetry,
-  onDismiss 
+  onDismiss,
+  sx
 }: ErrorAlertProps) {
   return (
     <Alert 
       severity={severity}
       onClose={onDismiss}
-      sx={{ mb: 2 }}
+      sx={{ mb: 2, ...sx }}
     >
       {title && <AlertTitle>{title}</AlertTitle>}
       {message}

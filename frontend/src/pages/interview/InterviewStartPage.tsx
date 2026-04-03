@@ -1,242 +1,220 @@
 /**
- * Interview Start Page
- * Create a new interview session with customizable parameters
- * 
- * Requirements: 14.1-14.10
+ * Premium Interview Start Page
+ * High-end AI session configuration terminal
  */
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { SelectChangeEvent } from '@mui/material';
 import {
   Box,
-  Container,
-  Paper,
   Typography,
   TextField,
   MenuItem,
-  Button,
   FormControl,
   InputLabel,
   Select,
   Chip,
   OutlinedInput,
-  Alert,
+  Stack,
+  alpha,
+  useTheme,
+  Grid,
+  Divider,
 } from '@mui/material';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
-import { PlayArrow } from '@mui/icons-material';
+import { 
+  PlayArrow, 
+  Psychology, 
+  Settings as SettingsIcon,
+  Tune as DifficultyIcon,
+  Layers as CategoryIcon,
+} from '@mui/icons-material';
 import apiService from '../../services/api.service';
-import FadeIn from '../../components/animations/FadeIn';
-import ScaleButton from '../../components/animations/ScaleButton';
+import logger from '../../utils/logger';
+import { GlassCard, GradientButton, GradientText } from '../../components/common/PremiumComponents';
+import { motion } from 'framer-motion';
 
 const ROLES = [
-  'Software Engineer',
-  'Product Manager',
-  'Data Scientist',
-  'Marketing Manager',
-  'Finance Analyst',
-  'UX Designer',
-  'DevOps Engineer',
-  'Business Analyst',
+  'Software Engineer', 'Product Manager', 'Data Scientist', 'Marketing Manager',
+  'Finance Analyst', 'UX Designer', 'DevOps Engineer', 'Business Analyst',
 ];
 
 const DIFFICULTIES = ['Easy', 'Medium', 'Hard', 'Expert'];
 
 const CATEGORIES = [
-  'Technical',
-  'Behavioral',
-  'Domain_Specific',
-  'System_Design',
-  'Coding',
+  'Technical', 'Behavioral', 'Domain_Specific', 'System_Design', 'Coding',
 ];
 
-interface InterviewSessionCreate {
-  role: string;
-  difficulty: string;
-  question_count: number;
-  categories?: string[];
-}
+const MotionBox = motion.create(Box);
 
 function InterviewStartPage() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<InterviewSessionCreate>({
+  const theme = useTheme();
+  const [formData, setFormData] = useState({
     role: '',
     difficulty: 'Medium',
     question_count: 5,
-    categories: [],
+    categories: [] as string[],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (field: keyof InterviewSessionCreate, value: string | number | string[]) => {
+  const handleChange = (field: string, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     setError(null);
   };
 
-  const handleCategoryChange = (event: SelectChangeEvent<string[]>) => {
-    const value = event.target.value;
-    handleChange('categories', typeof value === 'string' ? value.split(',') : value);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
-    if (!formData.role) {
-      setError('Please select a target role');
-      return;
-    }
-
+    if (!formData.role) { setError('ROLE IDENTIFICATION REQUIRED'); return; }
     setLoading(true);
-    setError(null);
-
     try {
-      console.log('Creating interview session with data:', formData);
       const response = await apiService.post('/interviews', formData);
-      console.log('Interview session created:', response.data);
-      
-      const responseData = response.data as { session_id: number };
-      const { session_id } = responseData;
-      
-      // Navigate to interview session page
+      const { session_id } = response.data as { session_id: number };
       navigate(`/interviews/${session_id}/session`);
     } catch (err: any) {
-      console.error('Error creating interview session:', err);
-      
-      // Extract detailed error message
-      let errorMessage = 'Failed to create interview session';
-      
-      if (err.details) {
-        console.error('Error details:', err.details);
-        if (err.details.detail) {
-          errorMessage = err.details.detail;
-        }
-      }
-      
-      if (err.message) {
-        errorMessage = err.message;
-      }
-      
-      setError(errorMessage);
+      logger.error('Error:', err);
+      setError(err.message || 'LATTICE INITIALIZATION FAILED');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <FadeIn delay={0.1}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography variant="h4" gutterBottom>
-            Start Interview Practice
-          </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            Customize your interview session to match your preparation needs
-          </Typography>
+    <Box sx={{ pb: 8, maxWidth: 900, mx: 'auto' }}>
+      <MotionBox
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        sx={{ mb: 6, textAlign: 'center' }}
+      >
+        <Typography variant="h3" sx={{ mb: 1, fontFamily: 'Orbitron' }}>
+           INITIALIZE <GradientText>INTERVIEW SIMULATION</GradientText>
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+           Calibrate your parameters for a specialized AI-driven simulation.
+        </Typography>
+      </MotionBox>
 
-        {error && (
-          <ErrorAlert
-            message={error}
-            onRetry={() => void handleSubmit(new Event('submit') as unknown as React.FormEvent)}
-            onDismiss={() => setError(null)}
-          />
-        )}
+      {error && <ErrorAlert message={error} sx={{ mb: 4 }} onRetry={() => void handleSubmit(new Event('submit') as any)} />}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
-          <FadeIn delay={0.2}>
-            <TextField
-              select
-              fullWidth
-              label="Target Role"
-              value={formData.role}
-              onChange={(e) => handleChange('role', e.target.value)}
-              required
-              sx={{ mb: 3 }}
-            >
-              {ROLES.map((role) => (
-                <MenuItem key={role} value={role}>
-                  {role}
-                </MenuItem>
-              ))}
-            </TextField>
-          </FadeIn>
-
-          <FadeIn delay={0.3}>
-            <TextField
-              select
-              fullWidth
-              label="Difficulty Level"
-              value={formData.difficulty}
-              onChange={(e) => handleChange('difficulty', e.target.value)}
-              required
-              sx={{ mb: 3 }}
-            >
-              {DIFFICULTIES.map((difficulty) => (
-                <MenuItem key={difficulty} value={difficulty}>
-                  {difficulty}
-                </MenuItem>
-              ))}
-            </TextField>
-          </FadeIn>
-
-          <FadeIn delay={0.4}>
-            <TextField
-              type="number"
-              fullWidth
-              label="Number of Questions"
-              value={formData.question_count}
-              onChange={(e) => handleChange('question_count', parseInt(e.target.value))}
-              required
-              slotProps={{ htmlInput: { min: 1, max: 20 } }}
-              helperText="Choose between 1 and 20 questions"
-              sx={{ mb: 3 }}
-            />
-          </FadeIn>
-
-          <FadeIn delay={0.5}>
-            <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel>Question Categories (Optional)</InputLabel>
-              <Select
-                multiple
-                value={formData.categories || []}
-                onChange={handleCategoryChange}
-                input={<OutlinedInput label="Question Categories (Optional)" />}
-                renderValue={(selected) => (
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                    {selected.map((value) => (
-                      <Chip key={value} label={value} size="small" />
-                    ))}
-                  </Box>
-                )}
-              >
-                {CATEGORIES.map((category) => (
-                  <MenuItem key={category} value={category}>
-                    {category.replace('_', ' ')}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </FadeIn>
-
-          <FadeIn delay={0.6}>
-            <ScaleButton fullWidth>
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                fullWidth
-                disabled={loading}
-                startIcon={loading ? <LoadingSpinner size="small" /> : <PlayArrow />}
-              >
-                {loading ? 'Creating Session...' : 'Start Interview'}
-              </Button>
-            </ScaleButton>
-          </FadeIn>
+      <GlassCard sx={{ p: 5, position: 'relative', overflow: 'hidden' }}>
+        <Box sx={{ position: 'absolute', top: 0, right: 0, p: 3, opacity: 0.1, color: 'primary.main' }}>
+           <SettingsIcon sx={{ fontSize: 120 }} />
         </Box>
-      </Paper>
-      </FadeIn>
-    </Container>
+
+        <form onSubmit={handleSubmit}>
+          <Stack spacing={4}>
+            {/* Sector 1: Role Identification */}
+            <Box>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', mb: 2, display: 'block', letterSpacing: '0.2em' }}>
+                <Psychology sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 01: ROLE IDENTIFICATION
+              </Typography>
+              <TextField
+                select
+                fullWidth
+                label="TARGET POSITION"
+                value={formData.role}
+                onChange={(e) => handleChange('role', e.target.value)}
+                required
+                InputProps={{
+                  sx: { 
+                    borderRadius: 3, 
+                    fontWeight: 700, 
+                    fontFamily: 'Orbitron',
+                    '&.Mui-focused fieldset': { borderColor: 'primary.main', borderWidth: 2 }
+                  }
+                }}
+              >
+                {ROLES.map((role) => (
+                  <MenuItem key={role} value={role} sx={{ fontWeight: 600 }}>{role.toUpperCase()}</MenuItem>
+                ))}
+              </TextField>
+            </Box>
+
+            <Grid container spacing={4}>
+              {/* Sector 2: Calibration */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'secondary.main', mb: 2, display: 'block', letterSpacing: '0.2em' }}>
+                    <DifficultyIcon sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 02: CALIBRATION
+                  </Typography>
+                  <TextField
+                    select
+                    fullWidth
+                    label="DIFFICULTY MAGNITUDE"
+                    value={formData.difficulty}
+                    onChange={(e) => handleChange('difficulty', e.target.value)}
+                    InputProps={{ sx: { borderRadius: 3, fontWeight: 700, fontFamily: 'Orbitron' } }}
+                  >
+                    {DIFFICULTIES.map((diff) => (
+                      <MenuItem key={diff} value={diff} sx={{ fontWeight: 600 }}>{diff.toUpperCase()}</MenuItem>
+                    ))}
+                  </TextField>
+              </Grid>
+
+              {/* Sector 3: Scope */}
+              <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'info.main', mb: 2, display: 'block', letterSpacing: '0.2em' }}>
+                    VECTOR COUNT
+                  </Typography>
+                  <TextField
+                    type="number"
+                    fullWidth
+                    label="TOTAL QUESTIONS"
+                    value={formData.question_count}
+                    onChange={(e) => handleChange('question_count', parseInt(e.target.value))}
+                    InputProps={{ 
+                      sx: { borderRadius: 3, fontWeight: 900, fontFamily: 'Orbitron' }
+                    }}
+                    inputProps={{ min: 1, max: 20 }}
+                    helperText="MAX LIMIT: 20 VECTORS"
+                  />
+              </Grid>
+            </Grid>
+
+            {/* Sector 4: Domain Specialization */}
+            <Box>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: 'success.main', mb: 2, display: 'block', letterSpacing: '0.2em' }}>
+                <CategoryIcon sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 03: DOMAIN SPECIALIZATION
+              </Typography>
+              <FormControl fullWidth>
+                <InputLabel sx={{ fontWeight: 800 }}>MODULE CATEGORIES (OPTIONAL)</InputLabel>
+                <Select
+                  multiple
+                  value={formData.categories}
+                  onChange={(e) => handleChange('categories', e.target.value as string[])}
+                  input={<OutlinedInput label="MODULE CATEGORIES (OPTIONAL)" sx={{ borderRadius: 3 }} />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                      {(selected as string[]).map((value) => (
+                        <Chip key={value} label={value.replace('_', ' ').toUpperCase()} size="small" color="primary" sx={{ fontWeight: 800, borderRadius: 1 }} />
+                      ))}
+                    </Box>
+                  )}
+                >
+                  {CATEGORIES.map((cat) => (
+                    <MenuItem key={cat} value={cat} sx={{ fontWeight: 600 }}>{cat.replace('_', ' ').toUpperCase()}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+
+            <Divider sx={{ opacity: 0.1 }} />
+
+            <GradientButton 
+               type="submit" 
+               size="large" 
+               fullWidth 
+               disabled={loading}
+               startIcon={loading ? <Box sx={{ display: 'flex' }}><LoadingSpinner size="small" /></Box> : <PlayArrow />}
+               sx={{ py: 2, fontSize: '1.2rem', fontFamily: 'Orbitron' }}
+            >
+               {loading ? 'INITIALIZING LATTICE...' : 'LAUNCH SIMULATION'}
+            </GradientButton>
+          </Stack>
+        </form>
+      </GlassCard>
+    </Box>
   );
 }
 

@@ -1,7 +1,8 @@
 """Refresh token model for JWT token management."""
 
-from sqlalchemy import Column, String, Integer, ForeignKey, Boolean
+from sqlalchemy import Column, String, Integer, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from app.models.base import BaseModel
 
 
@@ -25,7 +26,7 @@ class RefreshToken(BaseModel):
     
     # Token status
     is_revoked = Column(Boolean, default=False, nullable=False)
-    expires_at = Column(String(50), nullable=False)  # ISO format datetime string
+    expires_at = Column(DateTime(timezone=True), nullable=False)
     
     # Relationship to user
     user = relationship("User", back_populates="refresh_tokens")

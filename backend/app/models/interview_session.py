@@ -10,6 +10,7 @@ import enum
 
 from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import relationship, validates
+from sqlalchemy.sql import func
 
 from app.models.base import Base
 
@@ -33,8 +34,8 @@ class InterviewSession(Base):
     question_count = Column(Integer, default=5, nullable=False)
     categories = Column(JSON, nullable=True)
 
-    start_time = Column(DateTime, default=datetime.utcnow, nullable=False)
-    end_time = Column(DateTime, nullable=True)
+    start_time = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    end_time = Column(DateTime(timezone=True), nullable=True)
     session_metadata = Column(JSON, nullable=True)
 
     user = relationship("User", back_populates="interview_sessions")
@@ -42,9 +43,9 @@ class InterviewSession(Base):
     answers = relationship("Answer", back_populates="session", cascade="all, delete-orphan")
     session_summary = relationship("SessionSummary", back_populates="session", uselist=False, cascade="all, delete-orphan")
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    deleted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=func.now(), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
     @validates("status")
     def validate_status(self, key, value):

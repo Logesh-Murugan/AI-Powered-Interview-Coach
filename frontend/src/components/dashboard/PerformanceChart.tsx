@@ -1,44 +1,24 @@
-/**
- * Performance Chart Widget
- * Displays line chart showing score trends over last 30 days
- * Requirements: COMP-2.4
- */
-
 import { useEffect, useState } from 'react';
+import { Typography, Box, CircularProgress, alpha, useTheme, Stack } from '@mui/material';
 import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  CircularProgress,
-  Alert,
-  useTheme,
-} from '@mui/material';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ReferenceLine,
+  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend
 } from 'recharts';
-import analyticsService, { type ScoreOverTime } from '../../services/analyticsService';
+import analyticsService, { type ScoreOverTime, type SessionScore } from '../../services/analyticsService';
 
 interface ChartDataPoint {
-  week: string;
+  id: string | number;
+  label: string;
+
   score: number;
-  sessions: number;
+  teamScore: number;
+  fullDate: string;
+  isSession: boolean;
 }
 
 function PerformanceChart() {
   const theme = useTheme();
   const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
-  const [averageScore, setAverageScore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPerformanceData();
@@ -47,141 +27,122 @@ function PerformanceChart() {
   const loadPerformanceData = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
       const data = await analyticsService.getAnalyticsOverview();
       
-      // Transform score_over_time data for chart
-      const transformedData = data.score_over_time.map((item: ScoreOverTime) => ({
-        week: item.week,
-        score: Math.round(item.avg_score),
-        sessions: item.session_count,
-      }));
-      
-      setChartData(transformedData);
-      setAverageScore(data.average_score_last_30_days);
+      // Use recent_session_scores for the dots/line as requested (every interview marks)
+      const sessionData: ChartDataPoint[] = (data.recent_session_scores || []).map((item: SessionScore) => {
+
+        const date = new Date(item.date);
+        return {
+          id: item.session_id,
+          label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          score: Math.round(item.score),
+          teamScore: Math.round(data.average_score_all_time || 70), // Compare against all-time avg or similar
+          fullDate: item.date,
+          isSession: true
+        };
+      });
+
+      setChartData(sessionData);
     } catch (err) {
-      console.error('Error loading performance data:', err);
-      setError('Unable to load performance data');
+      console.error('Error:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress />
-        </CardContent>
-      </Card>
-    );
-  }
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <Box sx={{
+          backgroundColor: 'rgba(15, 23, 42, 0.95)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '12px',
+          p: 2,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+        }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800, mb: 1, display: 'block' }}>
+            {payload[0].payload.fullDate}
+          </Typography>
+          <Stack spacing={1}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#3B82F6' }} />
+              <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600 }}>
+                Score: {payload[0]?.value}%
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
+      );
+    }
+    return null;
+  };
 
-  if (error) {
-    return (
-      <Card>
-        <CardContent>
-          <Alert severity="error">{error}</Alert>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (loading) return (
+    <Box sx={{ height: 350, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <CircularProgress size={24} />
+    </Box>
+  );
 
-  // No data state
-  if (chartData.length === 0) {
-    return (
-      <Card>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <TrendingUpIcon sx={{ mr: 1, color: 'info.main' }} />
-            <Typography variant="h6" component="h2">
-              Performance Trend
-            </Typography>
-          </Box>
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <Typography variant="body2" color="text.secondary">
-              Complete some interview sessions to see your performance trend.
-            </Typography>
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!chartData || chartData.length === 0) return (
+    <Box sx={{ height: 350, display: 'flex', flexFlow: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
+      <Typography variant="caption" sx={{ fontWeight: 1000, letterSpacing: '0.2em', color: 'text.secondary' }}>
+        NO PERFORMANCE VECTORS
+      </Typography>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1, fontSize: 10 }}>
+        Complete interviews to see your performance progression
+      </Typography>
+    </Box>
+  );
 
   return (
-    <Card>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <TrendingUpIcon sx={{ mr: 1, color: 'info.main' }} />
-          <Typography variant="h6" component="h2">
-            Performance Trend
-          </Typography>
-        </Box>
 
-        <Box sx={{ width: '100%', height: 250 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-              <XAxis
-                dataKey="week"
-                tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                stroke={theme.palette.divider}
-              />
-              <YAxis
-                domain={[0, 100]}
-                tick={{ fontSize: 12, fill: theme.palette.text.secondary }}
-                stroke={theme.palette.divider}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: 4,
-                }}
-                labelStyle={{ color: theme.palette.text.primary }}
-                formatter={(value: number | string | undefined, name?: string) => {
-                  const safeName = name ?? 'Value';
-                  if (value === undefined) return ['N/A', safeName];
-                  if (name === 'score') return [`${value}%`, 'Score'];
-                  if (name === 'sessions') return [value, 'Sessions'];
-                  return [value, safeName];
-                }}
-              />
-              {averageScore !== null && (
-                <ReferenceLine
-                  y={averageScore}
-                  stroke={theme.palette.warning.main}
-                  strokeDasharray="5 5"
-                  label={{
-                    value: `Avg: ${Math.round(averageScore)}%`,
-                    position: 'right',
-                    fill: theme.palette.text.secondary,
-                    fontSize: 12,
-                  }}
-                />
-              )}
-              <Line
-                type="monotone"
-                dataKey="score"
-                stroke={theme.palette.primary.main}
-                strokeWidth={2}
-                dot={{ fill: theme.palette.primary.main, r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </Box>
+    <ResponsiveContainer width="100%" height={350}>
+      <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+        {/* Added Vertical and Horizontal Grid Lines as per screenshot */}
+        <CartesianGrid strokeDasharray="0" stroke="rgba(255,255,255,0.08)" vertical={true} />
+        <XAxis 
+          dataKey="label" 
+          axisLine={false} 
+          tickLine={false} 
+          tick={{ fill: alpha(theme.palette.text.secondary, 0.7), fontSize: 11, fontWeight: 600 }} 
+          dy={15}
+          minTickGap={30}
+        />
 
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-          Score trends over the last 30 days
-        </Typography>
-      </CardContent>
-    </Card>
+        <YAxis 
+          domain={[0, 100]} 
+          ticks={[0, 20, 40, 60, 80, 100]}
+          axisLine={false} 
+          tickLine={false} 
+          tickFormatter={(value) => `${value}%`}
+          tick={{ fill: alpha(theme.palette.text.secondary, 0.7), fontSize: 11, fontWeight: 600 }}
+        />
+        <Tooltip content={<CustomTooltip />} />
+        
+        {/* Curved Line with Large Blue Dots as in screenshot */}
+        <Line 
+          name="Interview Score"
+          type="monotone" 
+          dataKey="score" 
+          stroke={theme.palette.text.primary} 
+          strokeWidth={3} 
+          dot={{ 
+            fill: '#3B82F6', 
+            r: 8, 
+            strokeWidth: 4,
+            stroke: 'rgba(59, 130, 246, 0.2)'
+          }} 
+          activeDot={{ r: 10, strokeWidth: 0, fill: '#60A5FA' }}
+
+          animationDuration={1500}
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
   );
 }
 
 export default PerformanceChart;
+
+

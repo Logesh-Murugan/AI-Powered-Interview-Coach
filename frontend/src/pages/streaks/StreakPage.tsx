@@ -14,9 +14,9 @@ import {
   Breadcrumbs,
   Link,
   Alert,
-  Chip
+  Chip,
+  Grid
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import { useNavigate } from 'react-router-dom';
@@ -169,7 +169,7 @@ function StreakPage() {
 
         {/* Statistics Cards */}
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <LocalFireDepartmentIcon sx={{ fontSize: 48, color: 'error.main', mb: 1 }} />
@@ -183,7 +183,7 @@ function StreakPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <EmojiEventsIcon sx={{ fontSize: 48, color: 'warning.main', mb: 1 }} />
@@ -197,7 +197,7 @@ function StreakPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <TrendingUpIcon sx={{ fontSize: 48, color: 'success.main', mb: 1 }} />
@@ -211,7 +211,7 @@ function StreakPage() {
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
             <Card>
               <CardContent sx={{ textAlign: 'center' }}>
                 <CalendarTodayIcon sx={{ fontSize: 48, color: 'info.main', mb: 1 }} />
@@ -242,7 +242,7 @@ function StreakPage() {
 
           <Grid container spacing={2}>
             {milestones.map((milestone, index) => (
-              <Grid item xs={12} sm={6} md={3} key={index}>
+              <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
                 <Card 
                   sx={{ 
                     opacity: milestone.achieved ? 1 : 0.6,

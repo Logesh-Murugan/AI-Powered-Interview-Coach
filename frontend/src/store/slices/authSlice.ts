@@ -9,6 +9,7 @@ import { apiService } from '../../services/api.service';
 import { API_ENDPOINTS } from '../../config/api.config';
 import { APP_CONFIG } from '../../config/app.config';
 import { userService, type UpdateProfileRequest, type UserProfile } from '../../services/userService';
+import { getAuthTokensFromStorage, clearAuthStorage } from '../../utils/authStateSync';
 
 interface User {
   id: number;
@@ -25,6 +26,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  registrationSuccess: boolean;
 }
 
 interface LoginCredentials {
@@ -38,20 +40,29 @@ interface RegisterData {
   name: string;
 }
 
+interface RegisterResponse {
+  message: string;
+  user: User;
+}
+
 interface AuthResponse {
   access_token: string;
   refresh_token: string;
   user: User;
 }
 
-const initialState: AuthState = {
-  user: JSON.parse(localStorage.getItem(APP_CONFIG.STORAGE_KEYS.USER) || 'null'),
-  accessToken: localStorage.getItem(APP_CONFIG.STORAGE_KEYS.ACCESS_TOKEN),
-  refreshToken: localStorage.getItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN),
-  isAuthenticated: !!localStorage.getItem(APP_CONFIG.STORAGE_KEYS.ACCESS_TOKEN),
-  isLoading: false,
-  error: null,
-};
+const initialState: AuthState = (() => {
+  const tokens = getAuthTokensFromStorage();
+  return {
+    user: tokens.user,
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+    isAuthenticated: !!(tokens.accessToken && tokens.refreshToken && tokens.user),
+    isLoading: false,
+    error: null,
+    registrationSuccess: false,
+  };
+})();
 
 // Async thunks
 export const login = createAsyncThunk<AuthResponse, LoginCredentials>(
@@ -63,29 +74,25 @@ export const login = createAsyncThunk<AuthResponse, LoginCredentials>(
         credentials
       );
       return response.data;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue('Login failed');
+    } catch (error: any) {
+      const message = error?.message || 'Login failed';
+      return rejectWithValue(message);
     }
   }
 );
 
-export const register = createAsyncThunk<AuthResponse, RegisterData>(
+export const register = createAsyncThunk<RegisterResponse, RegisterData>(
   'auth/register',
   async (data, { rejectWithValue }) => {
     try {
-      const response = await apiService.post<AuthResponse>(
+      const response = await apiService.post<RegisterResponse>(
         API_ENDPOINTS.AUTH.REGISTER,
         data
       );
       return response.data;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue('Registration failed');
+    } catch (error: any) {
+      const message = error?.message || 'Registration failed';
+      return rejectWithValue(message);
     }
   }
 );
@@ -105,11 +112,9 @@ export const updateProfile = createAsyncThunk<UserProfile, UpdateProfileRequest>
     try {
       const response = await userService.updateProfile(request);
       return response;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        return rejectWithValue(error.message);
-      }
-      return rejectWithValue('Profile update failed');
+    } catch (error: any) {
+      const message = error?.message || 'Profile update failed';
+      return rejectWithValue(message);
     }
   }
 );
@@ -139,12 +144,13 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       
       // Clear localStorage
-      localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER);
-      localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
-      localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+      clearAuthStorage();
     },
     clearError: (state) => {
       state.error = null;
+    },
+    resetRegistrationSuccess: (state) => {
+      state.registrationSuccess = false;
     },
   },
   extraReducers: (builder) => {
@@ -179,15 +185,7 @@ const authSlice = createSlice({
       })
       .addCase(register.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.accessToken = action.payload.access_token;
-        state.refreshToken = action.payload.refresh_token;
-        state.isAuthenticated = true;
-        
-        // Persist to localStorage
-        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.USER, JSON.stringify(action.payload.user));
-        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.ACCESS_TOKEN, action.payload.access_token);
-        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN, action.payload.refresh_token);
+        state.registrationSuccess = true;
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false;
@@ -207,9 +205,7 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         
         // Clear localStorage
-        localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER);
-        localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
-        localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+        clearAuthStorage();
       })
       .addCase(logout.rejected, (state) => {
         state.isLoading = false;
@@ -219,9 +215,7 @@ const authSlice = createSlice({
         state.refreshToken = null;
         state.isAuthenticated = false;
         
-        localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.USER);
-        localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.ACCESS_TOKEN);
-        localStorage.removeItem(APP_CONFIG.STORAGE_KEYS.REFRESH_TOKEN);
+        clearAuthStorage();
       });
 
     // Update Profile
@@ -244,5 +238,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, clearCredentials, clearError } = authSlice.actions;
+export const { setCredentials, clearCredentials, clearError, resetRegistrationSuccess } = authSlice.actions;
 export default authSlice.reducer;

@@ -21,6 +21,7 @@ router = APIRouter()
 
 @router.get("/overview", response_model=AnalyticsOverview)
 async def get_analytics_overview(
+    force_refresh: bool = False,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -29,7 +30,7 @@ async def get_analytics_overview(
     
     Requirements: 20.1-20.15
     - Returns comprehensive performance metrics
-    - Cached for 1 hour
+    - Cached for 1 hour (unless force_refresh is True)
     - Response time < 100ms (cache hit) or < 500ms (cache miss)
     
     Returns:
@@ -39,6 +40,9 @@ async def get_analytics_overview(
         cache_service = CacheService()
         analytics_service = AnalyticsService(db, cache_service)
         
+        if force_refresh:
+            analytics_service.invalidate_cache(current_user.id)
+            
         analytics = analytics_service.get_analytics_overview(current_user.id)
         
         logger.info(
@@ -71,13 +75,6 @@ async def get_session_analytics(
     - Supports date_range filter (days, default 30)
     - Supports status filter (completed, in_progress, abandoned)
     - Cached for 1 hour
-    
-    Args:
-        date_range: Number of days to include (default 30)
-        status: Filter by session status (optional)
-        
-    Returns:
-        SessionStatistics: Session analytics data
     """
     try:
         cache_service = CacheService()
@@ -111,14 +108,6 @@ async def get_skill_analytics(
 ):
     """
     Get skill-based performance analytics.
-    
-    Requirements: 6.6
-    - Returns performance_by_skill, top_skills, weak_skills
-    - Calculates average scores per skill from resume
-    - Cached for 1 hour
-    
-    Returns:
-        SkillStatistics: Skill performance data
     """
     try:
         cache_service = CacheService()
@@ -148,15 +137,6 @@ async def get_progress_analytics(
 ):
     """
     Get progress tracking over time.
-    
-    Requirements: 6.6
-    - Returns weekly_improvement, monthly_improvement, trend_direction
-    - Calculates score deltas over time periods
-    - Includes confidence intervals for trends
-    - Cached for 1 hour
-    
-    Returns:
-        ProgressMetrics: Progress and improvement metrics
     """
     try:
         cache_service = CacheService()
@@ -186,15 +166,6 @@ async def get_insights(
 ):
     """
     Get AI-generated insights and recommendations.
-    
-    Requirements: 6.6, 13.7
-    - Analyzes user performance patterns using AI
-    - Generates personalized recommendations
-    - Returns insights_text, recommendations, readiness_score
-    - Cached for 24 hours
-    
-    Returns:
-        AIInsights: AI-generated insights and recommendations
     """
     try:
         cache_service = CacheService()
@@ -225,6 +196,7 @@ async def get_insights(
 
 @router.get("/comparison", response_model=PerformanceComparison)
 async def get_performance_comparison(
+    force_refresh: bool = False,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -232,25 +204,15 @@ async def get_performance_comparison(
     Get anonymous performance comparison against cohort.
     
     Requirements: 21.1-21.8
-    - Compare user against others with same target role
-    - Calculate percentile rank
-    - Show top performer habits
-    - Maintain complete anonymity
-    - Response time < 300ms
-    
-    Returns:
-        PerformanceComparison: Anonymous comparison data
-    
-    Raises:
-        400: User must have target role set
-        400: User must complete at least one interview
-        400: Not enough users in cohort for comparison
-        500: Internal server error
+    - Force refresh allows bypassing stale cache (cached for 24h by default)
     """
     try:
         cache_service = CacheService()
         analytics_service = AnalyticsService(db, cache_service)
         
+        if force_refresh:
+            analytics_service.invalidate_cache(current_user.id)
+            
         comparison = analytics_service.get_performance_comparison(current_user.id)
         
         logger.info(

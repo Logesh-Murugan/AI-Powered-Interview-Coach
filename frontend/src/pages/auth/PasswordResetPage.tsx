@@ -1,6 +1,6 @@
 /**
- * Password Reset Page Component
- * Handles both password reset request and password reset with token
+ * Premium Password Reset Page
+ * High-end identity recovery interface with secure key regeneration modules
  */
 
 import { useState } from 'react';
@@ -10,17 +10,24 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import {
   Box,
-  Button,
   TextField,
   Typography,
   Link,
   Alert,
+  alpha,
+  useTheme,
+  Stack,
+  CircularProgress,
 } from '@mui/material';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { apiService } from '../../services/api.service';
 import { API_ENDPOINTS } from '../../config/api.config';
 import { ROUTES } from '../../config/app.config';
 import PasswordStrengthIndicator from '../../components/auth/PasswordStrengthIndicator';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GradientButton, GradientText } from '../../components/common/PremiumComponents';
+import { Email, Lock, Shield, Autorenew } from '@mui/icons-material';
+
+const MotionBox = motion.create(Box);
 
 interface ResetRequestFormData {
   email: string;
@@ -34,27 +41,26 @@ interface ResetPasswordFormData {
 const resetRequestSchema = yup.object().shape({
   email: yup
     .string()
-    .required('Email is required')
-    .email('Please enter a valid email address'),
+    .required('VIRTUAL IDENTIFIER REQUIRED')
+    .email('INVALID IDENTIFIER FORMAT'),
 });
 
 const resetPasswordSchema = yup.object().shape({
   password: yup
     .string()
-    .required('Password is required')
-    .min(8, 'Password must be at least 8 characters')
-    .matches(/[a-z]/, 'Password must contain at least one lowercase letter')
-    .matches(/[A-Z]/, 'Password must contain at least one uppercase letter')
-    .matches(/[0-9]/, 'Password must contain at least one number')
-    .matches(/[^a-zA-Z0-9]/, 'Password must contain at least one special character'),
+    .required('ACCESS KEY REQUIRED')
+    .min(8, 'MINIMUM 8 CHARACTER COMPLIANCE')
+    .matches(/[A-Z]/, 'UPPERCASE PROTOCOL REQUIRED')
+    .matches(/[0-9]/, 'NUMERIC VECTOR REQUIRED'),
   confirmPassword: yup
     .string()
-    .required('Please confirm your password')
-    .oneOf([yup.ref('password')], 'Passwords must match'),
+    .required('CONFIRMATION KEY REQUIRED')
+    .oneOf([yup.ref('password')], 'KEYS MUST SYNCHRONIZE'),
 });
 
 function PasswordResetPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
 
@@ -62,19 +68,15 @@ function PasswordResetPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Form for password reset request
   const {
     control: requestControl,
     handleSubmit: handleRequestSubmit,
     formState: { errors: requestErrors },
   } = useForm<ResetRequestFormData>({
     resolver: yupResolver(resetRequestSchema),
-    defaultValues: {
-      email: '',
-    },
+    defaultValues: { email: '' },
   });
 
-  // Form for password reset with token
   const {
     control: resetControl,
     handleSubmit: handleResetSubmit,
@@ -82,10 +84,7 @@ function PasswordResetPage() {
     formState: { errors: resetErrors },
   } = useForm<ResetPasswordFormData>({
     resolver: yupResolver(resetPasswordSchema),
-    defaultValues: {
-      password: '',
-      confirmPassword: '',
-    },
+    defaultValues: { password: '', confirmPassword: '' },
   });
 
   const password = watch('password');
@@ -94,190 +93,147 @@ function PasswordResetPage() {
     setIsLoading(true);
     setError(null);
     setSuccess(null);
-
     try {
       await apiService.post(API_ENDPOINTS.AUTH.PASSWORD_RESET_REQUEST, data);
-      setSuccess('If the email exists, a password reset link has been sent. Please check your inbox.');
+      setSuccess('RECOVERY SIGNAL TRANSMITTED. CHECK YOUR INBOX.');
     } catch {
-      setError('Failed to send reset email. Please try again.');
+      setError('TRANSMISSION FAILED. VERIFY IDENTIFIER.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const onResetSubmit = async (data: ResetPasswordFormData) => {
-    if (!token) {
-      setError('Invalid reset token');
-      return;
-    }
-
+    if (!token) { setError('INVALID RECOVERY TOKEN'); return; }
     setIsLoading(true);
     setError(null);
     setSuccess(null);
-
     try {
       await apiService.post(API_ENDPOINTS.AUTH.PASSWORD_RESET, {
         token,
         new_password: data.password,
       });
-      setSuccess('Password reset successfully! Redirecting to login...');
-      setTimeout(() => {
-        navigate(ROUTES.LOGIN);
-      }, 2000);
+      setSuccess('ACCESS KEY SYNCHRONIZED. REDIRECTING...');
+      setTimeout(() => navigate(ROUTES.LOGIN), 2000);
     } catch {
-      setError('Failed to reset password. The link may be invalid or expired.');
+      setError('SYNCHRONIZATION FAILED. TOKEN EXPIRED.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Show password reset form if token is present
-  if (token) {
-    return (
-      <Box>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          Reset Password
+  return (
+    <Box>
+      <MotionBox
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        sx={{ textAlign: 'center', mb: 4 }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'Orbitron', mb: 1 }}>KEY <GradientText>RECOVERY</GradientText></Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+           {token ? 'ESTABLISHING NEW ACCESS PROTOCOLS' : 'INITIATING IDENTITY RECOVERY'}
         </Typography>
-        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-          Enter your new password below
-        </Typography>
+      </MotionBox>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
+      <AnimatePresence>
+        {(error || success) && (
+          <MotionBox initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} sx={{ overflow: 'hidden' }}>
+            <Alert severity={error ? "error" : "success"} sx={{ mb: 3, border: `1px solid ${error ? theme.palette.error.main : theme.palette.success.main}66`, bgcolor: `${error ? theme.palette.error.main : theme.palette.success.main}11`, fontWeight: 800 }} onClose={() => { setError(null); setSuccess(null); }}>
+              {(error || success || "").toUpperCase()}
+            </Alert>
+          </MotionBox>
         )}
+      </AnimatePresence>
 
-        {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            {success}
-          </Alert>
-        )}
-
+      {token ? (
         <form onSubmit={handleResetSubmit(onResetSubmit)}>
-          <Controller
-            name="password"
-            control={resetControl}
-            render={({ field }) => (
-              <Box>
+          <Stack spacing={2.5}>
+            <Controller
+              name="password"
+              control={resetControl}
+              render={({ field }) => (
+                <Box>
+                  <TextField
+                    {...field}
+                    fullWidth
+                    label="NEW ACCESS KEY"
+                    type="password"
+                    error={!!resetErrors.password}
+                    helperText={resetErrors.password?.message}
+                    InputProps={{ 
+                      sx: { borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.4) },
+                      startAdornment: <Lock sx={{ mr: 1, color: 'primary.main', opacity: 0.5, fontSize: 18 }} />
+                    }}
+                  />
+                  <Box sx={{ mt: 1 }}>
+                     <PasswordStrengthIndicator password={password} />
+                  </Box>
+                </Box>
+              )}
+            />
+
+            <Controller
+              name="confirmPassword"
+              control={resetControl}
+              render={({ field }) => (
                 <TextField
                   {...field}
                   fullWidth
-                  label="New Password"
+                  label="CONFIRMATION KEY"
                   type="password"
-                  margin="normal"
-                  autoComplete="new-password"
-                  autoFocus
-                  error={!!resetErrors.password}
-                  helperText={resetErrors.password?.message}
+                  error={!!resetErrors.confirmPassword}
+                  helperText={resetErrors.confirmPassword?.message}
+                  InputProps={{ 
+                    sx: { borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.4) },
+                    startAdornment: <Shield sx={{ mr: 1, color: 'primary.main', opacity: 0.5, fontSize: 18 }} />
+                  }}
                 />
-                <PasswordStrengthIndicator password={password} />
-              </Box>
-            )}
-          />
-
-          <Controller
-            name="confirmPassword"
-            control={resetControl}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                label="Confirm New Password"
-                type="password"
-                margin="normal"
-                autoComplete="new-password"
-                error={!!resetErrors.confirmPassword}
-                helperText={resetErrors.confirmPassword?.message}
-              />
-            )}
-          />
-
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            size="large"
-            disabled={isLoading || !!success}
-            sx={{ mt: 3, mb: 2 }}
-          >
-            {isLoading ? <LoadingSpinner size="small" /> : 'Reset Password'}
-          </Button>
-
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="body2">
-              Remember your password?{' '}
-              <Link component={RouterLink} to={ROUTES.LOGIN}>
-                Sign in
-              </Link>
-            </Typography>
-          </Box>
-        </form>
-      </Box>
-    );
-  }
-
-  // Show password reset request form
-  return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom align="center">
-        Reset Password
-      </Typography>
-      <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-        Enter your email address and we'll send you a link to reset your password
-      </Typography>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {success}
-        </Alert>
-      )}
-
-      <form onSubmit={handleRequestSubmit(onRequestSubmit)}>
-        <Controller
-          name="email"
-          control={requestControl}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Email"
-              type="email"
-              margin="normal"
-              autoComplete="email"
-              autoFocus
-              error={!!requestErrors.email}
-              helperText={requestErrors.email?.message}
+              )}
             />
-          )}
-        />
 
-        <Button
-          type="submit"
-          fullWidth
-          variant="contained"
-          size="large"
-          disabled={isLoading || !!success}
-          sx={{ mt: 3, mb: 2 }}
-        >
-          {isLoading ? <LoadingSpinner size="small" /> : 'Send Reset Link'}
-        </Button>
+            <GradientButton type="submit" fullWidth size="large" disabled={isLoading || !!success} sx={{ py: 2, mt: 2 }}>
+               {isLoading ? <CircularProgress size={20} color="inherit" /> : 'SYNCHRONIZE KEY'}
+            </GradientButton>
+          </Stack>
+        </form>
+      ) : (
+        <form onSubmit={handleRequestSubmit(onRequestSubmit)}>
+          <Stack spacing={3}>
+            <Controller
+              name="email"
+              control={requestControl}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  fullWidth
+                  label="VIRTUAL IDENTIFIER"
+                  type="email"
+                  placeholder="NAME@DOMAIN.COM"
+                  error={!!requestErrors.email}
+                  helperText={requestErrors.email?.message}
+                  InputProps={{ 
+                    sx: { borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.4) },
+                    startAdornment: <Email sx={{ mr: 1, color: 'primary.main', opacity: 0.5, fontSize: 18 }} />
+                  }}
+                />
+              )}
+            />
 
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography variant="body2">
-            Remember your password?{' '}
-            <Link component={RouterLink} to={ROUTES.LOGIN}>
-              Sign in
-            </Link>
-          </Typography>
-        </Box>
-      </form>
+            <GradientButton type="submit" fullWidth size="large" disabled={isLoading || !!success} sx={{ py: 2, mt: 1 }} startIcon={<Autorenew />}>
+               {isLoading ? <CircularProgress size={20} color="inherit" /> : 'TRANSMIT RECOVERY SIGNAL'}
+            </GradientButton>
+          </Stack>
+        </form>
+      )}
+
+      <Box sx={{ textAlign: 'center', mt: 4 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+          REMEMBER YOUR ACCESS KEY?{' '}
+          <Link component={RouterLink} to={ROUTES.LOGIN} sx={{ color: 'primary.main', fontWeight: 900, textDecoration: 'none' }}>
+            AUTHORIZE ACCESS
+          </Link>
+        </Typography>
+      </Box>
     </Box>
   );
 }

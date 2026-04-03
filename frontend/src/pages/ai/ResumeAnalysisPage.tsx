@@ -1,18 +1,13 @@
 /**
- * Resume Analysis Page - Redesigned for AI Agent Response
- * Full analysis view with enhanced UI/UX for AI-generated insights
- * 
- * Requirements: INT-1.5, INT-1.7
+ * Premium Resume Analysis Page
+ * High-end AI "Cognitive Intelligence Scan" interface
  */
 
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Container,
-  Paper,
-  Typography,
   Box,
-  Button,
+  Typography,
   Tabs,
   Tab,
   Breadcrumbs,
@@ -20,12 +15,10 @@ import {
   Alert,
   Stack,
   Chip,
-  Card,
-  CardContent,
-  List,
-  ListItem,
-  ListItemText,
   Divider,
+  alpha,
+  useTheme,
+  Grid,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -37,58 +30,22 @@ import {
   Psychology,
   Build,
   Language as LanguageIcon,
+  AutoAwesome,
+  Memory,
+  Bolt,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import { useAppDispatch, useAppSelector } from '../../store';
 import type { RootState } from '../../store';
-import { fetchAnalysis, fetchHistory } from '../../store/slices/resumeAnalysisSlice';
+import { analyzeResume, fetchAnalysis, fetchHistory, clearError } from '../../store/slices/resumeAnalysisSlice';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import ErrorBoundary from '../../components/common/ErrorBoundary';
-import SkillGapsSection from '../../components/ai/SkillGapsSection';
-import ImprovementRoadmap from '../../components/ai/ImprovementRoadmap';
 import { format } from 'date-fns';
-import { clearError } from '../../store/slices/resumeAnalysisSlice';
+import { GlassCard, GradientButton, GradientText } from '../../components/common/PremiumComponents';
+import { motion, AnimatePresence } from 'framer-motion';
 
-// TypeScript interfaces for better type safety
-interface SkillGap {
-  gap: string;
-  recommendations: string[];
-}
-
-interface ImprovementRoadmapData {
-  short_term?: string[];
-  long_term?: string[];
-  milestones?: Array<{
-    skill: string;
-    duration: string;
-  }>;
-  timeline_weeks?: number;
-  note?: string;
-}
-
-interface SkillInventory {
-  technical_skills?: string[];
-  soft_skills?: string[];
-  tools?: string[];
-  languages?: string[];
-}
-
-interface ExperienceTimeline {
-  total_years: number;
-  seniority_level: string;
-  companies?: string[];
-  roles?: string[];
-  analysis?: string;
-}
-
-interface AnalysisData {
-  skill_inventory: SkillInventory;
-  experience_timeline: ExperienceTimeline;
-  skill_gaps: SkillGap[] | any; // Allow legacy format
-  improvement_roadmap: ImprovementRoadmapData | any; // Allow legacy format
-  analysis_summary?: string;
-  fallback_used?: boolean;
-}
+const MotionBox = motion.create(Box);
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -99,7 +56,18 @@ interface TabPanelProps {
 function TabPanel({ children, value, index }: TabPanelProps) {
   return (
     <div role="tabpanel" hidden={value !== index}>
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      <AnimatePresence mode="wait">
+        {value === index && (
+          <MotionBox
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            sx={{ py: 4 }}
+          >
+            {children}
+          </MotionBox>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -108,46 +76,49 @@ function ResumeAnalysisPage() {
   const { resumeId } = useParams<{ resumeId: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const theme = useTheme();
 
   const [tabValue, setTabValue] = useState(0);
   const [pollAttempts, setPollAttempts] = useState(0);
 
-  const { currentAnalysis, history, isLoading, error } = useAppSelector(
+  const { currentAnalysis, history, isLoading, isGenerating, error } = useAppSelector(
     (state: RootState) => state.resumeAnalysis
   );
 
   useEffect(() => {
     if (resumeId) {
       const id = parseInt(resumeId);
-      dispatch(fetchAnalysis(id));
-      dispatch(fetchHistory({ resumeId: id, limit: 5 }));
+      dispatch(fetchAnalysis(id)).then((action) => {
+        // If analysis doesn't exist, trigger generation
+        if (action.meta.requestStatus === 'rejected') {
+          const payload = action.payload as { status?: number };
+          if (payload?.status === 404) {
+            const targetRole = 'Software Engineer'; // Default or from profile
+            dispatch(analyzeResume({ resumeId: id, request: { target_role: targetRole } }));
+          }
+        }
+      });
+      dispatch(fetchHistory({ resumeId: id, limit: 10 }));
     }
   }, [resumeId, dispatch]);
 
-  // Poll for analysis while waiting (handles initial 404/in-progress)
   useEffect(() => {
-    if (!resumeId || currentAnalysis || pollAttempts >= 12) return; // Increased from 6 to 12
-    if (isLoading) return; // wait for the current request to finish
+    if (!resumeId || currentAnalysis || pollAttempts >= 12) return;
+    if (isLoading) return;
 
     const id = parseInt(resumeId);
     const timer = setTimeout(() => {
       setPollAttempts((p) => p + 1);
       dispatch(fetchAnalysis(id));
-    }, pollAttempts < 6 ? 3000 : 5000); // Faster polling initially, then slower
+    }, pollAttempts < 6 ? 3000 : 5000);
 
     return () => clearTimeout(timer);
   }, [resumeId, currentAnalysis, isLoading, pollAttempts, dispatch]);
 
-  // Reset polling when analysis arrives
-  useEffect(() => {
-    if (currentAnalysis) {
-      setPollAttempts(0);
-    }
-  }, [currentAnalysis]);
-
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
+  const analysisData = currentAnalysis?.analysis_data;
+  const { skill_inventory, experience_timeline, skill_gaps, improvement_roadmap } = analysisData || {};
+  const analysisHistory = resumeId ? history[parseInt(resumeId)] || [] : [];
+  const isAIGenerated = currentAnalysis?.status === 'success' && !analysisData?.fallback_used;
 
   const handleRetry = () => {
     if (resumeId) {
@@ -156,621 +127,313 @@ function ResumeAnalysisPage() {
     }
   };
 
-  if (isLoading) {
-    return <LoadingSpinner variant="fullPage" text="Loading AI analysis..." />;
-  }
+  const handleRescan = () => {
+    if (resumeId) {
+      const id = parseInt(resumeId);
+      dispatch(clearError());
+      const targetRole = 'Software Engineer';
+      dispatch(analyzeResume({ resumeId: id, request: { target_role: targetRole, force_refresh: true } }));
+      setPollAttempts(0);
+    }
+  };
 
-  if (error) {
+  if (isLoading && !currentAnalysis) return <LoadingSpinner variant="fullPage" text="SYNCHRONIZING WITH AI NEURALS..." />;
+  
+  // Show generating state if analysis is not ready yet but in progress
+  const isCurrentlyGenerating = isGenerating || (isLoading && !currentAnalysis) || (currentAnalysis?.status === 'processing');
+  
+  if (isCurrentlyGenerating) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <ErrorAlert
-          message={error}
-          onRetry={handleRetry}
-        />
-      </Container>
+      <Box sx={{ py: 10, textAlign: 'center' }}>
+        <GlassCard sx={{ p: 8, maxWidth: 600, mx: 'auto' }}>
+          <AutoAwesome sx={{ fontSize: 80, color: 'primary.main', mb: 3, opacity: 0.8 }} className="pulse-animation" />
+          <Typography variant="h4" sx={{ fontWeight: 1000, mb: 2, fontFamily: 'Orbitron' }}>AI SCAN IN PROGRESS</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, fontWeight: 600 }}>
+            OUR NEURAL NETWORK IS CURRENTLY ANALYZING YOUR VECTOR. THIS PROCESS TYPICALLY TAKES 15-30 SECONDS.
+          </Typography>
+          <LoadingSpinner variant="fullPage" />
+        </GlassCard>
+      </Box>
     );
   }
+
+  if (error) return (
+    <Box sx={{ py: 10, textAlign: 'center' }}>
+      <GlassCard sx={{ p: 8, maxWidth: 600, mx: 'auto' }}>
+        <Warning sx={{ fontSize: 80, color: 'error.main', mb: 3, opacity: 0.8 }} />
+        <Typography variant="h4" sx={{ fontWeight: 1000, mb: 2, fontFamily: 'Orbitron', color: 'error.main' }}>NEURAL LINK FAILED</Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 4, fontWeight: 600 }}>
+          THE AI REASONING ENGINE ENCOUNTERED A SYMBOLIC LOGIC CONFLICT OR CONNECTION TIMEOUT.
+        </Typography>
+        <Stack direction="row" spacing={2} justifyContent="center">
+          <GradientButton onClick={handleRetry} startIcon={<History />}>RETRY LINK</GradientButton>
+          <GradientButton onClick={handleRescan} startIcon={<Bolt />} sx={{ bgcolor: alpha(theme.palette.secondary.main, 0.2) }}>
+            RE-INITIALIZE ANALYSIS
+          </GradientButton>
+        </Stack>
+      </GlassCard>
+    </Box>
+  );
 
   if (!currentAnalysis) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Paper elevation={3} sx={{ p: 6, textAlign: 'center' }}>
-          <Psychology sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
-          <Typography variant="h5" gutterBottom>
-            No AI Analysis Available Yet
+      <Box sx={{ py: 10, textAlign: 'center' }}>
+        <GlassCard sx={{ p: 8, maxWidth: 600, mx: 'auto' }}>
+          <Psychology sx={{ fontSize: 80, color: 'primary.main', mb: 3, opacity: 0.5 }} />
+          <Typography variant="h4" sx={{ fontWeight: 900, mb: 2, fontFamily: 'Orbitron' }}>ANALYSIS OFFLINE</Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4, fontWeight: 500 }}>
+            NEURAL SCAN DATA FOR THIS VECTOR IS CURRENTLY UNAVAILABLE OR INITIALIZING.
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            Generate an AI-powered analysis to get personalized insights on your skills, experience, and career growth opportunities.
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<ArrowBack />}
-            onClick={() => navigate(`/resumes/${resumeId}`)}
-            size="large"
-          >
-            Go to Resume Details
-          </Button>
-        </Paper>
-      </Container>
+          <Stack direction="row" spacing={2} justifyContent="center">
+            <GradientButton onClick={handleRescan} startIcon={<Bolt />}>INITIALIZE AI SCAN</GradientButton>
+            <GradientButton variant="outlined" onClick={() => navigate(`/resumes/${resumeId}`)} sx={{ bgcolor: 'transparent !important', border: `1px solid ${alpha(theme.palette.divider, 0.1)} !important`, color: 'text.primary !important' }}>
+              DOSSIER
+            </GradientButton>
+          </Stack>
+        </GlassCard>
+      </Box>
     );
   }
 
-  const { analysis_data, analyzed_at, from_cache, execution_time_ms, status } = currentAnalysis;
-  const { skill_inventory, experience_timeline, skill_gaps, improvement_roadmap } = analysis_data;
-  const analysisHistory = resumeId ? history[parseInt(resumeId)] || [] : [];
-
-  // Debug logging to help identify data structure issues
-  useEffect(() => {
-    if (analysis_data) {
-      console.log('=== ANALYSIS DATA DEBUG ===');
-      console.log('Full analysis_data:', analysis_data);
-      console.log('skill_gaps:', skill_gaps);
-      console.log('skill_gaps type:', typeof skill_gaps);
-      console.log('skill_gaps is array?:', Array.isArray(skill_gaps));
-      console.log('improvement_roadmap:', improvement_roadmap);
-      console.log('improvement_roadmap type:', typeof improvement_roadmap);
-      if (skill_gaps && Array.isArray(skill_gaps) && skill_gaps.length > 0) {
-        console.log('First skill gap:', skill_gaps[0]);
-        console.log('First skill gap type:', typeof skill_gaps[0]);
-      }
-    }
-  }, [analysis_data]);
-
-  // Check if this is AI-generated or fallback
-  const isAIGenerated = status === 'success' && !(analysis_data as any).fallback_used;
-
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Breadcrumbs */}
-      <Breadcrumbs sx={{ mb: 2 }}>
-        <Link
-          component="button"
-          variant="body2"
-          onClick={() => navigate('/resumes')}
-          sx={{ cursor: 'pointer' }}
-        >
-          Resumes
-        </Link>
-        <Link
-          component="button"
-          variant="body2"
-          onClick={() => navigate(`/resumes/${resumeId}`)}
-          sx={{ cursor: 'pointer' }}
-        >
-          Resume Details
-        </Link>
-        <Typography variant="body2" color="text.primary">
-          AI Analysis
-        </Typography>
+    <Box sx={{ pb: 8 }}>
+      {/* Header Breadcrumbs */}
+      <Breadcrumbs sx={{ mb: 3, opacity: 0.6 }}>
+        <Link component="button" variant="caption" onClick={() => navigate('/resumes')} sx={{ color: 'inherit', fontWeight: 800 }}>REPOSITORY</Link>
+        <Link component="button" variant="caption" onClick={() => navigate(`/resumes/${resumeId}`)} sx={{ color: 'inherit', fontWeight: 800 }}>IDENTITY VECTOR</Link>
+        <Typography variant="caption" sx={{ fontWeight: 900, color: 'primary.main' }}>AI SCAN</Typography>
       </Breadcrumbs>
 
-      {/* Header with AI Badge */}
-      <Paper 
-        elevation={3} 
+      {/* Main Analysis Header */}
+      <GlassCard 
         sx={{ 
-          p: 3, 
-          mb: 3, 
+          p: 6, 
+          mb: 4, 
           background: isAIGenerated 
-            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-            : undefined, 
-          color: isAIGenerated ? 'white' : undefined 
+            ? `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)` 
+            : undefined,
+          border: isAIGenerated ? `1px solid ${alpha(theme.palette.primary.main, 0.3)}` : undefined,
+          position: 'relative',
+          overflow: 'hidden'
         }}
       >
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+        <Box sx={{ position: 'absolute', top: -100, right: -100, width: 300, height: 300, bgcolor: 'primary.main', opacity: 0.1, filter: 'blur(100px)', borderRadius: '50%' }} />
+        
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ position: 'relative', zIndex: 1, mb: analysisData?.fallback_used ? 4 : 0 }}>
           <Box>
-            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1 }}>
-              <Psychology sx={{ fontSize: 32 }} />
-              <Typography variant="h4">
-                Resume Analysis
-              </Typography>
-              {isAIGenerated && (
-                <Chip 
-                  label="🤖 AI Generated" 
-                  color="success" 
-                  variant="filled"
-                  sx={{ 
-                    bgcolor: 'rgba(255,255,255,0.2)', 
-                    color: 'white',
-                    fontWeight: 'bold'
-                  }}
-                />
-              )}
-              {(analysis_data as any).fallback_used && (
-                <Chip 
-                  label="⚠️ Fallback Analysis" 
-                  color="warning" 
-                  variant="outlined"
-                />
-              )}
+            <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+               <Psychology sx={{ fontSize: 40, color: 'primary.main' }} />
+               <Typography variant="h3" sx={{ fontWeight: 1000, fontFamily: 'Orbitron' }}>INTELLIGENCE <GradientText>SCAN</GradientText></Typography>
+               {isAIGenerated && <Chip label="NEURAL-ACTIVE" size="small" sx={{ bgcolor: alpha(theme.palette.success.main, 0.1), color: 'success.main', fontWeight: 900, border: `1px solid ${alpha(theme.palette.success.main, 0.2)}` }} />}
+               {analysisData?.fallback_used && <Chip label="FALLBACK NLP" size="small" sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), color: 'warning.main', fontWeight: 900, border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}` }} />}
             </Stack>
-            <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-              <Typography variant="body2" sx={{ opacity: isAIGenerated ? 0.9 : 0.7 }}>
-                Analyzed: {format(new Date(analyzed_at), 'MMM dd, yyyy HH:mm')}
-              </Typography>
-              {from_cache && (
-                <Chip 
-                  label="From Cache" 
-                  size="small" 
-                  sx={{ 
-                    bgcolor: isAIGenerated ? 'rgba(255,255,255,0.15)' : undefined,
-                    color: isAIGenerated ? 'white' : undefined
-                  }}
-                />
-              )}
-              <Chip
-                label={`⚡ ${execution_time_ms}ms`}
-                size="small"
-                sx={{ 
-                  bgcolor: isAIGenerated ? 'rgba(255,255,255,0.15)' : undefined,
-                  color: isAIGenerated ? 'white' : undefined
-                }}
-              />
+            
+            <Stack direction="row" spacing={3} alignItems="center">
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Memory sx={{ fontSize: 16, color: 'text.secondary' }} />
+                  <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary' }}>SCAN COMPLETED: {format(new Date(currentAnalysis.analyzed_at), 'dd MMM yyyy • HH:mm')}</Typography>
+               </Box>
+               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Bolt sx={{ fontSize: 16, color: 'primary.main' }} />
+                  <Typography variant="caption" sx={{ fontWeight: 900, color: 'primary.main' }}>LATENCY: {currentAnalysis.execution_time_ms === 0 ? 'N/A' : `${currentAnalysis.execution_time_ms}MS`}</Typography>
+               </Box>
+               {currentAnalysis.from_cache && !analysisData?.fallback_used && <Chip label="CACHED" size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem', fontWeight: 900 }} />}
             </Stack>
           </Box>
-          <Button
-            variant="outlined"
-            startIcon={<ArrowBack />}
-            onClick={() => navigate(`/resumes/${resumeId}`)}
-            sx={{ 
-              color: isAIGenerated ? 'white' : undefined,
-              borderColor: isAIGenerated ? 'rgba(255,255,255,0.5)' : undefined,
-              '&:hover': {
-                borderColor: isAIGenerated ? 'white' : undefined,
-                bgcolor: isAIGenerated ? 'rgba(255,255,255,0.1)' : undefined
-              }
-            }}
-          >
-            Back
-          </Button>
+          <Stack direction="row" spacing={2}>
+            <GradientButton 
+              onClick={handleRescan} 
+              startIcon={<Bolt />} 
+              sx={{ 
+                bgcolor: analysisData?.fallback_used ? alpha(theme.palette.warning.main, 0.2) + ' !important' : undefined 
+              }}
+            >
+              RE-SCAN
+            </GradientButton>
+            <GradientButton variant="outlined" startIcon={<ArrowBack />} onClick={() => navigate(`/resumes/${resumeId}`)} sx={{ bgcolor: 'transparent !important', border: `1px solid ${alpha(theme.palette.divider, 0.1)} !important`, color: 'text.primary !important' }}>
+               DOSSIER
+            </GradientButton>
+          </Stack>
         </Stack>
-      </Paper>
 
-      {/* Analysis Summary Card */}
-      {(analysis_data as any).analysis_summary && (
-        <Paper elevation={2} sx={{ p: 3, mb: 3, bgcolor: 'primary.lighter' }}>
-          <Typography variant="h6" gutterBottom color="primary.main">
-            🧠 AI Analysis Summary
-          </Typography>
-          <Typography variant="body1">
-            {(analysis_data as any).analysis_summary}
-          </Typography>
-        </Paper>
-      )}
+        {analysisData?.fallback_used && (
+           <Box sx={{ mt: 4, p: 2, borderRadius: 3, bgcolor: alpha(theme.palette.warning.main, 0.05), border: `1px solid ${alpha(theme.palette.warning.main, 0.2)}`, color: 'warning.main', display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Warning sx={{ fontSize: 20 }} />
+              <Typography variant="caption" sx={{ fontWeight: 900, letterSpacing: '0.05em' }}>
+                INTELLIGENCE DOSSIER INCOMPLETE: NEURAL AGENT TIMEOUT. COGNITIVE VECTORS GENERATED VIA FALLBACK NLP. 
+              </Typography>
+           </Box>
+        )}
 
-      {/* Tabs */}
-      <Paper elevation={2}>
-        <Tabs value={tabValue} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
-          <Tab icon={<Code />} label="Skills Inventory" iconPosition="start" />
-          <Tab icon={<TimelineIcon />} label="Experience Timeline" iconPosition="start" />
-          <Tab icon={<Warning />} label="Skill Gaps" iconPosition="start" />
-          <Tab icon={<TrendingUp />} label="Improvement Roadmap" iconPosition="start" />
-          <Tab icon={<History />} label="History" iconPosition="start" />
+        {analysisData?.analysis_summary && (
+          <Box sx={{ mt: 6, p: 3, borderRadius: 4, bgcolor: alpha(theme.palette.background.paper, 0.4), border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` }}>
+             <Typography variant="body1" sx={{ fontWeight: 500, lineHeight: 1.8, fontStyle: 'italic' }}>
+                "{analysisData.analysis_summary}"
+             </Typography>
+          </Box>
+        )}
+      </GlassCard>
+
+      {/* Tabs Control */}
+      <GlassCard sx={{ p: 0, mb: 4, overflow: 'hidden' }}>
+        <Tabs 
+          value={tabValue} 
+          onChange={(_, v) => setTabValue(v)} 
+          variant="fullWidth"
+          sx={{
+            '& .MuiTabs-indicator': { height: 4 },
+            '& .MuiTab-root': { py: 3, fontWeight: 900, fontFamily: 'Orbitron', letterSpacing: '0.1em', fontSize: '0.8rem' }
+          }}
+        >
+          <Tab icon={<AutoAwesome sx={{ mb: 1 }} />} label="SKILLS" />
+          <Tab icon={<TimelineIcon sx={{ mb: 1 }} />} label="TIMELINE" />
+          <Tab icon={<Warning sx={{ mb: 1 }} />} label="GAPS" />
+          <Tab icon={<TrendingUp sx={{ mb: 1 }} />} label="ROADMAP" />
+          <Tab icon={<History sx={{ mb: 1 }} />} label="ARCHIVE" />
         </Tabs>
+      </GlassCard>
 
-        {/* Skills Inventory Tab */}
-        <TabPanel value={tabValue} index={0}>
-          <Box sx={{ px: 3 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
-              {/* Technical Skills */}
-              {skill_inventory.technical_skills && skill_inventory.technical_skills.length > 0 && (
-                <Card sx={{ border: '2px solid', borderColor: 'primary.light' }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                      <Code color="primary" />
-                      <Typography variant="h6">Technical Skills</Typography>
-                      <Chip label={skill_inventory.technical_skills.length} size="small" color="primary" />
-                    </Stack>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {skill_inventory.technical_skills.map((skill: string, idx: number) => (
-                        <Chip key={idx} label={String(skill)} color="primary" variant="outlined" />
+      {/* Content Panes */}
+      <TabPanel value={tabValue} index={0}>
+        <Grid container spacing={4}>
+           {[
+             { title: 'TECHNICAL STACK', data: skill_inventory?.technical_skills, icon: <Code />, color: 'primary' },
+             { title: 'SOFT CAPABILITIES', data: skill_inventory?.soft_skills, icon: <Psychology />, color: 'secondary' },
+             { title: 'ARSENAL (TOOLS)', data: skill_inventory?.tools, icon: <Build />, color: 'warning' },
+             { title: 'DIALECTS', data: skill_inventory?.languages, icon: <LanguageIcon />, color: 'info' },
+           ].map((sector, i) => (
+             <Grid key={i} size={{ xs: 12, md: 6 }}>
+                <GlassCard sx={{ p: 4, height: '100%', borderLeft: `6px solid ${(theme.palette as any)[sector.color].main}` }}>
+                   <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 3 }}>
+                      {sector.icon}
+                      <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', fontSize: '0.9rem' }}>{sector.title}</Typography>
+                      {sector.data && <Chip label={sector.data.length} size="small" sx={{ fontWeight: 900, bgcolor: alpha((theme.palette as any)[sector.color].main, 0.1), color: (theme.palette as any)[sector.color].main }} />}
+                   </Stack>
+                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+                      {sector.data?.map((s: string, idx: number) => (
+                        <Chip key={idx} label={s.toUpperCase()} variant="outlined" sx={{ fontWeight: 800, px: 1, borderRadius: 1.5, borderColor: alpha((theme.palette as any)[sector.color].main, 0.2), bgcolor: alpha((theme.palette as any)[sector.color].main, 0.05) }} />
                       ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-              )}
+                      {(!sector.data || sector.data.length === 0) && <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.disabled' }}>NO DATA DETECTED</Typography>}
+                   </Box>
+                </GlassCard>
+             </Grid>
+           ))}
+        </Grid>
+      </TabPanel>
 
-              {/* Soft Skills */}
-              {skill_inventory.soft_skills && skill_inventory.soft_skills.length > 0 && (
-                <Card sx={{ border: '2px solid', borderColor: 'secondary.light' }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                      <Psychology color="secondary" />
-                      <Typography variant="h6">Soft Skills</Typography>
-                      <Chip label={skill_inventory.soft_skills.length} size="small" color="secondary" />
-                    </Stack>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {skill_inventory.soft_skills.map((skill: string, idx: number) => (
-                        <Chip key={idx} label={String(skill)} color="secondary" variant="outlined" />
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Tools */}
-              {skill_inventory.tools && skill_inventory.tools.length > 0 && (
-                <Card sx={{ border: '2px solid', borderColor: 'success.light' }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                      <Build color="success" />
-                      <Typography variant="h6">Tools & Technologies</Typography>
-                      <Chip label={skill_inventory.tools.length} size="small" color="success" />
-                    </Stack>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {skill_inventory.tools.map((tool: string, idx: number) => (
-                        <Chip key={idx} label={String(tool)} color="success" variant="outlined" />
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Languages */}
-              {skill_inventory.languages && skill_inventory.languages.length > 0 && (
-                <Card sx={{ border: '2px solid', borderColor: 'info.light' }}>
-                  <CardContent>
-                    <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
-                      <LanguageIcon color="info" />
-                      <Typography variant="h6">Languages</Typography>
-                      <Chip label={skill_inventory.languages.length} size="small" color="info" />
-                    </Stack>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {skill_inventory.languages.map((lang: string, idx: number) => (
-                        <Chip key={idx} label={String(lang)} color="info" variant="outlined" />
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-              )}
-            </Box>
-
-            {/* Empty State */}
-            {(!skill_inventory.technical_skills || skill_inventory.technical_skills.length === 0) &&
-             (!skill_inventory.soft_skills || skill_inventory.soft_skills.length === 0) &&
-             (!skill_inventory.tools || skill_inventory.tools.length === 0) &&
-             (!skill_inventory.languages || skill_inventory.languages.length === 0) && (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                No skills were identified in this analysis. This may indicate the resume needs more detailed skill descriptions.
-              </Alert>
-            )}
-          </Box>
-        </TabPanel>
-
-        {/* Experience Timeline Tab */}
-        <TabPanel value={tabValue} index={1}>
-          <Box sx={{ px: 3 }}>
-            <Card>
-              <CardContent>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 3, mb: 3 }}>
-                  <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'primary.lighter', borderRadius: 2, border: '2px solid', borderColor: 'primary.light' }}>
-                    <Typography variant="h3" color="primary.main" fontWeight="bold">
-                      {Math.round(experience_timeline.total_years * 10) / 10}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight="medium">
-                      Years Experience
-                    </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'secondary.lighter', borderRadius: 2, border: '2px solid', borderColor: 'secondary.light' }}>
-                    <Typography variant="h5" color="secondary.main" fontWeight="bold">
-                      {experience_timeline.seniority_level}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight="medium">
-                      Seniority Level
-                    </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'success.lighter', borderRadius: 2, border: '2px solid', borderColor: 'success.light' }}>
-                    <Typography variant="h4" color="success.main" fontWeight="bold">
-                      {experience_timeline.companies?.length || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight="medium">
-                      Companies
-                    </Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'center', p: 3, bgcolor: 'info.lighter', borderRadius: 2, border: '2px solid', borderColor: 'info.light' }}>
-                    <Typography variant="h4" color="info.main" fontWeight="bold">
-                      {experience_timeline.roles?.length || 0}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" fontWeight="medium">
-                      Roles
-                    </Typography>
-                  </Box>
-                </Box>
-
-                {experience_timeline.analysis && (
-                  <>
-                    <Divider sx={{ my: 3 }} />
-                    <Alert severity="info" icon={<Psychology />} sx={{ bgcolor: 'primary.lighter' }}>
-                      <Typography variant="body1">
-                        <strong>🧠 AI Insight:</strong> {experience_timeline.analysis}
-                      </Typography>
-                    </Alert>
-                  </>
-                )}
-
-                {experience_timeline.companies && experience_timeline.companies.length > 0 && (
-                  <>
-                    <Divider sx={{ my: 3 }} />
-                    <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                      🏢 Companies Worked At:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {experience_timeline.companies.map((company: string, idx: number) => (
-                        <Chip key={idx} label={String(company)} variant="outlined" size="medium" />
-                      ))}
-                    </Box>
-                  </>
-                )}
-
-                {experience_timeline.roles && experience_timeline.roles.length > 0 && (
-                  <>
-                    <Divider sx={{ my: 3 }} />
-                    <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                      👔 Roles Held:
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {experience_timeline.roles.map((role: string, idx: number) => (
-                        <Chip key={idx} label={String(role)} color="primary" variant="outlined" size="medium" />
-                      ))}
-                    </Box>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Box>
-        </TabPanel>
-
-        {/* Skill Gaps Tab */}
-        <TabPanel value={tabValue} index={2}>
-          <Box sx={{ px: 3 }}>
-            <ErrorBoundary>
-              {/* Handle both old format (SkillGaps object) and new AI format (array of gaps) */}
-              {Array.isArray(skill_gaps) ? (
-                // New AI format: array of {gap, recommendations} objects
-                <Box>
-                  <Typography variant="h6" gutterBottom>
-                    <Warning sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Skill Gaps Analysis
+      <TabPanel value={tabValue} index={1}>
+         <Grid container spacing={4}>
+            <Grid size={{ xs: 12, md: 3 }}>
+               <GlassCard sx={{ p: 4, textAlign: 'center', height: '100%' }}>
+                  <Typography variant="h1" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', mb: 1, color: 'primary.main' }}>
+                     {Math.round((experience_timeline?.total_years || 0) * 10) / 10}
                   </Typography>
-                  {skill_gaps.length === 0 ? (
-                    <Alert severity="success">
-                      Great! No skill gaps identified. Your skills are well-rounded for your target role.
-                    </Alert>
-                  ) : (
-                    <Box sx={{ display: 'grid', gap: 2 }}>
-                      {skill_gaps.map((gapItem: any, idx: number) => (
-                        <Card key={idx} sx={{ border: '2px solid', borderColor: 'warning.light' }}>
-                          <CardContent>
-                            <Typography variant="h6" color="warning.main" gutterBottom>
-                              {typeof gapItem === 'object' && gapItem.gap 
-                                ? String(gapItem.gap) 
-                                : `Skill Gap ${idx + 1}`}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" gutterBottom>
-                              Recommendations:
-                            </Typography>
-                            {typeof gapItem === 'object' && gapItem.recommendations ? (
-                              Array.isArray(gapItem.recommendations) ? (
-                                <List dense>
-                                  {gapItem.recommendations.map((rec: any, recIdx: number) => (
-                                    <ListItem key={recIdx} sx={{ pl: 0 }}>
-                                      <ListItemText 
-                                        primary={String(rec)}
-                                        sx={{ '& .MuiListItemText-primary': { fontSize: '0.875rem' } }}
-                                      />
-                                    </ListItem>
-                                  ))}
-                                </List>
-                              ) : (
-                                <Typography variant="body1">
-                                  {String(gapItem.recommendations)}
-                                </Typography>
-                              )
-                            ) : (
-                              <Typography variant="body1" color="text.secondary">
-                                No specific recommendations available
-                              </Typography>
-                            )}
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-              ) : (
-                // Old format: SkillGaps object
-                <SkillGapsSection skillGaps={skill_gaps} />
-              )}
-            </ErrorBoundary>
-          </Box>
-        </TabPanel>
-
-        {/* Improvement Roadmap Tab */}
-        <TabPanel value={tabValue} index={3}>
-          <Box sx={{ px: 3 }}>
-            <ErrorBoundary>
-              {/* Handle both old format (ImprovementRoadmap object) and new AI format */}
-              {improvement_roadmap && typeof improvement_roadmap === 'object' && 'milestones' in improvement_roadmap ? (
-                // Old format: ImprovementRoadmap object with milestones array
-                <ImprovementRoadmap roadmap={improvement_roadmap} />
-              ) : (
-                // New AI format: simple object with milestones array or other structure
-                <Box>
-                  <Typography variant="h6" gutterBottom>
-                    <TrendingUp sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Improvement Roadmap
+                  <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary', letterSpacing: '0.2em' }}>CHRONO-YEARS</Typography>
+               </GlassCard>
+            </Grid>
+            <Grid size={{ xs: 12, md: 9 }}>
+               <GlassCard sx={{ p: 4, height: '100%', position: 'relative', overflow: 'hidden' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                     <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'Orbitron' }}>EXPERIENCE LATTICE</Typography>
+                     <Chip label={experience_timeline?.seniority_level?.toUpperCase() || 'UNKNOWN'} color="primary" sx={{ fontWeight: 900 }} />
+                  </Box>
+                  <Divider sx={{ mb: 3, opacity: 0.1 }} />
+                  <Typography variant="body1" sx={{ lineHeight: 1.8, color: 'text.secondary', mb: 4, fontWeight: 500 }}>
+                     {experience_timeline?.analysis || 'NO TEMPORAL ANALYSIS AVAILABLE.'}
                   </Typography>
-                  
-                  {improvement_roadmap && typeof improvement_roadmap === 'object' ? (
-                    <Box>
-                      {/* Handle short_term array */}
-                      {(improvement_roadmap as any).short_term && Array.isArray((improvement_roadmap as any).short_term) && (
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                            🎯 Short-term Goals (1-3 months):
-                          </Typography>
-                          <Box sx={{ display: 'grid', gap: 1 }}>
-                            {(improvement_roadmap as any).short_term.map((goal: any, idx: number) => (
-                              <Card key={idx} sx={{ border: '1px solid', borderColor: 'primary.light', bgcolor: 'primary.lighter' }}>
-                                <CardContent sx={{ py: 2 }}>
-                                  <Typography variant="body1">
-                                    {String(goal)}
-                                  </Typography>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
+                  <Stack direction="row" flexWrap="wrap" spacing={1}>
+                     {experience_timeline?.companies?.map((c: string, idx: number) => (
+                       <Chip key={idx} label={c.toUpperCase()} variant="outlined" size="small" sx={{ fontWeight: 800 }} />
+                     ))}
+                  </Stack>
+               </GlassCard>
+            </Grid>
+         </Grid>
+      </TabPanel>
 
-                      {/* Handle long_term array */}
-                      {(improvement_roadmap as any).long_term && Array.isArray((improvement_roadmap as any).long_term) && (
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                            🚀 Long-term Goals (6-12 months):
-                          </Typography>
-                          <Box sx={{ display: 'grid', gap: 1 }}>
-                            {(improvement_roadmap as any).long_term.map((goal: any, idx: number) => (
-                              <Card key={idx} sx={{ border: '1px solid', borderColor: 'secondary.light', bgcolor: 'secondary.lighter' }}>
-                                <CardContent sx={{ py: 2 }}>
-                                  <Typography variant="body1">
-                                    {String(goal)}
-                                  </Typography>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
-                      
-                      {/* Handle milestones array (legacy format) */}
-                      {(improvement_roadmap as any).milestones && Array.isArray((improvement_roadmap as any).milestones) && (
-                        <Box sx={{ mb: 3 }}>
-                          <Typography variant="subtitle1" gutterBottom fontWeight="bold">
-                            🎯 Learning Milestones:
-                          </Typography>
-                          <Box sx={{ display: 'grid', gap: 2 }}>
-                            {(improvement_roadmap as any).milestones.map((milestone: any, idx: number) => (
-                              <Card key={idx} sx={{ border: '2px solid', borderColor: 'primary.light' }}>
-                                <CardContent>
-                                  <Typography variant="h6" color="primary.main" gutterBottom>
-                                    {typeof milestone === 'object' && milestone.skill 
-                                      ? String(milestone.skill)
-                                      : `Milestone ${idx + 1}`}
-                                  </Typography>
-                                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                                    Timeline:
-                                  </Typography>
-                                  <Typography variant="body1">
-                                    {typeof milestone === 'object' && milestone.duration 
-                                      ? String(milestone.duration)
-                                      : 'Duration not specified'}
-                                  </Typography>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
-                      
-                      {/* Handle timeline_weeks */}
-                      {(improvement_roadmap as any).timeline_weeks && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                          <Typography variant="body1">
-                            <strong>📅 Timeline:</strong> {String((improvement_roadmap as any).timeline_weeks)} weeks total
-                          </Typography>
-                        </Alert>
-                      )}
-                      
-                      {/* Handle note */}
-                      {(improvement_roadmap as any).note && (
-                        <Alert severity="info">
-                          <Typography variant="body1">
-                            {String((improvement_roadmap as any).note)}
-                          </Typography>
-                        </Alert>
-                      )}
-
-                      {/* Show message if no recognized structure */}
-                      {!(improvement_roadmap as any).short_term && 
-                       !(improvement_roadmap as any).long_term && 
-                       !(improvement_roadmap as any).milestones && 
-                       !(improvement_roadmap as any).timeline_weeks && 
-                       !(improvement_roadmap as any).note && (
-                        <Alert severity="info">
-                          <Typography variant="body1">
-                            Improvement roadmap data is available but in an unrecognized format.
-                          </Typography>
-                          <Typography variant="body2" sx={{ mt: 1, fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                            Debug: {JSON.stringify(improvement_roadmap, null, 2)}
-                          </Typography>
-                        </Alert>
-                      )}
-                    </Box>
-                  ) : (
-                    <Alert severity="info">
-                      No improvement roadmap available. Your skills already match the target role well!
-                    </Alert>
-                  )}
-                </Box>
-              )}
-            </ErrorBoundary>
-          </Box>
-        </TabPanel>
-
-        {/* History Tab */}
-        <TabPanel value={tabValue} index={4}>
-          <Box sx={{ px: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              📊 Analysis History
-            </Typography>
-            {analysisHistory.length === 0 ? (
-              <Alert severity="info">No previous analyses found.</Alert>
-            ) : (
-              <List>
-                {analysisHistory.map((analysis: any, idx: number) => (
-                  <ListItem
-                    key={idx}
-                    sx={{
-                      border: 1,
-                      borderColor: 'divider',
-                      borderRadius: 2,
-                      mb: 1,
-                      bgcolor: analysis.status === 'success' && !analysis.analysis_data.fallback_used ? 'primary.lighter' : 'background.paper'
-                    }}
-                  >
-                    <ListItemText
-                      primary={
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="body1" fontWeight="medium" component="div">
-                            {format(new Date(analysis.analyzed_at), 'MMM dd, yyyy HH:mm')}
-                          </Typography>
-                          {analysis.from_cache && (
-                            <Chip label="Cached" size="small" color="info" variant="outlined" />
-                          )}
-                          {analysis.status === 'success' && !analysis.analysis_data.fallback_used && (
-                            <Chip label="🤖 AI Generated" size="small" color="success" variant="filled" />
-                          )}
-                          {analysis.analysis_data.fallback_used && (
-                            <Chip label="⚠️ Fallback" size="small" color="warning" variant="outlined" />
-                          )}
+      <TabPanel value={tabValue} index={2}>
+         <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+            <Stack spacing={4}>
+               {currentAnalysis?.analysis_data?.skill_gaps && Array.isArray((currentAnalysis.analysis_data.skill_gaps as any).items || currentAnalysis.analysis_data.skill_gaps) && 
+                 ((currentAnalysis.analysis_data.skill_gaps as any).items || (currentAnalysis.analysis_data.skill_gaps as any)).map((gap: any, i: number) => (
+                  <MotionBox key={i} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.1 }}>
+                     <GlassCard sx={{ p: 4, borderLeft: `6px solid ${theme.palette.error.main}` }}>
+                        <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', mb: 2, color: 'error.main' }}>GAP-{i+1}: {(gap.gap || gap).toUpperCase()}</Typography>
+                        <Stack spacing={1.5}>
+                           {gap.recommendations?.map((rec: string, idx: number) => (
+                             <Box key={idx} sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                                <ArrowBack sx={{ transform: 'rotate(180deg)', fontSize: 16, mt: 0.5, color: 'primary.main' }} />
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>{rec}</Typography>
+                             </Box>
+                           ))}
                         </Stack>
-                      }
-                      secondary={
-                        <Typography variant="body2" color="text.secondary" component="div">
-                          Target Role: {analysis.analysis_data.skill_gaps.target_role} •
-                          Match: {analysis.analysis_data.skill_gaps.match_percentage}% •
-                          Execution: {analysis.execution_time_ms}ms
-                        </Typography>
-                      }
-                    />
-                  </ListItem>
+                     </GlassCard>
+                  </MotionBox>
                 ))}
-              </List>
-            )}
-          </Box>
-        </TabPanel>
-      </Paper>
-    </Container>
+               {(!currentAnalysis?.analysis_data?.skill_gaps || (Array.isArray(currentAnalysis.analysis_data.skill_gaps) && (currentAnalysis.analysis_data.skill_gaps as any).length === 0)) && (
+                 <GlassCard sx={{ p: 6, textAlign: 'center' }}>
+                    <CheckCircleIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
+                    <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'Orbitron' }}>ZERO GAPS DETECTED</Typography>
+                    <Typography variant="body1" color="text.secondary">THE IDENTITY VECTOR MATCHES THE TARGET ROLE SYMMETRY.</Typography>
+                 </GlassCard>
+               )}
+            </Stack>
+         </Box>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={3}>
+         <Box sx={{ maxWidth: 900, mx: 'auto' }}>
+            <GlassCard sx={{ p: 6 }}>
+               <Typography variant="h5" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', mb: 6, textAlign: 'center' }}>NEURAL <GradientText>ROADMAP</GradientText></Typography>
+               
+               <Grid container spacing={4}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                     <Typography variant="caption" sx={{ fontWeight: 900, color: 'primary.main', letterSpacing: '0.2em', display: 'block', mb: 3 }}>TACTICAL OBJECTIVES (SHORT-TERM)</Typography>
+                     <Stack spacing={2}>
+                        {((currentAnalysis?.analysis_data?.improvement_roadmap as any)?.short_term || []).map((goal: any, i: number) => {
+                          const goalText = typeof goal === 'string' ? goal : goal?.skill || goal?.milestone || JSON.stringify(goal);
+                          return (
+                            <Box key={i} sx={{ p: 2.5, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.05), border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}` }}>
+                               <Typography variant="body2" sx={{ fontWeight: 700 }}>{goalText.toUpperCase()}</Typography>
+                            </Box>
+                          );
+                        })}
+                     </Stack>
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                     <Typography variant="caption" sx={{ fontWeight: 900, color: theme.palette.secondary.main, letterSpacing: '0.2em', display: 'block', mb: 3 }}>STRATEGIC MILESTONES (LONG-TERM)</Typography>
+                     <Stack spacing={2}>
+                        {((currentAnalysis?.analysis_data?.improvement_roadmap as any)?.long_term || []).map((goal: any, i: number) => {
+                          const goalText = typeof goal === 'string' ? goal : goal?.skill || goal?.milestone || JSON.stringify(goal);
+                          return (
+                            <Box key={i} sx={{ p: 2.5, borderRadius: 3, bgcolor: alpha(theme.palette.secondary.main, 0.05), border: `1px solid ${alpha(theme.palette.secondary.main, 0.1)}` }}>
+                               <Typography variant="body2" sx={{ fontWeight: 700 }}>{goalText.toUpperCase()}</Typography>
+                            </Box>
+                          );
+                        })}
+                     </Stack>
+                  </Grid>
+               </Grid>
+            </GlassCard>
+         </Box>
+      </TabPanel>
+
+      <TabPanel value={tabValue} index={4}>
+         <Stack spacing={2} sx={{ maxWidth: 800, mx: 'auto' }}>
+            {analysisHistory.map((h: any, i: number) => (
+              <GlassCard key={i} sx={{ p: 3, '&:hover': { bgcolor: alpha(theme.palette.background.paper, 0.6) } }}>
+                 <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Box>
+                       <Typography variant="body2" sx={{ fontWeight: 900, fontFamily: 'Orbitron' }}>{format(new Date(h.analyzed_at), 'dd MMM yyyy • HH:mm').toUpperCase()}</Typography>
+                       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>MATCH: {h.analysis_data?.skill_gaps?.match_percentage || 'N/A'}%</Typography>
+                    </Box>
+                    <Chip label="ARCHIVED" size="small" variant="outlined" sx={{ fontWeight: 900, fontSize: '0.65rem' }} />
+                 </Stack>
+              </GlassCard>
+            ))}
+         </Stack>
+      </TabPanel>
+    </Box>
   );
 }
 

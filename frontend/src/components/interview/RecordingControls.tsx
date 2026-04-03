@@ -1,16 +1,11 @@
 /**
- * Recording Controls Component
- * 
- * UI component for audio/video recording during interviews.
- * Provides recording controls, timer, and visual feedback.
- * 
- * Requirements: Recording System Implementation
+ * Premium Recording Controls Component
+ * High-end AI "Bio-Metric" recording interface
  */
 
 import React, { useState, useCallback } from 'react';
 import {
   Box,
-  Button,
   Typography,
   Alert,
   Chip,
@@ -18,9 +13,10 @@ import {
   IconButton,
   Tooltip,
   LinearProgress,
-  Paper,
   Fade,
-  CircularProgress
+  CircularProgress,
+  alpha,
+  useTheme
 } from '@mui/material';
 import {
   Mic,
@@ -32,19 +28,41 @@ import {
   Stop,
   Warning,
   CheckCircle,
-  Error as ErrorIcon
 } from '@mui/icons-material';
 import { useMediaRecorder } from '../../hooks/useMediaRecorder';
+import { VideoPreview } from './VideoPreview';
+import logger from '../../utils/logger';
 import type { RecordingOptions, RecordingResult } from '../../types/recording';
+import { GlassCard, GradientButton } from '../common/PremiumComponents';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion.create(Box);
 
 export interface RecordingControlsProps {
   onRecordingComplete: (result: RecordingResult) => void;
   onRecordingStart?: () => void;
   onRecordingStop?: () => void;
   disabled?: boolean;
-  maxDuration?: number; // Maximum recording duration in seconds
+  maxDuration?: number; 
   includeVideo?: boolean;
   showVideoToggle?: boolean;
+  // Optional external recorder state to synchronize with parent
+  recorder?: {
+    isRecording: boolean;
+    isPaused: boolean;
+    recordingTime: number;
+    hasPermission: boolean;
+    permissionError: string | null;
+    recordingError: string | null;
+    isSupported: boolean;
+    formattedTime: string;
+    stream: MediaStream | null;
+    requestPermissions: (options?: RecordingOptions) => Promise<MediaStream>;
+    startRecording: (options?: RecordingOptions) => Promise<void>;
+    pauseRecording: () => void;
+    resumeRecording: () => void;
+    stopRecording: () => Promise<RecordingResult>;
+  };
 }
 
 export const RecordingControls: React.FC<RecordingControlsProps> = ({
@@ -52,12 +70,18 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   onRecordingStart,
   onRecordingStop,
   disabled = false,
-  maxDuration = 600, // 10 minutes default
+  maxDuration = 600,
   includeVideo = false,
-  showVideoToggle = true
+  showVideoToggle = true,
+  recorder: externalRecorder
 }) => {
+  const theme = useTheme();
   const [videoEnabled, setVideoEnabled] = useState(includeVideo);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [componentError, setComponentError] = useState<string | null>(null);
+
+  const internalRecorder = useMediaRecorder();
+  const recorder = externalRecorder || internalRecorder;
 
   const {
     isRecording,
@@ -68,17 +92,30 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
     recordingError,
     isSupported,
     formattedTime,
+    stream,
     requestPermissions,
     startRecording,
     pauseRecording,
     resumeRecording,
     stopRecording,
-    cleanup
-  } = useMediaRecorder();
+  } = recorder;
 
-  // Handle start recording
   const handleStartRecording = useCallback(async () => {
     try {
+      setComponentError(null);
+      if (!isSupported) {
+        setComponentError('RECODRING ARCHITECTURE NOT SUPPORTED.');
+        return;
+      }
+
+      if (!hasPermission) {
+        try {
+          await requestPermissions({ includeVideo: videoEnabled });
+        } catch (permError) {
+          return;
+        }
+      }
+
       const options: RecordingOptions = {
         includeVideo: videoEnabled,
         audioBitsPerSecond: 128000,
@@ -87,12 +124,11 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
 
       await startRecording(options);
       onRecordingStart?.();
-    } catch (error) {
-      console.error('Failed to start recording:', error);
+    } catch (error: any) {
+      logger.error('Recording start fail', error);
     }
-  }, [videoEnabled, startRecording, onRecordingStart]);
+  }, [videoEnabled, startRecording, onRecordingStart, isSupported, hasPermission, requestPermissions]);
 
-  // Handle stop recording
   const handleStopRecording = useCallback(async () => {
     try {
       setIsProcessing(true);
@@ -100,227 +136,168 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
       onRecordingComplete(result);
       onRecordingStop?.();
     } catch (error) {
-      console.error('Failed to stop recording:', error);
+      console.error('Stop fail:', error);
     } finally {
       setIsProcessing(false);
     }
   }, [stopRecording, onRecordingComplete, onRecordingStop]);
 
-  // Handle pause/resume
   const handlePauseResume = useCallback(() => {
-    if (isPaused) {
-      resumeRecording();
-    } else {
-      pauseRecording();
-    }
+    if (isPaused) resumeRecording();
+    else pauseRecording();
   }, [isPaused, pauseRecording, resumeRecording]);
 
-  // Request permissions
-  const handleRequestPermissions = useCallback(async () => {
-    try {
-      await requestPermissions({ includeVideo: videoEnabled });
-    } catch (error) {
-      console.error('Permission request failed:', error);
-    }
-  }, [requestPermissions, videoEnabled]);
-
-  // Calculate progress percentage
   const progressPercentage = maxDuration > 0 ? (recordingTime / maxDuration) * 100 : 0;
-
-  // Determine progress color based on time remaining
   const getProgressColor = () => {
-    if (progressPercentage > 90) return 'error';
-    if (progressPercentage > 75) return 'warning';
-    return 'primary';
+    if (progressPercentage > 90) return theme.palette.error.main;
+    if (progressPercentage > 75) return theme.palette.warning.main;
+    return theme.palette.primary.main;
   };
 
-  // Check if recording should auto-stop
   React.useEffect(() => {
-    if (isRecording && recordingTime >= maxDuration) {
-      handleStopRecording();
-    }
+    if (isRecording && recordingTime >= maxDuration) handleStopRecording();
   }, [isRecording, recordingTime, maxDuration, handleStopRecording]);
 
-  // Show not supported message
   if (!isSupported) {
     return (
-      <Paper elevation={1} sx={{ p: 2, bgcolor: 'error.light', color: 'error.contrastText' }}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <ErrorIcon />
-          <Typography variant="body2">
-            Recording not supported in this browser. Please use Chrome, Firefox, or Safari.
-          </Typography>
-        </Stack>
-      </Paper>
+      <GlassCard sx={{ p: 3, bgcolor: alpha(theme.palette.error.main, 0.1), border: `1px solid ${theme.palette.error.main}` }}>
+        <Typography variant="body2" sx={{ fontWeight: 900, color: 'error.main' }}>SIGNAL ARCHITECTURE OFFLINE: BROWSER INCOMPATIBLE.</Typography>
+      </GlassCard>
     );
   }
 
   return (
-    <Paper elevation={2} sx={{ p: 3, bgcolor: 'background.paper' }}>
-      <Stack spacing={2}>
-        {/* Header */}
+    <Box>
+      <Stack spacing={3}>
+        {/* Header HUD */}
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" color="text.primary">
-            Record Your Answer
+          <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'Orbitron', letterSpacing: '0.1em' }}>
+             {isRecording ? 'LIVE SIGNAL' : 'RECEPTION READY'}
           </Typography>
           
           {showVideoToggle && (
-            <Tooltip title={videoEnabled ? "Disable video recording" : "Enable video recording"}>
+            <Tooltip title="TOGGLE VISUAL UPLINK">
               <IconButton
                 onClick={() => setVideoEnabled(!videoEnabled)}
                 disabled={disabled || isRecording}
-                color={videoEnabled ? "primary" : "default"}
+                sx={{ 
+                   bgcolor: videoEnabled ? alpha(theme.palette.primary.main, 0.1) : alpha(theme.palette.divider, 0.05),
+                   color: videoEnabled ? 'primary.main' : 'text.disabled',
+                   border: `1px solid ${videoEnabled ? alpha(theme.palette.primary.main, 0.3) : 'transparent'}`
+                }}
               >
-                {videoEnabled ? <Videocam /> : <VideocamOff />}
+                {videoEnabled ? <Videocam sx={{ fontSize: 20 }} /> : <VideocamOff sx={{ fontSize: 20 }} />}
               </IconButton>
             </Tooltip>
           )}
         </Box>
 
-        {/* Permission Error */}
-        {permissionError && (
-          <Alert 
-            severity="warning" 
-            action={
-              <Button size="small" onClick={handleRequestPermissions}>
-                Grant Permission
-              </Button>
-            }
-          >
-            {permissionError}
-          </Alert>
+        {/* Permission & Error Alerts */}
+        {(componentError || permissionError || recordingError) && (
+           <Fade in>
+             <Alert 
+               severity={permissionError ? "warning" : "error"} 
+               sx={{ 
+                  borderRadius: 3, 
+                  fontWeight: 700, 
+                  bgcolor: alpha(theme.palette.error.main, 0.05),
+                  border: `1px solid ${alpha(theme.palette.error.main, 0.2)}` 
+               }}
+             >
+               {(componentError || permissionError || recordingError)?.toUpperCase()}
+             </Alert>
+           </Fade>
         )}
 
-        {/* Recording Error */}
-        {recordingError && (
-          <Alert severity="error">
-            {recordingError}
-          </Alert>
-        )}
-
-        {/* Recording Status */}
+        {/* Recording Visuals */}
         {(isRecording || hasPermission) && (
           <Box>
-            <Stack direction="row" spacing={2} alignItems="center" mb={1}>
-              <Chip
-                icon={isRecording ? <Mic /> : <MicOff />}
-                label={
-                  isRecording 
-                    ? (isPaused ? "Paused" : "Recording") 
-                    : "Ready"
-                }
-                color={
-                  isRecording 
-                    ? (isPaused ? "warning" : "error") 
-                    : "success"
-                }
-                variant={isRecording ? "filled" : "outlined"}
-              />
+            <Stack direction="row" spacing={2} alignItems="center" mb={2}>
+              <MotionBox 
+                animate={isRecording && !isPaused ? { opacity: [1, 0.5, 1], scale: [1, 1.1, 1] } : {}}
+                transition={{ duration: 1.5, repeat: Infinity }}
+              >
+                 <Chip
+                    icon={isRecording ? <Mic sx={{ fontSize: 16 }} /> : <MicOff sx={{ fontSize: 16 }} />}
+                    label={isRecording ? (isPaused ? "STANDBY" : "ACTIVE") : "READY"}
+                    sx={{ 
+                      fontWeight: 1000, 
+                      fontFamily: 'Orbitron', 
+                      fontSize: '0.65rem',
+                      bgcolor: isRecording ? (isPaused ? alpha(theme.palette.warning.main, 0.2) : alpha(theme.palette.error.main, 0.2)) : alpha(theme.palette.success.main, 0.2),
+                      color: isRecording ? (isPaused ? 'warning.main' : 'error.main') : 'success.main',
+                      border: `1px solid ${isRecording ? (isPaused ? theme.palette.warning.main : theme.palette.error.main) : theme.palette.success.main}`,
+                      '& .MuiChip-icon': { color: 'inherit' }
+                    }}
+                 />
+              </MotionBox>
               
-              {videoEnabled && (
-                <Chip
-                  icon={isRecording ? <Videocam /> : <VideocamOff />}
-                  label="Video"
-                  color={isRecording ? "primary" : "default"}
-                  variant="outlined"
-                  size="small"
-                />
-              )}
-              
-              <Typography variant="h6" color="text.primary" fontFamily="monospace">
+              <Typography variant="h4" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', color: isRecording && !isPaused ? 'error.main' : 'text.primary' }}>
                 {formattedTime}
               </Typography>
             </Stack>
 
-            {/* Progress Bar */}
             {isRecording && maxDuration > 0 && (
               <Box>
                 <LinearProgress
                   variant="determinate"
                   value={Math.min(progressPercentage, 100)}
-                  color={getProgressColor()}
-                  sx={{ height: 6, borderRadius: 3 }}
+                  sx={{ 
+                    height: 8, 
+                    borderRadius: 4, 
+                    bgcolor: alpha(theme.palette.divider, 0.1),
+                    '& .MuiLinearProgress-bar': {
+                       bgcolor: getProgressColor(),
+                       boxShadow: `0 0 10px ${alpha(getProgressColor(), 0.4)}`
+                    }
+                  }}
                 />
-                <Typography variant="caption" color="text.secondary" mt={0.5}>
-                  {Math.max(0, maxDuration - recordingTime)}s remaining
+                <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary', display: 'block', mt: 1, textAlign: 'right' }}>
+                  {Math.max(0, maxDuration - recordingTime)}S REMAINING
                 </Typography>
               </Box>
             )}
           </Box>
         )}
 
-        {/* Control Buttons */}
-        <Stack direction="row" spacing={2} justifyContent="center">
+        {/* Interaction Hub */}
+        <Stack direction="row" spacing={3} justifyContent="center">
           {!isRecording ? (
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              startIcon={isProcessing ? <CircularProgress size={20} /> : <PlayArrow />}
+            <GradientButton
               onClick={handleStartRecording}
               disabled={disabled || isProcessing}
-              sx={{ minWidth: 140 }}
+              startIcon={isProcessing ? <CircularProgress size={20} color="inherit" /> : <PlayArrow />}
+              sx={{ px: 4, py: 1.5, fontSize: '1rem' }}
             >
-              {isProcessing ? "Processing..." : "Start Recording"}
-            </Button>
+              {isProcessing ? "INITIALIZING..." : "START UPLINK"}
+            </GradientButton>
           ) : (
             <>
-              <Button
-                variant="outlined"
-                color="warning"
-                startIcon={isPaused ? <PlayArrow /> : <Pause />}
+              <IconButton
                 onClick={handlePauseResume}
                 disabled={disabled}
+                sx={{ bgcolor: alpha(theme.palette.warning.main, 0.1), color: 'warning.main', p: 2, border: `1px solid ${alpha(theme.palette.warning.main, 0.3)}` }}
               >
-                {isPaused ? "Resume" : "Pause"}
-              </Button>
+                {isPaused ? <PlayArrow /> : <Pause />}
+              </IconButton>
               
-              <Button
-                variant="contained"
-                color="error"
-                startIcon={isProcessing ? <CircularProgress size={20} /> : <Stop />}
+              <IconButton
                 onClick={handleStopRecording}
                 disabled={disabled || isProcessing}
-                sx={{ minWidth: 120 }}
+                sx={{ bgcolor: alpha(theme.palette.error.main, 0.1), color: 'error.main', p: 2, border: `1px solid ${alpha(theme.palette.error.main, 0.3)}` }}
               >
-                {isProcessing ? "Saving..." : "Stop"}
-              </Button>
+                {isProcessing ? <CircularProgress size={20} color="inherit" /> : <Stop />}
+              </IconButton>
             </>
           )}
         </Stack>
 
-        {/* Instructions */}
         {!hasPermission && !permissionError && (
-          <Alert severity="info">
-            Click "Start Recording" to begin. You'll be asked for microphone permission.
-            {videoEnabled && " Camera permission will also be requested for video recording."}
-          </Alert>
-        )}
-
-        {/* Recording Tips */}
-        {hasPermission && !isRecording && (
-          <Fade in>
-            <Alert severity="success" icon={<CheckCircle />}>
-              <Typography variant="body2">
-                <strong>Ready to record!</strong> Speak clearly and ensure you're in a quiet environment.
-                {videoEnabled && " Make sure you're well-lit and centered in the camera view."}
-              </Typography>
-            </Alert>
-          </Fade>
-        )}
-
-        {/* Time Warning */}
-        {isRecording && progressPercentage > 75 && (
-          <Alert severity="warning" icon={<Warning />}>
-            <Typography variant="body2">
-              {progressPercentage > 90 
-                ? "Recording will stop automatically in a few seconds!"
-                : "You're running out of time. Consider wrapping up your answer."
-              }
-            </Typography>
-          </Alert>
+          <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textAlign: 'center', display: 'block' }}>
+            AWAITING BIOMETRIC PERMISSIONS...
+          </Typography>
         )}
       </Stack>
-    </Paper>
+    </Box>
   );
 };

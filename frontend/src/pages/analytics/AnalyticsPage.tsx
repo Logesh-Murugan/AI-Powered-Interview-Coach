@@ -1,19 +1,25 @@
+/**
+ * Premium Analytics Page
+ * High-end AI data command center for performance tracking
+ */
+
 import React, { useEffect, useState } from 'react';
 import {
   Box,
-  Container,
   Typography,
-  Alert,
   Grid,
-  Paper,
   Tabs,
   Tab,
   Button,
   CircularProgress,
+  alpha,
+  useTheme,
+  Stack,
+  Divider,
 } from '@mui/material';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
-import { TrendingUp, BarChart, CompareArrows, Download } from '@mui/icons-material';
+import { TrendingUp, BarChart, CompareArrows, Download, Assessment, Timeline, Hub } from '@mui/icons-material';
 import analyticsService, {
   type AnalyticsOverview,
   type PerformanceComparison,
@@ -25,6 +31,10 @@ import StrengthsWeaknesses from '../../components/analytics/StrengthsWeaknesses'
 import PracticeRecommendations from '../../components/analytics/PracticeRecommendations';
 import PerformanceComparisonSection from '../../components/analytics/PerformanceComparisonSection';
 import api from '../../services/api.service';
+import { GlassCard, GradientButton, GradientText } from '../../components/common/PremiumComponents';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const MotionBox = motion.create(Box);
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -34,21 +44,26 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`analytics-tabpanel-${index}`}
-      aria-labelledby={`analytics-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    <div role="tabpanel" hidden={value !== index} id={`analytics-tabpanel-${index}`} {...other}>
+      <AnimatePresence mode="wait">
+        {value === index && (
+          <MotionBox
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            sx={{ py: 4 }}
+          >
+            {children}
+          </MotionBox>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 const AnalyticsPage: React.FC = () => {
+  const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,246 +71,155 @@ const AnalyticsPage: React.FC = () => {
   const [comparison, setComparison] = useState<PerformanceComparison | null>(null);
   const [comparisonError, setComparisonError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     loadAnalytics();
   }, []);
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Load analytics overview
-      const analyticsData = await analyticsService.getAnalyticsOverview();
+      const analyticsData = await analyticsService.getAnalyticsOverview(forceRefresh);
       setAnalytics(analyticsData);
-
-      // Try to load performance comparison (may fail if user has no target role or sessions)
       try {
-        const comparisonData = await analyticsService.getPerformanceComparison();
+        const comparisonData = await analyticsService.getPerformanceComparison(forceRefresh);
         setComparison(comparisonData);
         setComparisonError(null);
       } catch (compErr: any) {
-        // Silently handle comparison errors - this is expected for users without target role
-        const errorDetail = compErr.response?.data?.detail || '';
-        if (errorDetail.includes('target role')) {
-          setComparisonError(
-            'To see how you compare with others, please set your target role in your profile settings.'
-          );
-        } else if (errorDetail.includes('complete at least one')) {
-          setComparisonError(
-            'Complete at least one interview session to see performance comparisons.'
-          );
-        } else if (errorDetail.includes('Not enough users')) {
-          setComparisonError(
-            'Not enough users in your cohort yet for meaningful comparison. Check back later!'
-          );
-        } else {
-          setComparisonError(
-            'Performance comparison requires a target role and completed interviews.'
-          );
-        }
+        setComparisonError('COMPARISON LATTICE DATA UNAVAILABLE');
       }
     } catch (err: any) {
-      console.error('Error loading analytics:', err);
-      setError(err.response?.data?.detail || 'Failed to load analytics data');
+      setError(err.response?.data?.detail || 'DATA SYNCHRONIZATION FAILED');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
   const handleExportReport = async () => {
     try {
       setExporting(true);
-      setExportError(null);
-
-      // Call export endpoint
-      const response = await api.get('/export/analytics', {
-        responseType: 'blob', // Important for file download
-      });
-
-      // Create blob from response
+      const response = await api.get('/export/analytics', { responseType: 'blob' });
       const blob = new Blob([response.data as BlobPart], { type: 'application/pdf' });
-      
-      // Create download link
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      
-      // Generate filename with current date
-      const date = new Date().toISOString().split('T')[0];
-      link.download = `analytics_report_${date}.pdf`;
-      
-      // Trigger download
+      link.download = `analytics_dossier_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(link);
       link.click();
-      
-      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error('Error exporting report:', err);
-      setExportError(err.response?.data?.detail || 'Failed to export report');
+    } catch (err) {
+      console.error('Export fail:', err);
     } finally {
       setExporting(false);
     }
   };
 
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <LoadingSpinner variant="fullPage" size="large" text="Loading analytics..." />
-      </Container>
-    );
-  }
-
-  if (error) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <ErrorAlert
-          message={error}
-          onRetry={loadAnalytics}
-        />
-      </Container>
-    );
-  }
-
-  if (!analytics) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Alert severity="info">
-          No analytics data available. Complete some interview sessions to see your performance metrics.
-        </Alert>
-      </Container>
-    );
-  }
+  if (loading) return <LoadingSpinner variant="fullPage" />;
+  if (error) return <Box sx={{ p: 4 }}><ErrorAlert message={error} onRetry={loadAnalytics} /></Box>;
+  if (!analytics) return <Box sx={{ p: 4 }}><ErrorAlert message="NO DATA VECTORS FOUND. COMPLETE A SESSION TO INITIALIZE ANALYTICS." /></Box>;
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Box sx={{ pb: 8 }}>
+      {/* Premium Header */}
+      <MotionBox
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        sx={{ mb: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      >
         <Box>
-          <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-            Performance Analytics
+          <Typography variant="h3" sx={{ fontWeight: 900, mb: 1, fontFamily: 'Orbitron' }}>
+             DATA <GradientText>COMMAND CENTER</GradientText>
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Track your progress, identify strengths, and get personalized recommendations
+          <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+             Synchronized performance telemetry and growth mapping.
           </Typography>
         </Box>
-        <Button
-          variant="contained"
-          startIcon={exporting ? <CircularProgress size={20} color="inherit" /> : <Download />}
-          onClick={handleExportReport}
-          disabled={exporting || !analytics}
-        >
-          {exporting ? 'Exporting...' : 'Export Report'}
-        </Button>
-      </Box>
+        <Stack direction="row" spacing={2}>
+          <Button 
+            variant="outlined" 
+            onClick={() => loadAnalytics(true)} 
+            startIcon={<TrendingUp />} 
+            sx={{ borderRadius: 3, fontWeight: 700, borderColor: alpha(theme.palette.primary.main, 0.3) }}
+          >
+            RECALIBRATE
+          </Button>
+          <GradientButton
+            startIcon={exporting ? <CircularProgress size={20} color="inherit" /> : <Download />}
+            onClick={handleExportReport}
+            disabled={exporting}
+            size="large"
+          >
+            {exporting ? 'EXPORTING...' : 'EXPORT DOSSIER'}
+          </GradientButton>
+        </Stack>
+      </MotionBox>
 
-      {/* Export Error Alert */}
-      {exportError && (
-        <Alert severity="error" onClose={() => setExportError(null)} sx={{ mb: 3 }}>
-          {exportError}
-        </Alert>
-      )}
-
-      {/* Tabs */}
-      <Paper sx={{ mb: 3 }}>
+      {/* Tabs Hub */}
+      <GlassCard sx={{ mb: 4, p: 0, borderRadius: 4, overflow: 'hidden' }}>
         <Tabs
           value={tabValue}
-          onChange={handleTabChange}
-          aria-label="analytics tabs"
+          onChange={(_, v) => setTabValue(v)}
           variant="fullWidth"
+          sx={{
+            '& .MuiTabs-indicator': { height: 4, borderRadius: '2px 2px 0 0' },
+            '& .MuiTab-root': { py: 3, fontWeight: 900, fontFamily: 'Orbitron', letterSpacing: '0.1em', fontSize: '0.8rem' }
+          }}
         >
-          <Tab
-            icon={<TrendingUp />}
-            label="Overview"
-            id="analytics-tab-0"
-            aria-controls="analytics-tabpanel-0"
-          />
-          <Tab
-            icon={<BarChart />}
-            label="Performance"
-            id="analytics-tab-1"
-            aria-controls="analytics-tabpanel-1"
-          />
-          <Tab
-            icon={<CompareArrows />}
-            label="Comparison"
-            id="analytics-tab-2"
-            aria-controls="analytics-tabpanel-2"
-            disabled={!comparison}
-          />
+          <Tab icon={<Timeline sx={{ mb: 1 }} />} label="TELEMERY" />
+          <Tab icon={<Hub sx={{ mb: 1 }} />} label="CAPABILITIES" />
+          <Tab icon={<CompareArrows sx={{ mb: 1 }} />} label="COMPARISON" disabled={!comparison} />
         </Tabs>
-      </Paper>
+      </GlassCard>
 
-      {/* Tab Panels */}
+      {/* Analytics Content */}
       <TabPanel value={tabValue} index={0}>
-        {/* Overview Tab */}
-        <AnalyticsOverviewSection analytics={analytics} />
-        
-        <Box sx={{ mt: 4 }}>
-          <ScoreChart data={analytics.score_over_time} />
-        </Box>
+        <Grid container spacing={4}>
+           <Grid size={{ xs: 12 }}>
+              <AnalyticsOverviewSection analytics={analytics} />
+           </Grid>
+            <Grid size={{ xs: 12, lg: 8 }}>
+               <ScoreChart analytics={analytics} />
+            </Grid>
 
-        <Box sx={{ mt: 4 }}>
-          <PracticeRecommendations recommendations={analytics.practice_recommendations} />
-        </Box>
+           <Grid size={{ xs: 12, lg: 4 }}>
+              <PracticeRecommendations recommendations={analytics.practice_recommendations} />
+           </Grid>
+        </Grid>
       </TabPanel>
 
       <TabPanel value={tabValue} index={1}>
-        {/* Performance Tab */}
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <CategoryPerformance categories={analytics.category_performance} />
-          </Grid>
-          <Grid size={{ xs: 12, lg: 6 }}>
-            <StrengthsWeaknesses
-              strengths={analytics.top_5_strengths}
-              weaknesses={analytics.top_5_weaknesses}
-              categoryPerformance={analytics.category_performance}
-            />
-          </Grid>
-        </Grid>
+        <Grid container spacing={4}>
+           <Grid size={{ xs: 12, lg: 6 }}>
+              <CategoryPerformance categories={analytics.category_performance} />
+           </Grid>
+           <Grid size={{ xs: 12, lg: 6 }}>
+              <StrengthsWeaknesses
+                strengths={analytics.top_5_strengths}
+                weaknesses={analytics.top_5_weaknesses}
+                categoryPerformance={analytics.category_performance}
+              />
+           </Grid>
+            <Grid size={{ xs: 12 }}>
+               <ScoreChart analytics={analytics} />
+            </Grid>
 
-        <Box sx={{ mt: 4 }}>
-          <ScoreChart data={analytics.score_over_time} />
-        </Box>
+        </Grid>
       </TabPanel>
 
       <TabPanel value={tabValue} index={2}>
-        {/* Comparison Tab */}
         {comparison ? (
           <PerformanceComparisonSection comparison={comparison} />
         ) : (
-          <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <CompareArrows sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" gutterBottom>
-              Performance Comparison Not Available
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              {comparisonError || 'Performance comparison not available'}
-            </Typography>
-            {comparisonError?.includes('target role') && (
-              <Alert severity="info" sx={{ mt: 2, textAlign: 'left' }}>
-                <Typography variant="body2" gutterBottom>
-                  <strong>Note:</strong> Performance comparison requires a target role to be set in your profile.
-                </Typography>
-                <Typography variant="body2">
-                  This feature will be available once you set your target role (e.g., "Software Engineer", "Data Scientist").
-                  Profile editing functionality is coming soon!
-                </Typography>
-              </Alert>
-            )}
-          </Paper>
+          <GlassCard sx={{ p: 6, textAlign: 'center' }}>
+            <CompareArrows sx={{ fontSize: 80, color: alpha(theme.palette.divider, 0.1), mb: 3 }} />
+            <Typography variant="h5" sx={{ fontWeight: 900, mb: 1, fontFamily: 'Orbitron' }}>COMPARISON LATTICE LOCKED</Typography>
+            <Typography variant="body1" color="text.secondary">{comparisonError}</Typography>
+          </GlassCard>
         )}
       </TabPanel>
-    </Container>
+    </Box>
   );
 };
 

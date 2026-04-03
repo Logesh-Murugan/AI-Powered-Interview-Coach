@@ -6,10 +6,13 @@ Custom LangChain tools for company-specific interview coaching.
 Requirements: 29.1, 29.3-29.7
 """
 import json
+import logging
 from typing import Dict, Any, List
 from sqlalchemy.orm import Session
 from langchain_core.tools import Tool
 from app.models.resume_analysis import ResumeAnalysis
+
+logger = logging.getLogger(__name__)
 
 
 class CompanyResearchTool:
@@ -226,58 +229,65 @@ class STARMethodTool:
         Queries resume_analyses table for user's experience and achievements,
         then structures them as STAR method examples.
         """
-        # Get user's resume analysis
-        resume_analysis = self.db.query(ResumeAnalysis).filter(
-            ResumeAnalysis.user_id == user_id,
-            ResumeAnalysis.status.in_(['success', 'completed'])
-        ).first()
-        
-        if not resume_analysis:
-            return json.dumps([], separators=(',', ':'))
-        
-        analysis_data = resume_analysis.analysis_data or {}
-        
-        # Extract experiences and achievements
-        experiences = analysis_data.get('work_experience', [])
-        achievements = analysis_data.get('key_achievements', [])
-        projects = analysis_data.get('projects', [])
-        
-        star_examples = []
-        
-        # Convert experiences to STAR format
-        for exp in experiences[:2]:  # Top 2 experiences
-            star_examples.append({
-                'situation': f"Working as {exp.get('title', 'professional')} at {exp.get('company', 'previous company')}",
-                'task': exp.get('responsibilities', ['Delivered key projects'])[0] if exp.get('responsibilities') else 'Delivered key projects',
-                'action': 'Led development, collaborated with team, implemented solutions',
-                'result': exp.get('achievements', ['Successful project delivery'])[0] if exp.get('achievements') else 'Successful project delivery',
-                'relevant_to': 'Leadership and technical execution'
-            })
-        
-        # Convert achievements to STAR format
-        for achievement in achievements[:2]:  # Top 2 achievements
-            if isinstance(achievement, str):
+        try:
+            # Get user's resume analysis
+            resume_analysis = self.db.query(ResumeAnalysis).filter(
+                ResumeAnalysis.user_id == user_id,
+                ResumeAnalysis.status.in_(['success', 'completed'])
+            ).first()
+            
+            if not resume_analysis:
+                return json.dumps([], separators=(',', ':'))
+            
+            analysis_data = resume_analysis.analysis_data or {}
+            
+            # Extract experiences and achievements
+            experiences = analysis_data.get('work_experience', [])
+            achievements = analysis_data.get('key_achievements', [])
+            projects = analysis_data.get('projects', [])
+            
+            star_examples = []
+            
+            # Convert experiences to STAR format
+            for exp in experiences[:2]:  # Top 2 experiences
                 star_examples.append({
-                    'situation': 'Identified opportunity for improvement',
-                    'task': 'Needed to deliver measurable impact',
-                    'action': achievement,
-                    'result': 'Achieved significant positive outcome',
-                    'relevant_to': 'Problem solving and impact'
+                    'situation': f"Working as {exp.get('title', 'professional')} at {exp.get('company', 'previous company')}",
+                    'task': exp.get('responsibilities', ['Delivered key projects'])[0] if exp.get('responsibilities') else 'Delivered key projects',
+                    'action': 'Led development, collaborated with team, implemented solutions',
+                    'result': exp.get('achievements', ['Successful project delivery'])[0] if exp.get('achievements') else 'Successful project delivery',
+                    'relevant_to': 'Leadership and technical execution'
                 })
-        
-        # Convert projects to STAR format
-        for project in projects[:1]:  # Top 1 project
-            if isinstance(project, dict):
-                star_examples.append({
-                    'situation': f"Project: {project.get('name', 'Key project')}",
-                    'task': project.get('description', 'Build and deliver solution'),
-                    'action': f"Used {', '.join(project.get('technologies', ['various technologies']))}",
-                    'result': project.get('outcome', 'Successfully delivered project'),
-                    'relevant_to': 'Technical skills and project delivery'
-                })
-        
-        # Return top 5 examples
-        return json.dumps(star_examples[:5], separators=(',', ':'))
+            
+            # Convert achievements to STAR format
+            for achievement in achievements[:2]:  # Top 2 achievements
+                if isinstance(achievement, str):
+                    star_examples.append({
+                        'situation': 'Identified opportunity for improvement',
+                        'task': 'Needed to deliver measurable impact',
+                        'action': achievement,
+                        'result': 'Achieved significant positive outcome',
+                        'relevant_to': 'Problem solving and impact'
+                    })
+            
+            # Convert projects to STAR format
+            for project in projects[:1]:  # Top 1 project
+                if isinstance(project, dict):
+                    star_examples.append({
+                        'situation': f"Project: {project.get('name', 'Key project')}",
+                        'task': project.get('description', 'Build and deliver solution'),
+                        'action': f"Used {', '.join(project.get('technologies', ['various technologies']))}",
+                        'result': project.get('outcome', 'Successfully delivered project'),
+                        'relevant_to': 'Technical skills and project delivery'
+                    })
+            
+            # Return top 5 examples
+            return json.dumps(star_examples[:5], separators=(',', ':'))
+        except Exception as e:
+            logger.error(f"STARMethodTool error: {e}")
+            return json.dumps({'error': str(e)})
+        finally:
+            if self.db:
+                self.db.close()
     
     async def _arun(self, user_id: int) -> List[Dict[str, str]]:
         """Async version"""

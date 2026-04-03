@@ -26,6 +26,11 @@ export interface ExperienceTimeline {
 }
 
 // Skill gaps section
+export interface GapItem {
+  gap: string;
+  recommendations: string[];
+}
+
 export interface SkillGaps {
   target_role: string;
   required_missing: string[];
@@ -35,6 +40,8 @@ export interface SkillGaps {
   recommendation?: string;
   analysis?: string;
   note?: string;
+  // New standardized list format for UI
+  items?: GapItem[];
 }
 
 // Learning roadmap milestone
@@ -55,6 +62,9 @@ export interface ImprovementRoadmap {
   success_tips: string[];
   recommendations?: string;
   note?: string;
+  // New standardized sectors for UI
+  short_term?: string[];
+  long_term?: string[];
 }
 
 // Agent reasoning step

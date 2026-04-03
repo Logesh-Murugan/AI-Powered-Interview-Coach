@@ -27,19 +27,23 @@ class TestAgent(BaseAgent):
             )
         ]
     
-    def _get_prompt_template(self):
+    def _get_prompt_template(self, tools):
         """Get test prompt template"""
+        tool_names = ", ".join([tool.name for tool in tools])
+        
         template = """Test agent with tools.
 
 Tools available:
 {tools}
+
+Tool Names: {tool_names}
 
 Question: {input}
 Thought: {agent_scratchpad}"""
         
         return PromptTemplate(
             template=template,
-            input_variables=["input", "tools", "agent_scratchpad"]
+            input_variables=["input", "tools", "tool_names", "agent_scratchpad"]
         )
 
 
@@ -66,7 +70,7 @@ class TestBaseAgent:
         agent = TestAgent()
         
         assert agent.llm is not None
-        assert agent.llm.model_name == "gemini-2.0-flash"
+        assert agent.llm.model_name == "orchestrator-multi"
         assert agent.llm._llm_type == "orchestrator"
     
     def test_tool_registration(self):
@@ -193,10 +197,10 @@ class TestBaseAgent:
             def _register_tools(self):
                 return []
             
-            def _get_prompt_template(self):
+            def _get_prompt_template(self, tools):
                 return PromptTemplate(
-                    template="Test: {input}",
-                    input_variables=["input"]
+                    template="Test: {input}\nTools: {tools}\nTool Names: {tool_names}",
+                    input_variables=["input", "tools", "tool_names"]
                 )
         
         agent = NoToolsAgent()

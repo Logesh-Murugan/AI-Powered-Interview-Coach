@@ -49,12 +49,10 @@ import NotFoundPage from '../pages/NotFoundPage';
 function LandingPageWrapper() {
   const isAuthenticated = useSelector((state: RootState) => state.auth.isAuthenticated);
 
-  if (isAuthenticated) {
-    return <Navigate to={ROUTES.DASHBOARD} replace />;
-  }
-
+  // Removed automatic redirect to dashboard to ensure landing page is always shown first as requested
   return <LandingPage />;
 }
+
 
 function AppRoutes() {
   return (

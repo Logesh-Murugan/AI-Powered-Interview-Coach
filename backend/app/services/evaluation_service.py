@@ -9,7 +9,7 @@ import logging
 import hashlib
 import json
 from typing import Dict, Any, Optional
-from datetime import timedelta
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 
 from app.models.answer import Answer
@@ -54,6 +54,11 @@ class EvaluationService:
         if not answer:
             raise ValueError(f"Answer {answer_id} not found")
         
+        # Return existing evaluation if available
+        if answer.evaluation:
+            logger.info(f"Answer {answer_id} already has evaluation {answer.evaluation.id}")
+            return self._format_evaluation_response(answer.evaluation)
+            
         question = self.db.query(Question).filter(Question.id == answer.question_id).first()
         if not question:
             raise ValueError(f"Question {answer.question_id} not found")
@@ -139,7 +144,8 @@ class EvaluationService:
             strengths=feedback['strengths'],
             improvements=feedback['improvements'],
             suggestions=feedback['suggestions'],
-            example_answer=feedback.get('example_answer')
+            example_answer=feedback.get('example_answer'),
+            evaluated_at=datetime.utcnow()
         )
         
         self.db.add(evaluation)
@@ -215,70 +221,79 @@ Provide your evaluation in the following JSON format (DO NOT include example_ans
 
 IMPORTANT: Return ONLY valid JSON. Do not include any example answers or additional text that could break JSON formatting.
 
-Be constructive, specific, and actionable in your feedback."""""
+Be constructive, specific, and actionable in your feedback."""
         
         return prompt
     
     def _parse_evaluation_response(self, ai_response: str) -> Dict[str, Any]:
         """
-        Parse AI evaluation response.
+        Parse AI evaluation response with robust extraction for Llama-3/HF.
         
         Requirements: 18.7
         """
+        import re
+        import json
+        
         try:
-            # Try to extract JSON from response
-            # AI might wrap JSON in markdown code blocks
-            if "```json" in ai_response:
-                start = ai_response.find("```json") + 7
-                end = ai_response.find("```", start)
-                json_str = ai_response[start:end].strip()
-            elif "```" in ai_response:
-                start = ai_response.find("```") + 3
-                end = ai_response.find("```", start)
-                json_str = ai_response[start:end].strip()
-            else:
-                json_str = ai_response.strip()
+            # Extract content and remove common LLM "Thought" prefixes
+            content = ai_response.strip()
             
-            # Remove any trailing text after the JSON object
-            # Find the last closing brace
-            last_brace = json_str.rfind('}')
-            if last_brace != -1:
-                json_str = json_str[:last_brace + 1]
+            # Locate JSON boundaries
+            if "{" in content:
+                content = content[content.find("{"):]
+            if "}" in content:
+                content = content[:content.rfind("}")+1]
             
-            evaluation_data = json.loads(json_str)
+            # Handle markdown code blocks
+            if content.startswith('```'):
+                lines = content.split('\n')
+                content = '\n'.join(lines[1:-1]) if len(lines) > 2 else content
+                content = content.replace('```json', '').replace('```', '').strip()
+            
+            # Pre-parse cleaning for common LLM mistakes
+            # Fix single quotes
+            content = re.sub(r"'([^']*)':", r'"\1":', content)
+            # Fix Python booleans
+            content = re.sub(r'\bTrue\b', 'true', content)
+            content = re.sub(r'\bFalse\b', 'false', content)
+            
+            evaluation_data = json.loads(content)
+            
+            # Handle nesting if AI wrapped it in an 'evaluation' key
+            if isinstance(evaluation_data, dict) and "evaluation" in evaluation_data:
+                evaluation_data = evaluation_data["evaluation"]
             
             # Ensure all required fields exist with default values if missing
             required_fields = {
-                'content_quality': 0,
-                'clarity': 0,
-                'confidence': 0,
-                'technical_accuracy': 0,
-                'strengths': [],
-                'improvements': [],
-                'suggestions': []
+                'content_quality': 50,
+                'clarity': 50,
+                'confidence': 50,
+                'technical_accuracy': 50,
+                'strengths': ['Performance recorded'],
+                'improvements': ['Continue practicing to improve scores'],
+                'suggestions': ['Focus on structural clarity and technical depth']
             }
             
             for field, default_value in required_fields.items():
-                if field not in evaluation_data:
+                if field not in evaluation_data or evaluation_data[field] is None:
                     logger.warning(f"Missing field {field}, using default: {default_value}")
                     evaluation_data[field] = default_value
             
             return evaluation_data
             
-        except json.JSONDecodeError as e:
+        except Exception as e:
             logger.error(f"Failed to parse evaluation JSON: {e}")
-            logger.error(f"AI Response: {ai_response}")
+            logger.debug(f"AI Response: {ai_response[:500]}")
             
-            # Return default evaluation instead of failing
-            logger.warning("Returning default evaluation due to JSON parse error")
+            # Absolute fallback to prevent 404/Null record creation
             return {
                 'content_quality': 0,
                 'clarity': 0,
                 'confidence': 0,
                 'technical_accuracy': 0,
-                'strengths': ['Answer provided'],
-                'improvements': ['Provide a clear and structured answer', 'Address all parts of the question'],
-                'suggestions': ['Review the question requirements', 'Organize your answer logically']
+                'strengths': ['Answer analyzed'],
+                'improvements': ['AI processing error - please try again'],
+                'suggestions': ['Ensure your answer is clear and well-structured']
             }
     
     def _validate_scores(self, evaluation_data: Dict[str, Any]):
@@ -292,9 +307,17 @@ Be constructive, specific, and actionable in your feedback."""""
         for field in score_fields:
             score = evaluation_data.get(field)
             if not isinstance(score, (int, float)):
-                raise ValueError(f"Score {field} must be a number, got {type(score)}")
-            if score < 0 or score > 100:
-                raise ValueError(f"Score {field} must be between 0 and 100, got {score}")
+                # Try to convert to float if it's a string
+                try:
+                    score = float(score)
+                    evaluation_data[field] = score
+                except (ValueError, TypeError):
+                    logger.warning(f"Score {field} must be a number, got {type(score)}. Using 0.")
+                    evaluation_data[field] = 0
+                    score = 0
+            
+            if score < 0: evaluation_data[field] = 0
+            if score > 100: evaluation_data[field] = 100
     
     def _calculate_overall_score(self, evaluation_data: Dict[str, Any]) -> float:
         """
@@ -330,6 +353,11 @@ Be constructive, specific, and actionable in your feedback."""""
             'example_answer': evaluation_data.get('example_answer')
         }
         
+        # Ensure lists are actually lists
+        for field in ['strengths', 'improvements', 'suggestions']:
+            if not isinstance(feedback[field], list):
+                feedback[field] = [str(feedback[field])] if feedback[field] else []
+        
         # Ensure lists are not empty
         if not feedback['strengths']:
             feedback['strengths'] = ["Answer provided"]
@@ -358,7 +386,8 @@ Be constructive, specific, and actionable in your feedback."""""
             strengths=feedback['strengths'],
             improvements=feedback['improvements'],
             suggestions=feedback['suggestions'],
-            example_answer=feedback.get('example_answer')
+            example_answer=feedback.get('example_answer'),
+            evaluated_at=datetime.utcnow()
         )
         
         self.db.add(evaluation)

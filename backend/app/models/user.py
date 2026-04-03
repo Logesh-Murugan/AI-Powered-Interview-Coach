@@ -14,6 +14,7 @@ class AccountStatus(str, enum.Enum):
     ACTIVE = "active"
     SUSPENDED = "suspended"
     LOCKED = "locked"
+    DELETED = "deleted"
 
 
 class ExperienceLevel(str, enum.Enum):
@@ -50,6 +51,9 @@ class User(BaseModel):
     )
     failed_login_attempts = Column(String(10), default="0", nullable=False)
     last_login_at = Column(String(50), nullable=True)
+    
+    # Admin role for scalable permission management
+    is_admin = Column(Boolean, default=False, nullable=False)
     
     # Gamification
     total_achievements_count = Column(Integer, default=0, nullable=False)

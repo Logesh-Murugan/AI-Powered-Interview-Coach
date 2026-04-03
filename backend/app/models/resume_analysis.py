@@ -31,7 +31,7 @@ class ResumeAnalysis(BaseModel):
     resume_id = Column(Integer, ForeignKey("resumes.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # Analysis data (structured JSON)
-    analysis_data = Column(JSONB, nullable=False)
+    analysis_data = Column(JSONB, nullable=True)
     # Structure: {
     #   "skill_inventory": {
     #     "technical_skills": [...],

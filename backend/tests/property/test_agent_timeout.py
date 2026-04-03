@@ -211,51 +211,23 @@ class TestStudyPlanAgentTimeout:
         
         # Mock database queries
         mock_db.query.return_value.filter.return_value.first.side_effect = [
-            mock_user,  # User validation
-            mock_resume_analysis,  # Resume analysis validation
-            mock_resume_analysis  # Skill data retrieval
+            mock_user,  # User validation (prerequisites)
+            mock_resume_analysis,  # Skill data retrieval
         ]
-        
-        # Mock agent execution
-        with patch('app.services.agents.study_plan_agent_service.BaseAgent') as mock_agent_class, \
-             patch('app.services.agents.study_plan_agent_service.AgentExecutor') as mock_executor_class, \
-             patch('app.services.agents.study_plan_agent_service.StudyPlan') as mock_plan_class:
-            
-            mock_agent = Mock()
-            mock_agent.execute.return_value = {
-                'output': '''```json
-{
-  "daily_tasks": [],
-  "weekly_milestones": [],
-  "resource_links": {},
-  "time_estimates": {
-    "total_hours": 180,
-    "hours_per_week": 15,
-    "completion_date": "2026-05-15"
-  }
-}
-```''',
-                'reasoning_steps': [],
-                'execution_time_ms': 5000,
-                'status': 'success'
-            }
-            mock_agent_class.return_value = mock_agent
-            
-            mock_executor = Mock()
-            mock_executor.run.return_value = mock_agent.execute.return_value
-            mock_executor_class.return_value = mock_executor
-            
+
+        # Mock StudyPlan model instantiation
+        with patch('app.services.agents.study_plan_agent_service.StudyPlan') as mock_plan_class:
             mock_plan = Mock()
             mock_plan.id = 1
             mock_plan_class.return_value = mock_plan
-            
+
             mock_db.add = Mock()
             mock_db.commit = Mock()
             mock_db.refresh = Mock()
-            
+
             # Measure execution time
             start_time = time.time()
-            
+
             try:
                 result = service.generate_study_plan(
                     user_id=user_id,
@@ -264,17 +236,11 @@ class TestStudyPlanAgentTimeout:
                     available_hours_per_week=hours
                 )
                 execution_time = time.time() - start_time
-                
+
                 # Property: Execution must complete within 20 seconds
                 assert execution_time < 20.0, \
                     f"Study plan agent exceeded 20s timeout: {execution_time:.2f}s"
-                
-                # Verify AgentExecutor was initialized with 20s timeout
-                mock_executor_class.assert_called_once()
-                call_kwargs = mock_executor_class.call_args[1]
-                assert call_kwargs.get('max_execution_time') == 20.0, \
-                    "AgentExecutor must be initialized with 20s timeout"
-                
+
             except Exception as e:
                 execution_time = time.time() - start_time
                 # Even on error, should not exceed timeout
@@ -324,51 +290,29 @@ class TestCompanyCoachingAgentTimeout:
         
         # Mock rate limit check
         mock_db.query.return_value.filter.return_value.scalar.return_value = 0
-        
-        # Mock agent execution
-        with patch('app.services.agents.company_coaching_agent_service.BaseAgent') as mock_agent_class, \
-             patch('app.services.agents.company_coaching_agent_service.AgentExecutor') as mock_executor_class, \
+
+        # Mock structured coaching and session creation
+        with patch.object(service, '_generate_structured_coaching') as mock_gen, \
              patch('app.services.agents.company_coaching_agent_service.CompanyCoachingSession') as mock_session_class:
-            
-            mock_agent = Mock()
-            mock_agent.execute.return_value = {
-                'output': '''```json
-{
-  "company_overview": {"culture": "test", "values": ["v1"], "interview_style": "test", "hiring_process": "test"},
-  "predicted_questions": [
-    {"question": "Q1"}, {"question": "Q2"}, {"question": "Q3"},
-    {"question": "Q4"}, {"question": "Q5"}
-  ],
-  "star_examples": [
-    {"situation": "S", "task": "T", "action": "A", "result": "R", "relevant_to": "test"},
-    {"situation": "S", "task": "T", "action": "A", "result": "R", "relevant_to": "test"},
-    {"situation": "S", "task": "T", "action": "A", "result": "R", "relevant_to": "test"}
-  ],
-  "confidence_tips": ["tip1"],
-  "pre_interview_checklist": ["item1"]
-}
-```''',
-                'reasoning_steps': [],
-                'execution_time_ms': 5000,
-                'status': 'success'
+
+            mock_gen.return_value = {
+                'company_overview': 'test overview',
+                'interview_process': ['step1', 'step2', 'step3'],
+                'predicted_questions': ['Q1', 'Q2', 'Q3', 'Q4', 'Q5'],
+                'pre_interview_checklist': ['item1', 'item2', 'item3', 'item4', 'item5']
             }
-            mock_agent_class.return_value = mock_agent
-            
-            mock_executor = Mock()
-            mock_executor.run.return_value = mock_agent.execute.return_value
-            mock_executor_class.return_value = mock_executor
-            
+
             mock_session = Mock()
             mock_session.id = 1
             mock_session_class.return_value = mock_session
-            
+
             mock_db.add = Mock()
             mock_db.commit = Mock()
             mock_db.refresh = Mock()
-            
+
             # Measure execution time
             start_time = time.time()
-            
+
             try:
                 result = service.generate_coaching_session(
                     user_id=user_id,
@@ -376,17 +320,11 @@ class TestCompanyCoachingAgentTimeout:
                     target_role=target_role
                 )
                 execution_time = time.time() - start_time
-                
+
                 # Property: Execution must complete within 20 seconds
                 assert execution_time < 20.0, \
                     f"Company coaching agent exceeded 20s timeout: {execution_time:.2f}s"
-                
-                # Verify AgentExecutor was initialized with 20s timeout
-                mock_executor_class.assert_called_once()
-                call_kwargs = mock_executor_class.call_args[1]
-                assert call_kwargs.get('max_execution_time') == 20.0, \
-                    "AgentExecutor must be initialized with 20s timeout"
-                
+
             except Exception as e:
                 execution_time = time.time() - start_time
                 # Even on error, should not exceed timeout
@@ -434,7 +372,7 @@ class TestAgentTimeoutConfiguration:
                     )
                 ]
             
-            def _get_prompt_template(self):
+            def _get_prompt_template(self, tools):
                 return PromptTemplate(
                     template="Test: {input}\n{agent_scratchpad}",
                     input_variables=["input", "agent_scratchpad"]

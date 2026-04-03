@@ -7,6 +7,7 @@ Requirements: 16.1-16.10, 18.1-18.14, Recording System
 """
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, UniqueConstraint, Float, JSON
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from datetime import datetime
 
 from app.models.base import Base
@@ -35,10 +36,11 @@ class Answer(Base):
     recording_format = Column(String(20), nullable=True)  # webm, mp4, etc.
     transcription = Column(Text, nullable=True)
     voice_analysis = Column(JSON, nullable=True)  # Speaking pace, filler words, etc.
+    video_analysis = Column(JSON, nullable=True)  # Video quality, lighting, stability, etc.
     
     # Timing
     time_taken = Column(Integer, nullable=False)  # Time taken in seconds
-    submitted_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    submitted_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
     
     # Relationships
     session = relationship("InterviewSession", back_populates="answers")
@@ -47,9 +49,9 @@ class Answer(Base):
     evaluation = relationship("Evaluation", back_populates="answer", uselist=False, foreign_keys="[Evaluation.answer_id]")
     
     # Timestamps from base
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    deleted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=func.now(), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     
     # Unique constraint: one answer per question per session
     __table_args__ = (
@@ -73,6 +75,7 @@ class Answer(Base):
             'recording_format': self.recording_format,
             'transcription': self.transcription,
             'voice_analysis': self.voice_analysis,
+            'video_analysis': self.video_analysis,
             'time_taken': self.time_taken,
             'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,

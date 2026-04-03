@@ -1,7 +1,7 @@
 """JWT token generation and validation utilities."""
 
 import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 from app.config import settings
 
@@ -23,7 +23,7 @@ def create_access_token(user_id: int, email: str, role: str = "user") -> str:
         >>> print(token)
         eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     payload = {
         'sub': user_id,
         'email': email,
@@ -50,7 +50,7 @@ def create_refresh_token(user_id: int) -> str:
         >>> print(token)
         eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     payload = {
         'sub': user_id,
         'type': 'refresh',
@@ -161,7 +161,7 @@ def get_token_expiry(token: str) -> Optional[datetime]:
         payload = decode_token(token)
         exp_timestamp = payload.get('exp')
         if exp_timestamp:
-            return datetime.utcfromtimestamp(exp_timestamp)
+            return datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
         return None
     except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
         return None

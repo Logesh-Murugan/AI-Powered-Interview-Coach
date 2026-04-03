@@ -1,26 +1,24 @@
 /**
- * Recent Sessions Component
- * Display list of recent interview sessions with resume functionality
+ * Premium Recent Sessions Component
+ * High-end, high-contrast "Historical Vector" list for displaying interview session history
  */
 
 import { useNavigate } from 'react-router-dom';
 import {
-  Card,
-  CardContent,
   Typography,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  Chip,
   Box,
   Stack,
-  Divider,
-  Button,
-  LinearProgress,
+  alpha,
+  useTheme,
+  IconButton,
+  Chip,
 } from '@mui/material';
-import { ChevronRight, EmojiEvents, PlayArrow } from '@mui/icons-material';
+import { ChevronRight, AccessTime as TimeIcon, Sensors } from '@mui/icons-material';
 import { format } from 'date-fns';
+import { GlassCard, GradientButton } from '../common/PremiumComponents';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion.create(Box);
 
 interface Session {
   id: number;
@@ -29,174 +27,122 @@ interface Session {
   status: string;
   start_time: string;
   overall_score?: number;
-  question_count?: number;
-  answered_count?: number;
 }
 
 interface RecentSessionsProps {
   sessions: Session[];
-  loading?: boolean;
 }
 
-function RecentSessions({ sessions, loading }: RecentSessionsProps) {
+function RecentSessions({ sessions }: RecentSessionsProps) {
   const navigate = useNavigate();
-
-  const getScoreColor = (score: number): 'success' | 'warning' | 'error' => {
-    if (score >= 80) return 'success';
-    if (score >= 60) return 'warning';
-    return 'error';
-  };
-
-  const getStatusColor = (status: string): 'success' | 'warning' | 'default' => {
-    if (status === 'completed') return 'success';
-    if (status === 'in_progress') return 'warning';
-    return 'default';
-  };
-
-  const getStatusLabel = (status: string): string => {
-    const labels: Record<string, string> = {
-      in_progress: 'In Progress',
-      completed: 'Completed',
-      abandoned: 'Abandoned',
-    };
-    return labels[status] || status;
-  };
-
-  const handleResumeSession = (sessionId: number, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent navigation to summary
-    navigate(`/interviews/${sessionId}/resume`);
-  };
-
-  const handleViewSummary = (sessionId: number) => {
-    navigate(`/interviews/${sessionId}/summary`);
-  };
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Recent Sessions
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Loading...
-          </Typography>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (sessions.length === 0) {
-    return (
-      <Card>
-        <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Recent Sessions
-          </Typography>
-          <Box sx={{ textAlign: 'center', py: 4 }}>
-            <EmojiEvents sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="body2" color="text.secondary">
-              No interview sessions yet. Start your first interview!
-            </Typography>
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
+  const theme = useTheme();
 
   return (
-    <Card>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Recent Sessions
+    <GlassCard sx={{ p: 4, height: '100%', position: 'relative', overflow: 'hidden' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+           <Sensors sx={{ color: 'primary.main' }} />
+           <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', letterSpacing: '0.05em' }}>HISTORICAL VECTORS</Typography>
+        </Stack>
+        <Typography 
+          variant="caption" 
+          onClick={() => navigate('/interviews/history')}
+          sx={{ 
+            fontWeight: 900, 
+            color: 'primary.main', 
+            cursor: 'pointer', 
+            letterSpacing: '0.1em',
+            '&:hover': { textDecoration: 'underline', color: 'secondary.main' } 
+          }}
+        >
+          VIEW ARCHIVES
         </Typography>
-        <List disablePadding>
-          {sessions.map((session, index) => {
-            const isInProgress = session.status.toLowerCase() === 'in_progress';
-            const progress = session.question_count && session.answered_count
-              ? (session.answered_count / session.question_count) * 100
-              : 0;
+      </Stack>
 
+      <Box sx={{ position: 'absolute', top: -50, left: -50, width: 150, height: 150, bgcolor: 'primary.main', opacity: 0.05, filter: 'blur(80px)', borderRadius: '50%' }} />
+
+      {sessions.length === 0 ? (
+        <Stack spacing={2} alignItems="center" justifyContent="center" sx={{ py: 8, opacity: 0.5 }}>
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>NO TEMPORAL VECTORS RECORDED.</Typography>
+        </Stack>
+      ) : (
+        <Stack spacing={2.5}>
+          {sessions.map((session, idx) => {
+            const isInProgress = session.status.toLowerCase() === 'in_progress';
             return (
-              <Box key={session.id}>
-                {index > 0 && <Divider />}
-                <ListItem disablePadding>
-                  <ListItemButton
-                    onClick={isInProgress ? undefined : () => handleViewSummary(session.id)}
-                    sx={{ py: 2, cursor: isInProgress ? 'default' : 'pointer' }}
-                    disabled={false}
-                  >
-                    <Box sx={{ width: '100%' }}>
-                      {/* Primary content */}
-                      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-                        <Typography variant="body1" component="div">{session.role}</Typography>
-                        {session.difficulty && (
-                          <Chip
-                            label={session.difficulty}
-                            size="small"
-                            variant="outlined"
-                          />
-                        )}
-                      </Stack>
-                      
-                      {/* Secondary content */}
-                      <Stack spacing={1}>
-                        <Stack direction="row" spacing={2} alignItems="center">
-                          {session.start_time && (
-                            <Typography variant="caption" color="text.secondary" component="div">
-                              {format(new Date(session.start_time), 'MMM dd, yyyy')}
-                            </Typography>
-                          )}
-                          <Chip
-                            label={getStatusLabel(session.status)}
-                            size="small"
-                            color={getStatusColor(session.status)}
-                          />
-                          {session.overall_score !== undefined && (
-                            <Chip
-                              label={`${session.overall_score.toFixed(0)}%`}
-                              size="small"
-                              color={getScoreColor(session.overall_score)}
-                            />
-                          )}
-                        </Stack>
-                        {isInProgress && session.question_count && session.answered_count !== undefined && (
-                          <Box sx={{ width: '100%' }}>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 0.5 }}>
-                              <Typography variant="caption" color="text.secondary" component="div">
-                                {session.answered_count} of {session.question_count} answered
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" component="div">
-                                {progress.toFixed(0)}%
-                              </Typography>
-                            </Stack>
-                            <LinearProgress variant="determinate" value={progress} />
-                          </Box>
-                        )}
+              <MotionBox
+                key={session.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+              >
+                <Box
+                  onClick={() => !isInProgress && navigate(`/interviews/${session.id}/summary`)}
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 4,
+                    bgcolor: alpha(theme.palette.background.paper, 0.3),
+                    border: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: isInProgress ? 'default' : 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    '&:hover': {
+                      bgcolor: alpha(theme.palette.background.paper, 0.5),
+                      borderColor: alpha(theme.palette.primary.main, 0.3),
+                      transform: 'translateX(8px)',
+                      boxShadow: `0 0 20px ${alpha(theme.palette.primary.main, 0.1)}`
+                    }
+                  }}
+                >
+                  <Stack direction="row" spacing={3} alignItems="center">
+                    <Box sx={{ 
+                      width: 54, 
+                      height: 54, 
+                      borderRadius: 3.5, 
+                      bgcolor: alpha(theme.palette.primary.main, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: theme.palette.primary.main,
+                      border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+                    }}>
+                      <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron' }}>{session.overall_score ? `${Math.round(session.overall_score)}` : '?'}</Typography>
+                    </Box>
+                    <Box>
+                      <Typography variant="body1" sx={{ fontWeight: 900, mb: 0.5, letterSpacing: '0.02em' }}>{session.role.toUpperCase()}</Typography>
+                      <Stack direction="row" spacing={2} alignItems="center">
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                           <TimeIcon sx={{ fontSize: '0.85rem', color: 'text.secondary' }} />
+                           <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary' }}>
+                             {format(new Date(session.start_time), 'MMM dd | HH:mm')}
+                           </Typography>
+                        </Box>
+                        <Chip label={session.difficulty.toUpperCase()} size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900, bgcolor: alpha(theme.palette.secondary.main, 0.1), color: 'secondary.main', border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}` }} />
                       </Stack>
                     </Box>
+                  </Stack>
+
+                  <Box>
                     {isInProgress ? (
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        size="small"
-                        startIcon={<PlayArrow />}
-                        onClick={(e) => handleResumeSession(session.id, e)}
-                        sx={{ ml: 1 }}
-                      >
-                        Continue
-                      </Button>
+                      <GradientButton size="small" onClick={() => navigate(`/interviews/${session.id}/resume`)} sx={{ height: 32, fontSize: '0.65rem' }}>
+                        RESUME SESSION
+                      </GradientButton>
                     ) : (
-                      <ChevronRight />
+                      <IconButton size="small" sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5), border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                        <ChevronRight fontSize="small" />
+                      </IconButton>
                     )}
-                  </ListItemButton>
-                </ListItem>
-              </Box>
+                  </Box>
+                </Box>
+              </MotionBox>
             );
           })}
-        </List>
-      </CardContent>
-    </Card>
+        </Stack>
+      )}
+    </GlassCard>
   );
 }
 

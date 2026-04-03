@@ -1,15 +1,10 @@
 /**
- * Resume Analysis Card Component - Redesigned for AI Agent Response
- * Display analysis summary with enhanced UI for AI-generated insights
- * 
- * Requirements: INT-1.6, INT-1.7, INT-1.10
+ * Premium Resume Analysis Card Component
+ * High-end AI-powered insights with glassmorphic design and animations
  */
 
 import {
-  Card,
-  CardContent,
   Typography,
-  Button,
   Box,
   Stack,
   Chip,
@@ -17,19 +12,25 @@ import {
   Alert,
   Divider,
   LinearProgress,
+  alpha,
+  useTheme,
+  Grid,
+  IconButton
 } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import {
   Psychology,
   Refresh,
-  TrendingUp,
-  CheckCircle,
-  Schedule,
-  Speed,
   AutoAwesome,
-  Warning,
+  FlashOn as FlashIcon,
+  Timeline as RoadmapIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import type { ResumeAnalysis } from '../../services/resumeAnalysisService';
+import { GlassCard, GradientButton } from '../common/PremiumComponents';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion.create(Box);
 
 interface ResumeAnalysisCardProps {
   analysis: ResumeAnalysis | null;
@@ -50,324 +51,149 @@ function ResumeAnalysisCard({
   onRegenerate,
   onViewDetails,
 }: ResumeAnalysisCardProps) {
-  // In-progress state (analysis queued/running)
+  const theme = useTheme();
+
+  // 1. Loading/Generation State
   if (!analysis && (isGenerating || isLoading)) {
     return (
-      <Card sx={{ border: '2px solid', borderColor: 'primary.light' }}>
-        <CardContent>
-          <Stack spacing={3} alignItems="center" sx={{ py: 4 }}>
-            <Box sx={{ position: 'relative' }}>
-              <CircularProgress size={48} thickness={4} />
-              <AutoAwesome 
-                sx={{ 
-                  position: 'absolute', 
-                  top: '50%', 
-                  left: '50%', 
-                  transform: 'translate(-50%, -50%)',
-                  fontSize: 20,
-                  color: 'primary.main'
-                }} 
-              />
-            </Box>
-            <Typography variant="h6" color="primary.main">
-              🤖 AI Analysis in Progress
-            </Typography>
-            <Typography variant="body2" color="text.secondary" align="center">
-              Our AI agent is analyzing your resume. This usually takes 10–20 seconds. 
-              We'll show results automatically when ready.
-            </Typography>
-            <LinearProgress sx={{ width: '100%', height: 8, borderRadius: 4 }} />
-          </Stack>
-        </CardContent>
-      </Card>
-    );
-  }
-  // Loading state
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 4 }}>
-            <CircularProgress size={40} />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              Loading analysis...
-            </Typography>
+      <GlassCard sx={{ p: 4, position: 'relative', overflow: 'hidden' }}>
+        <Box className="ai-shimmer" sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, zIndex: 1 }} />
+        <Stack spacing={4} alignItems="center" sx={{ py: 6 }}>
+          <Box sx={{ position: 'relative' }}>
+             <CircularProgress size={80} thickness={2} sx={{ color: 'primary.main', opacity: 0.3 }} />
+             <MotionBox
+               animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+               transition={{ repeat: Infinity, duration: 2 }}
+               sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'primary.main' }}
+             >
+               <AutoAwesome sx={{ fontSize: 40 }} />
+             </MotionBox>
           </Box>
-        </CardContent>
-      </Card>
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography variant="h4" sx={{ fontWeight: 900, mb: 1, letterSpacing: '-0.02em', fontFamily: 'Orbitron' }}>SYNTHESIZING INTELLIGENCE</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ maxWidth: 400 }}>Our AI agent is cross-referencing your experience with industry benchmarks. This deep-scan takes 15–30 seconds.</Typography>
+          </Box>
+          <LinearProgress variant="indeterminate" sx={{ width: '100%', height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.primary.main, 0.1) }} />
+        </Stack>
+      </GlassCard>
     );
   }
 
-  // Error state
+  // 2. Error State
   if (error) {
     return (
-      <Card sx={{ border: '2px solid', borderColor: 'error.light' }}>
-        <CardContent>
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-          <Button
-            variant="contained"
-            startIcon={<Refresh />}
-            onClick={onGenerate}
-            fullWidth
-          >
-            Retry Analysis
-          </Button>
-        </CardContent>
-      </Card>
+      <GlassCard sx={{ p: 4, border: `2px solid ${theme.palette.error.main}33` }}>
+        <Alert severity="error" variant="filled" sx={{ borderRadius: 3, mb: 3 }}>{error}</Alert>
+        <GradientButton fullWidth onClick={onGenerate} startIcon={<Refresh />}>RE-INITIALIZE ANALYSIS</GradientButton>
+      </GlassCard>
     );
   }
 
-  // No analysis state
+  // 3. No Analysis State
   if (!analysis) {
     return (
-      <Card sx={{ border: '2px dashed', borderColor: 'primary.light', bgcolor: 'primary.lighter' }}>
-        <CardContent>
-          <Stack spacing={3} alignItems="center" sx={{ py: 4 }}>
-            <Box sx={{ position: 'relative' }}>
-              <Psychology sx={{ fontSize: 80, color: 'primary.main' }} />
-              <AutoAwesome 
-                sx={{ 
-                  position: 'absolute', 
-                  top: -5, 
-                  right: -5,
-                  fontSize: 24,
-                  color: 'secondary.main'
-                }} 
-              />
-            </Box>
-            <Typography variant="h6" align="center" color="primary.main">
-              🚀 AI-Powered Resume Analysis
-            </Typography>
-            <Typography variant="body2" color="text.secondary" align="center">
-              Get personalized insights on your skills, experience gaps, and career growth opportunities 
-              powered by advanced AI technology.
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={isGenerating ? <CircularProgress size={20} /> : <Psychology />}
-              onClick={onGenerate}
-              disabled={isGenerating}
-              size="large"
-              sx={{ minWidth: 200 }}
-            >
-              {isGenerating ? 'Generating Analysis...' : '🤖 Generate AI Analysis'}
-            </Button>
-          </Stack>
-        </CardContent>
-      </Card>
+      <GlassCard sx={{ p: 6, textAlign: 'center', background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 100%)` }}>
+        <Box sx={{ 
+          width: 80, 
+          height: 80, 
+          borderRadius: 4, 
+          bgcolor: alpha(theme.palette.primary.main, 0.1),
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          mx: 'auto',
+          mb: 4,
+          color: 'primary.main',
+          border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`
+        }}>
+          <Psychology sx={{ fontSize: 40 }} />
+        </Box>
+        <Typography variant="h3" sx={{ fontWeight: 900, mb: 2, fontFamily: 'Orbitron' }}>COLLECTIVE BRAIN</Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 500, mx: 'auto', mb: 4 }}>Unlock personalized career growth insights, skill gap analysis, and tailored improvement roadmaps powered by InterviewMaster AI.</Typography>
+        <GradientButton size="large" onClick={onGenerate} startIcon={<AutoAwesome />}>LAUNCH AI SCAN</GradientButton>
+      </GlassCard>
     );
   }
-  // Analysis exists - show summary
-  const { analysis_data, analyzed_at, from_cache, cache_age_days, execution_time_ms, status } = analysis;
-  const { skill_inventory, skill_gaps, improvement_roadmap } = analysis_data;
 
-  // Check if this is AI-generated or fallback
+  // 4. Results State
+  const { analysis_data, analyzed_at, execution_time_ms, status } = analysis;
   const isAIGenerated = status === 'success' && !(analysis_data as any).fallback_used;
 
-  const totalSkills =
-    (skill_inventory.technical_skills?.length || 0) +
-    (skill_inventory.soft_skills?.length || 0) +
-    (skill_inventory.tools?.length || 0) +
-    (skill_inventory.languages?.length || 0);
-
-  const totalGaps =
-    (skill_gaps.required_missing?.length || 0) +
-    (skill_gaps.preferred_missing?.length || 0);
-
-  const matchPercentage = skill_gaps.match_percentage !== undefined && skill_gaps.match_percentage !== null 
-    ? skill_gaps.match_percentage 
-    : 0;
-  
-  const milestonesCount = improvement_roadmap.milestones?.length || 
-    (improvement_roadmap.recommendations ? 1 : 0);
-  
-  const timelineWeeks = improvement_roadmap.timeline_weeks || 0;
-
   return (
-    <Card 
-      sx={{ 
-        border: '2px solid', 
-        borderColor: isAIGenerated ? 'success.light' : 'warning.light',
-        bgcolor: isAIGenerated ? 'success.lighter' : 'warning.lighter'
-      }}
-    >
-      <CardContent>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
-          <Box>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-              <Psychology sx={{ color: isAIGenerated ? 'success.main' : 'warning.main' }} />
-              <Typography variant="h6" color={isAIGenerated ? 'success.main' : 'warning.main'}>
-                Resume Analysis
-              </Typography>
-              {isAIGenerated && (
-                <Chip 
-                  label="🤖 AI Generated" 
-                  color="success" 
-                  variant="filled"
-                  size="small"
-                />
-              )}
-              {(analysis_data as any).fallback_used && (
-                <Chip 
-                  label="⚠️ Fallback" 
-                  color="warning" 
-                  variant="filled"
-                  size="small"
-                />
-              )}
-            </Stack>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Typography variant="caption" color="text.secondary">
-                Analyzed: {format(new Date(analyzed_at), 'MMM dd, yyyy HH:mm')}
-              </Typography>
-              {from_cache && (
-                <Chip
-                  label={`Cached (${cache_age_days}d old)`}
-                  size="small"
-                  color="info"
-                  variant="outlined"
-                />
-              )}
-              <Chip
-                label={`⚡ ${execution_time_ms}ms`}
-                size="small"
-                icon={<Speed />}
-                variant="outlined"
-              />
-            </Stack>
-          </Box>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={isGenerating ? <CircularProgress size={16} /> : <Refresh />}
-            onClick={onRegenerate}
-            disabled={isGenerating}
-            sx={{ 
-              color: isAIGenerated ? 'success.main' : 'warning.main',
-              borderColor: isAIGenerated ? 'success.main' : 'warning.main'
-            }}
-          >
-            {isGenerating ? 'Regenerating...' : 'Regenerate'}
-          </Button>
-        </Stack>
-
-        <Divider sx={{ my: 2 }} />
-
-        {/* AI Analysis Summary */}
-        {(analysis_data as any).analysis_summary && (
-          <>
-            <Alert 
-              severity={isAIGenerated ? "success" : "warning"} 
-              icon={isAIGenerated ? <AutoAwesome /> : <Warning />}
-              sx={{ mb: 2 }}
-            >
-              <Typography variant="body2">
-                <strong>{isAIGenerated ? '🧠 AI Insight:' : '⚠️ Fallback Analysis:'}</strong> {(analysis_data as any).analysis_summary}
-              </Typography>
-            </Alert>
-          </>
-        )}
-
-        {/* Summary Stats */}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' }, gap: 2, mb: 2 }}>
-          <Box sx={{ 
-            textAlign: 'center', 
-            p: 2, 
-            bgcolor: 'primary.lighter', 
-            borderRadius: 2,
-            border: '2px solid',
-            borderColor: 'primary.light'
-          }}>
-            <Typography variant="h4" color="primary.main" fontWeight="bold">
-              {totalSkills}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" fontWeight="medium">
-              Skills Identified
-            </Typography>
-          </Box>
-          <Box sx={{ 
-            textAlign: 'center', 
-            p: 2, 
-            bgcolor: 'warning.lighter', 
-            borderRadius: 2,
-            border: '2px solid',
-            borderColor: 'warning.light'
-          }}>
-            <Typography variant="h4" color="warning.main" fontWeight="bold">
-              {totalGaps}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" fontWeight="medium">
-              Skill Gaps
-            </Typography>
-          </Box>
-          <Box sx={{ 
-            textAlign: 'center', 
-            p: 2, 
-            bgcolor: 'success.lighter', 
-            borderRadius: 2,
-            border: '2px solid',
-            borderColor: 'success.light'
-          }}>
-            <Typography variant="h4" color="success.main" fontWeight="bold">
-              {matchPercentage}%
-            </Typography>
-            <Typography variant="body2" color="text.secondary" fontWeight="medium">
-              Role Match
-            </Typography>
-          </Box>
+    <GlassCard sx={{ 
+      p: 4, 
+      border: isAIGenerated ? `1px solid ${alpha(theme.palette.success.main, 0.3)}` : `1px solid ${alpha(theme.palette.warning.main, 0.3)}`,
+      background: isAIGenerated ? `radial-gradient(circle at top right, ${alpha(theme.palette.success.main, 0.1)}, transparent 40%)` : undefined,
+    }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
+        <Box>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 1 }}>
+            <Box sx={{ p: 1, borderRadius: 2, bgcolor: isAIGenerated ? 'success.main' : 'warning.main', color: 'white' }}>
+              <Psychology />
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'Orbitron' }}>RESUME INTELLIGENCE</Typography>
+            {isAIGenerated && <Chip label="AI SUCCESS" color="success" size="small" sx={{ fontWeight: 900, borderRadius: 1 }} />}
+          </Stack>
+          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600 }}>
+            LAST SCANNED: {format(new Date(analyzed_at), 'MMM dd, HH:mm')} • LATTICE DELAY: {execution_time_ms}ms
+          </Typography>
         </Box>
-        {/* Quick Insights */}
-        <Stack spacing={1} sx={{ mb: 3 }}>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <CheckCircle fontSize="small" color="success" />
-            <Typography variant="body2">
-              <strong>{skill_inventory.technical_skills?.length || 0}</strong> technical skills identified
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <TrendingUp fontSize="small" color="primary" />
-            <Typography variant="body2">
-              <strong>{milestonesCount}</strong> {milestonesCount === 1 ? 'improvement recommendation' : 'learning milestones'}
-            </Typography>
-          </Stack>
-          {timelineWeeks > 0 && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Schedule fontSize="small" color="info" />
-              <Typography variant="body2">
-                <strong>{timelineWeeks}</strong> weeks development roadmap
-              </Typography>
-            </Stack>
-          )}
-          {isAIGenerated && (
-            <Stack direction="row" spacing={1} alignItems="center">
-              <AutoAwesome fontSize="small" color="secondary" />
-              <Typography variant="body2" color="secondary.main" fontWeight="medium">
-                Powered by advanced AI analysis
-              </Typography>
-            </Stack>
-          )}
-        </Stack>
+        <IconButton onClick={onRegenerate} sx={{ bgcolor: alpha(theme.palette.background.paper, 0.5) }}>
+          <Refresh sx={{ fontSize: 18 }} />
+        </IconButton>
+      </Box>
 
-        {onViewDetails && (
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={onViewDetails}
-            size="large"
-            sx={{ 
-              bgcolor: isAIGenerated ? 'success.main' : 'warning.main',
-              '&:hover': {
-                bgcolor: isAIGenerated ? 'success.dark' : 'warning.dark'
-              }
-            }}
-          >
-            {isAIGenerated ? '🚀 View Full AI Analysis' : '📊 View Analysis Details'}
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+      <Divider sx={{ mb: 4, opacity: 0.1 }} />
+
+      {/* Summary Insight */}
+      {(analysis_data as any).analysis_summary && (
+        <Box sx={{ 
+          p: 2.5, 
+          borderRadius: 4, 
+          bgcolor: alpha(theme.palette.background.paper, 0.5), 
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          mb: 4
+        }}>
+          <Typography variant="body1" sx={{ fontStyle: 'italic', color: 'text.primary', fontWeight: 500 }}>
+            "{(analysis_data as any).analysis_summary}"
+          </Typography>
+        </Box>
+      )}
+
+      {/* Stats Bento */}
+      <Grid container spacing={2} sx={{ mb: 4 }}>
+        {[
+          { label: 'SKILLS', val: analysis_data.skill_inventory?.technical_skills?.length || 0, color: 'primary' },
+          { label: 'GAPS', val: (analysis_data.skill_gaps?.required_missing?.length || 0) + (analysis_data.skill_gaps?.preferred_missing?.length || 0), color: 'error' },
+          { label: 'MATCH', val: `${analysis_data.skill_gaps?.match_percentage || 0}%`, color: 'success' }
+        ].map((stat, i) => (
+          <Grid key={i} size={{ xs: 4 }}>
+            <Box sx={{ textAlign: 'center', p: 2, borderRadius: 3, bgcolor: alpha((theme.palette as any)[stat.color].main, 0.05), border: `1px solid ${alpha((theme.palette as any)[stat.color].main, 0.1)}` }}>
+              <Typography variant="h4" sx={{ fontWeight: 900, color: `${stat.color}.main`, fontFamily: 'Orbitron' }}>{stat.val}</Typography>
+              <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.1em' }} >{stat.label}</Typography>
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Roadmap & Details */}
+      <Stack spacing={2} sx={{ mb: 4 }}>
+        <Stack direction="row" spacing={2} alignItems="center">
+           <RoadmapIcon color="info" />
+           <Typography variant="body2" sx={{ fontWeight: 600 }}>{analysis_data.improvement_roadmap?.milestones?.length || 0} Growth Milestones Identified</Typography>
+        </Stack>
+        <Stack direction="row" spacing={2} alignItems="center">
+           <FlashIcon color="warning" />
+           <Typography variant="body2" sx={{ fontWeight: 600 }}>Matched for {analysis_data.skill_gaps?.target_role?.toUpperCase() || 'CORE ROLE'}</Typography>
+        </Stack>
+      </Stack>
+
+      {onViewDetails && (
+        <GradientButton fullWidth size="large" onClick={onViewDetails} startIcon={<AutoAwesome />}>
+          OPEN INTELLIGENCE REPORT
+        </GradientButton>
+      )}
+    </GlassCard>
   );
 }
 

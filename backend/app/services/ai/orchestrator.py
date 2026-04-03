@@ -293,7 +293,17 @@ class AIOrchestrator:
             f"cache_hit_rate={self.cache_hits / max(1, self.total_requests) * 100:.1f}%)"
         )
 
-    def generate(self, request: "AIRequest") -> "AIResponse":
+    def generate(self, request: "AIRequest", max_retries: int = 3) -> "AIResponse":
+        """
+        Generate AI response with retry limits.
+        
+        Args:
+            request: AI request with prompt and parameters
+            max_retries: Maximum number of provider attempts (default: 3)
+            
+        Returns:
+            AIResponse with generated content or error
+        """
         import asyncio
         import nest_asyncio
         from .types import AIRequest, AIResponse
@@ -301,30 +311,99 @@ class AIOrchestrator:
 
         nest_asyncio.apply()
         cache_key = f"ai_gen:{hashlib.md5(request.prompt.encode()).hexdigest()}"
+        
+        # Check cache first
+        cached_response = self._check_cache(cache_key)
+        if cached_response and cached_response.success:
+            self.cache_hits += 1
+            logger.info(f"Cache hit for request")
+            return AIResponse(
+                provider_name=cached_response.provider_name,
+                content=cached_response.content,
+                model=cached_response.model,
+                success=True,
+                error=None,
+                tokens_used=cached_response.tokens_used,
+                response_time=0,
+                timestamp=cached_response.timestamp,
+                metadata={"cached": True}
+            )
+        
+        self.cache_misses += 1
+        self.total_requests += 1
+        
         try:
             loop = asyncio.get_event_loop()
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        response = loop.run_until_complete(
-            self.call(
-                prompt=request.prompt,
-                cache_key=cache_key,
-                use_cache=True,
-                max_tokens=request.max_tokens,
-                temperature=request.temperature,
-            )
-        )
+        
+        # Try providers with retry limit
+        errors = []
+        attempts = 0
+        
+        for provider in self.providers:
+            if attempts >= max_retries:
+                logger.warning(f"Reached max retries ({max_retries})")
+                break
+            
+            if not self._can_use_provider(provider):
+                continue
+            
+            attempts += 1
+            
+            try:
+                self.provider_calls[provider.config.name] = \
+                    self.provider_calls.get(provider.config.name, 0) + 1
+                
+                response = loop.run_until_complete(
+                    provider.call_with_tracking(
+                        prompt=request.prompt,
+                        max_tokens=request.max_tokens,
+                        temperature=request.temperature,
+                    )
+                )
+                
+                if response.success:
+                    # Cache successful response
+                    self._cache_response(cache_key, response)
+                    
+                    return AIResponse(
+                        provider_name=response.provider_name,
+                        content=response.content,
+                        model=response.model,
+                        success=True,
+                        error=None,
+                        tokens_used=response.tokens_used,
+                        response_time=response.response_time,
+                        timestamp=response.timestamp,
+                        metadata=response.metadata,
+                    )
+                else:
+                    errors.append(f"{provider.config.name}: {response.error}")
+                    
+            except Exception as e:
+                error_msg = f"{provider.config.name}: {str(e)}"
+                logger.warning(f"Provider failed: {error_msg}")
+                errors.append(error_msg)
+                self.provider_failures[provider.config.name] = \
+                    self.provider_failures.get(provider.config.name, 0) + 1
+                continue
+        
+        # All providers failed
+        final_error = f"All {attempts} provider(s) failed: {'; '.join(errors)}"
+        logger.error(final_error)
+        
         return AIResponse(
-            provider_name=response.provider_name,
-            content=response.content,
-            model=response.model,
-            success=response.success,
-            error=response.error,
-            tokens_used=response.tokens_used,
-            response_time=response.response_time,
-            timestamp=response.timestamp,
-            metadata=response.metadata,
+            provider_name="orchestrator",
+            content="",
+            model="none",
+            success=False,
+            error=final_error,
+            tokens_used=0,
+            response_time=0,
+            timestamp=None,
+            metadata={"attempts": attempts, "errors": errors},
         )
 
     def generate_without_cache(self, request: "AIRequest") -> "AIResponse":

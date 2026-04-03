@@ -5,7 +5,7 @@
 
 export const API_CONFIG = {
   BASE_URL: import.meta.env.VITE_API_URL || '/api/v1',
-  TIMEOUT: 30000,
+  TIMEOUT: 120000,
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
 } as const;
@@ -54,6 +54,32 @@ export const API_ENDPOINTS = {
     DASHBOARD: '/analytics/dashboard',
     PERFORMANCE: '/analytics/performance',
     PROGRESS: '/analytics/progress',
+  },
+
+  // Study Plans
+  STUDY_PLANS: {
+    LIST: '/study-plans',
+    CREATE: '/study-plans',
+    GET: (id: number) => `/study-plans/${id}`,
+    ACTIVE: '/study-plans/active/current',
+    UPDATE_PROGRESS: (id: number) => `/study-plans/${id}/progress`,
+    ABANDON: (id: number) => `/study-plans/${id}`,
+  },
+
+  // Resume Analysis
+  RESUME_ANALYSIS: {
+    LIST: '/resume-analysis',
+    CREATE: '/resume-analysis',
+    GET: (id: number) => `/resume-analysis/${id}`,
+    LATEST: '/resume-analysis/latest',
+  },
+
+  // Company Coaching
+  COMPANY_COACHING: {
+    LIST: '/company-coaching',
+    CREATE: '/company-coaching',
+    GET: (id: number) => `/company-coaching/${id}`,
+    BY_COMPANY: (company: string) => `/company-coaching/company/${company}`,
   },
 
   // Health

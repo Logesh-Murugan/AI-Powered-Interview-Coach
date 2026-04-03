@@ -7,6 +7,7 @@
 
 import apiService from './api.service';
 import { logError } from '../utils/errorMessages';
+import { API_ENDPOINTS } from '../config/api.config';
 
 // Daily task within a study plan
 export interface DailyTask {
@@ -87,7 +88,7 @@ export const studyPlanService = {
   async createStudyPlan(request: CreateStudyPlanRequest): Promise<StudyPlan> {
     try {
       const response = await apiService.post<StudyPlan>(
-        '/study-plans',
+        API_ENDPOINTS.STUDY_PLANS.CREATE,
         request
       );
       return response.data;
@@ -104,7 +105,7 @@ export const studyPlanService = {
   async getStudyPlan(planId: number): Promise<StudyPlan> {
     try {
       const response = await apiService.get<StudyPlan>(
-        `/study-plans/${planId}`
+        API_ENDPOINTS.STUDY_PLANS.GET(planId)
       );
       return response.data;
     } catch (error) {
@@ -120,12 +121,12 @@ export const studyPlanService = {
   async getActiveStudyPlan(): Promise<StudyPlan | null> {
     try {
       const response = await apiService.get<StudyPlan>(
-        '/study-plans/active/current'
+        API_ENDPOINTS.STUDY_PLANS.ACTIVE
       );
       return response.data;
     } catch (error: any) {
       // Handle 404 gracefully - no active study plan exists
-      if (error?.response?.status === 404) {
+      if (error?.status === 404 || error?.response?.status === 404) {
         return null;
       }
       logError(error, 'studyPlanService.getActiveStudyPlan');
@@ -143,7 +144,7 @@ export const studyPlanService = {
   ): Promise<StudyPlan> {
     try {
       const response = await apiService.patch<StudyPlan>(
-        `/study-plans/${planId}/progress`,
+        API_ENDPOINTS.STUDY_PLANS.UPDATE_PROGRESS(planId),
         request
       );
       return response.data;
@@ -159,7 +160,7 @@ export const studyPlanService = {
    */
   async abandonPlan(planId: number): Promise<void> {
     try {
-      await apiService.delete(`/study-plans/${planId}`);
+      await apiService.delete(API_ENDPOINTS.STUDY_PLANS.ABANDON(planId));
     } catch (error) {
       logError(error, 'studyPlanService.abandonPlan');
       throw error;

@@ -80,7 +80,7 @@ class ResumeAnalysisResponse(BaseModel):
     """Response with resume analysis"""
     analysis_id: int
     resume_id: int
-    analysis_data: Dict[str, Any]
+    analysis_data: Optional[Dict[str, Any]] = None
     agent_reasoning: Optional[List[Dict[str, Any]]] = None
     execution_time_ms: int
     status: str

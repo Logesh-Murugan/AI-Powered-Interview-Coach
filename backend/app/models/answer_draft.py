@@ -7,6 +7,7 @@ Requirements: 17.1-17.7
 """
 from sqlalchemy import Column, Integer, Text, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from datetime import datetime
 
 from app.models.base import Base
@@ -29,15 +30,15 @@ class AnswerDraft(Base):
     draft_text = Column(Text, nullable=False)
     
     # Timing
-    last_saved_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    last_saved_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
     
     # Relationships
     user = relationship("User")
     
     # Timestamps from base
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    deleted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=func.now(), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     
     def __repr__(self):
         return f"<AnswerDraft(id={self.id}, session_id={self.session_id}, question_id={self.question_id}, user_id={self.user_id})>"

@@ -1,21 +1,19 @@
 /**
- * Upcoming Tasks Widget
- * Displays next 3-5 upcoming tasks from active study plan
- * Requirements: COMP-2.3
+ * Premium Upcoming Tasks Widget
+ * High-end AI-powered learning task tracker
  */
 
 import { useEffect, useState } from 'react';
 import {
-  Card,
-  CardContent,
   Typography,
   Box,
   Checkbox,
   Stack,
-  Button,
   CircularProgress,
-  Alert,
   Chip,
+  alpha,
+  useTheme,
+  IconButton,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import AssignmentIcon from '@mui/icons-material/Assignment';
@@ -23,6 +21,10 @@ import AddIcon from '@mui/icons-material/Add';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { studyPlanService } from '../../services/studyPlanService';
 import type { DailyTask } from '../../services/studyPlanService';
+import { GlassCard, GradientButton } from '../common/PremiumComponents';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion.create(Box);
 
 interface TaskWithDay {
   task: DailyTask;
@@ -32,6 +34,7 @@ interface TaskWithDay {
 
 function UpcomingTasks() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [tasks, setTasks] = useState<TaskWithDay[]>([]);
   const [hasActivePlan, setHasActivePlan] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -45,175 +48,115 @@ function UpcomingTasks() {
     try {
       setLoading(true);
       setError(null);
-      
       const plan = await studyPlanService.getActiveStudyPlan();
       setHasActivePlan(true);
       
-      // Get upcoming tasks (next 5 incomplete tasks)
       const upcomingTasks: TaskWithDay[] = [];
-      
       if (plan?.plan_data?.daily_tasks) {
         for (const dayTasks of plan.plan_data.daily_tasks) {
           for (const task of dayTasks.tasks) {
             if (!task.completed && upcomingTasks.length < 5) {
-              upcomingTasks.push({
-                task,
-                day: dayTasks.day,
-                date: dayTasks.date,
-              });
+              upcomingTasks.push({ task, day: dayTasks.day, date: dayTasks.date });
             }
           }
           if (upcomingTasks.length >= 5) break;
         }
       }
-      
       setTasks(upcomingTasks);
     } catch (err: any) {
-      console.error('Error loading upcoming tasks:', err);
-      
-      // Check if error is 404 (no active plan)
       if (err.response?.status === 404) {
         setHasActivePlan(false);
       } else {
-        setError('Unable to load upcoming tasks');
+        setError('Connection shielding active');
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCreatePlan = () => {
-    navigate('/ai/study-plans');
-  };
+  if (loading) return (
+    <GlassCard sx={{ minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <CircularProgress size={30} thickness={5} />
+    </GlassCard>
+  );
 
-  const handleViewPlan = () => {
-    navigate('/ai/study-plans');
-  };
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-          <CircularProgress />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardContent>
-          <Alert severity="error">{error}</Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // No active plan state
-  if (!hasActivePlan) {
-    return (
-      <Card>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <AssignmentIcon sx={{ mr: 1, color: 'primary.main' }} />
-            <Typography variant="h6" component="h2">
-              Upcoming Tasks
-            </Typography>
-          </Box>
-
-          <Box sx={{ textAlign: 'center', py: 3 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              You don't have an active study plan yet.
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleCreatePlan}
-            >
-              Create Study Plan
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-    );
-  }
+  if (!hasActivePlan) return (
+    <GlassCard sx={{ p: 4, height: '100%', border: `1px dashed ${alpha(theme.palette.primary.main, 0.3)}` }}>
+      <Stack spacing={3} alignItems="center" justifyContent="center" sx={{ height: '100%', py: 4 }}>
+        <Box sx={{ p: 2, borderRadius: '50%', bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }}>
+           <AssignmentIcon sx={{ fontSize: 40 }} />
+        </Box>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>NO ACTIVE ROADMAP</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontWeight: 500 }}>INITIALIZE YOUR AI STUDY PLAN TO TRACK VECTORS.</Typography>
+        </Box>
+        <GradientButton startIcon={<AddIcon />} onClick={() => navigate('/ai/study-plans')}>
+          INITIALIZE PLAN
+        </GradientButton>
+      </Stack>
+    </GlassCard>
+  );
 
   return (
-    <Card>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <AssignmentIcon sx={{ mr: 1, color: 'primary.main' }} />
-          <Typography variant="h6" component="h2">
-            Upcoming Tasks
-          </Typography>
-        </Box>
+    <GlassCard sx={{ p: 4, height: '100%' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 4 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+           <AssignmentIcon color="primary" />
+           <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', letterSpacing: '0.05em' }}>UPCOMING VECTORS</Typography>
+        </Stack>
+        <IconButton onClick={() => navigate('/ai/study-plans')} size="small" sx={{ bgcolor: alpha(theme.palette.background.paper, 0.3) }}>
+           <ArrowForwardIcon fontSize="small" />
+        </IconButton>
+      </Stack>
 
-        {tasks.length > 0 ? (
-          <Stack spacing={1.5} sx={{ mb: 2 }}>
-            {tasks.map((item, index) => (
-              <Box
-                key={index}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  p: 1,
-                  borderRadius: 1,
-                  '&:hover': {
-                    bgcolor: 'action.hover',
-                  },
-                }}
-              >
-                <Checkbox
-                  disabled
-                  checked={item.task.completed}
-                  sx={{ mt: -0.5 }}
-                />
-                <Box sx={{ flex: 1, ml: 1 }}>
-                  <Typography variant="body2" fontWeight="medium">
-                    {item.task.skill}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                    {item.task.activity}
-                  </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                    <Chip
-                      label={`Day ${item.day}`}
-                      size="small"
-                      variant="outlined"
-                      sx={{ height: 20, fontSize: '0.7rem' }}
-                    />
-                    <Chip
-                      label={`${item.task.duration_minutes} min`}
-                      size="small"
-                      variant="outlined"
-                      sx={{ height: 20, fontSize: '0.7rem' }}
-                    />
-                  </Box>
-                </Box>
-              </Box>
-            ))}
-          </Stack>
-        ) : (
-          <Box sx={{ textAlign: 'center', py: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              All tasks completed! 🎉
-            </Typography>
+      <Stack spacing={2}>
+        {tasks.map((item, idx) => (
+          <MotionBox
+            key={idx}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            sx={{
+              p: 2,
+              borderRadius: 3,
+              bgcolor: alpha(theme.palette.background.paper, 0.3),
+              border: `1px solid ${alpha(theme.palette.divider, 0.05)}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                bgcolor: alpha(theme.palette.background.paper, 0.5),
+                borderColor: alpha(theme.palette.primary.main, 0.2)
+              }
+            }}
+          >
+            <Checkbox 
+              checked={item.task.completed} 
+              sx={{ 
+                color: alpha(theme.palette.text.primary, 0.2),
+                '&.Mui-checked': { color: theme.palette.success.main }
+              }} 
+            />
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" sx={{ fontWeight: 900, mb: 0.5 }}>{item.task.skill.toUpperCase()}</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontWeight: 600, mb: 1, lineHeight: 1.4 }}>
+                {item.task.activity}
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Chip label={`CHRONO-DAY ${item.day}`} size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900, bgcolor: alpha(theme.palette.primary.main, 0.1), color: 'primary.main' }} />
+                <Chip label={`${item.task.duration_minutes} MIN`} size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 900, bgcolor: alpha(theme.palette.secondary.main, 0.1), color: 'secondary.main' }} />
+              </Stack>
+            </Box>
+          </MotionBox>
+        ))}
+        {tasks.length === 0 && (
+          <Box sx={{ py: 6, textAlign: 'center', opacity: 0.5 }}>
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>SYNCHRONIZATION COMPLETE. NO PENDING VECTORS.</Typography>
           </Box>
         )}
-
-        {/* View Full Plan Button */}
-        <Button
-          fullWidth
-          variant="outlined"
-          endIcon={<ArrowForwardIcon />}
-          onClick={handleViewPlan}
-          sx={{ mt: 2 }}
-        >
-          View Full Study Plan
-        </Button>
-      </CardContent>
-    </Card>
+      </Stack>
+    </GlassCard>
   );
 }
 

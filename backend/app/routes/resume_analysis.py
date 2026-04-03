@@ -28,6 +28,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/resume-analysis", tags=["Resume Analysis"])
 
 
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+
 @router.post(
     "/{resume_id}",
     response_model=ResumeAnalysisResponse,
@@ -50,6 +52,7 @@ router = APIRouter(prefix="/api/v1/resume-analysis", tags=["Resume Analysis"])
 async def analyze_resume(
     resume_id: int,
     request: ResumeAnalysisRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -59,6 +62,7 @@ async def analyze_resume(
     Args:
         resume_id: Resume ID to analyze
         request: Analysis request parameters
+        background_tasks: FastAPI background tasks
         current_user: Authenticated user
         db: Database session
         
@@ -69,17 +73,20 @@ async def analyze_resume(
         HTTPException: If resume not found or not ready
     """
     try:
+        # Capture user_id before session operations to avoid detached instance errors
+        user_id = current_user.id
         service = ResumeAgentService(db)
         
         result = service.analyze_resume(
             resume_id=resume_id,
-            user_id=current_user.id,
+            user_id=user_id,
             target_role=request.target_role,
-            force_refresh=request.force_refresh
+            force_refresh=request.force_refresh,
+            background_tasks=background_tasks
         )
         
         logger.info(
-            f"Resume {resume_id} analyzed for user {current_user.id} "
+            f"Resume {resume_id} analyzed for user {user_id} "
             f"(status: {result['status']}, from_cache: {result['from_cache']})"
         )
         

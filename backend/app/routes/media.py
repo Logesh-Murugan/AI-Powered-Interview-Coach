@@ -139,6 +139,7 @@ async def upload_recording(
         answer.recording_format = processing_result.get('recording_format')
         answer.transcription = processing_result.get('transcription')
         answer.voice_analysis = processing_result.get('voice_analysis')
+        answer.video_analysis = processing_result.get('video_analysis')
         
         # IMPORTANT: If answer_text is empty, populate it with transcription
         # This allows speech-to-text to be evaluated like a normal text answer
@@ -160,6 +161,7 @@ async def upload_recording(
             "recording_duration": processing_result.get('recording_duration'),
             "transcription": processing_result.get('transcription'),
             "voice_analysis": processing_result.get('voice_analysis'),
+            "video_analysis": processing_result.get('video_analysis'),
             "processing_metadata": processing_result.get('processing_metadata')
         }
         
@@ -378,9 +380,9 @@ async def cleanup_old_files(
         This endpoint should be restricted to admin users in production
     """
     try:
-        # TODO: Add admin role check
-        # if not current_user.is_admin:
-        #     raise HTTPException(status_code=403, detail="Admin access required")
+        # Admin role check - verify user is admin
+        if not current_user.is_admin:
+            raise HTTPException(status_code=403, detail="Admin access required")
         
         if days_old < 1:
             raise HTTPException(

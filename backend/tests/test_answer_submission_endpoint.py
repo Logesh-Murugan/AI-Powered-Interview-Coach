@@ -75,7 +75,8 @@ class TestAnswerSubmissionEndpoint:
             difficulty="Medium",
             status=SessionStatus.IN_PROGRESS,
             question_count=1,
-            start_time=datetime.utcnow()
+            start_time=datetime.utcnow(),
+            created_at=datetime.utcnow()
         )
         db.add(session)
         db.commit()
@@ -200,7 +201,8 @@ class TestAnswerSubmissionEndpoint:
             difficulty="Medium",
             status=SessionStatus.IN_PROGRESS,
             question_count=1,
-            start_time=datetime.utcnow()
+            start_time=datetime.utcnow(),
+            created_at=datetime.utcnow()
         )
         db.add(session)
         db.commit()
@@ -281,7 +283,8 @@ class TestAnswerSubmissionEndpoint:
             difficulty="Medium",
             status=SessionStatus.IN_PROGRESS,
             question_count=1,
-            start_time=datetime.utcnow()
+            start_time=datetime.utcnow(),
+            created_at=datetime.utcnow()
         )
         db.add(session)
         db.commit()
@@ -342,7 +345,8 @@ class TestAnswerSubmissionEndpoint:
             difficulty="Medium",
             status=SessionStatus.IN_PROGRESS,
             question_count=1,
-            start_time=datetime.utcnow()
+            start_time=datetime.utcnow(),
+            created_at=datetime.utcnow()
         )
         db.add(session)
         db.commit()
@@ -402,7 +406,8 @@ class TestAnswerSubmissionEndpoint:
             difficulty="Medium",
             status=SessionStatus.IN_PROGRESS,
             question_count=1,
-            start_time=datetime.utcnow()
+            start_time=datetime.utcnow(),
+            created_at=datetime.utcnow()
         )
         db.add(session)
         db.commit()
@@ -483,7 +488,8 @@ class TestAnswerSubmissionEndpoint:
             difficulty="Medium",
             status=SessionStatus.IN_PROGRESS,
             question_count=3,
-            start_time=datetime.utcnow()
+            start_time=datetime.utcnow(),
+            created_at=datetime.utcnow()
         )
         db.add(session)
         db.commit()
@@ -552,7 +558,8 @@ class TestAnswerSubmissionEndpoint:
             difficulty="Medium",
             status=SessionStatus.IN_PROGRESS,
             question_count=1,
-            start_time=datetime.utcnow()
+            start_time=datetime.utcnow(),
+            created_at=datetime.utcnow()
         )
         db.add(session)
         db.commit()

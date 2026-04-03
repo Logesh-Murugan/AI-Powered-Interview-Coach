@@ -1,13 +1,11 @@
 /**
- * Leaderboard Page
- * Display rankings and competitive standings
+ * Premium Leaderboard Page
+ * High-end Competitive Lattice and global standing interface
  */
 
 import { useEffect, useState } from 'react';
 import {
   Box,
-  Container,
-  Paper,
   Typography,
   Table,
   TableBody,
@@ -17,25 +15,37 @@ import {
   TableRow,
   Tabs,
   Tab,
-  Alert,
   Chip,
   Switch,
   FormControlLabel,
   Avatar,
+  alpha,
+  useTheme,
+  Stack,
+  Grid,
+  CircularProgress,
 } from '@mui/material';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import {
+  EmojiEvents as EmojiEventsIcon,
+  Public,
+  MilitaryTech,
+  AutoAwesome,
+} from '@mui/icons-material';
 import {
   getLeaderboard,
   getLeaderboardPreference,
   updateLeaderboardPreference,
   type LeaderboardEntry,
 } from '../../services/leaderboardService';
-import FadeIn from '../../components/animations/FadeIn';
+import { motion } from 'framer-motion';
+import { GlassCard, GradientText } from '../../components/common/PremiumComponents';
+
+const MotionBox = motion.create(Box);
 
 function LeaderboardPage() {
+  const theme = useTheme();
   const [period, setPeriod] = useState<'weekly' | 'all_time'>('weekly');
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [currentUserRank, setCurrentUserRank] = useState<number | null>(null);
@@ -58,7 +68,7 @@ function LeaderboardPage() {
       setCurrentUserRank(data.current_user_rank);
       setTotalParticipants(data.total_participants);
     } catch (err: any) {
-      setError(err.message || 'Failed to load leaderboard');
+      setError(err.message || 'Data retrieval failed.');
     } finally {
       setLoading(false);
     }
@@ -69,7 +79,7 @@ function LeaderboardPage() {
       const data = await getLeaderboardPreference();
       setOptedOut(data.opted_out);
     } catch (err) {
-      console.error('Failed to load preference:', err);
+      console.error('Preference retrieval failed:', err);
     }
   };
 
@@ -78,143 +88,134 @@ function LeaderboardPage() {
     try {
       await updateLeaderboardPreference(newOptedOut);
       setOptedOut(newOptedOut);
-      loadLeaderboard(); // Reload to reflect changes
+      loadLeaderboard();
     } catch (err: any) {
-      setError(err.message || 'Failed to update preference');
+      setError(err.message || 'Preference update failed.');
     }
   };
 
-  const getRankColor = (rank: number) => {
-    if (rank === 1) return 'gold';
-    if (rank === 2) return 'silver';
-    if (rank === 3) return '#CD7F32'; // bronze
-    return 'inherit';
+  const getRankGlow = (rank: number) => {
+    if (rank === 1) return '#facc15'; // Gold
+    if (rank === 2) return '#94a3b8'; // Silver
+    if (rank === 3) return '#b45309'; // Bronze
+    return 'transparent';
   };
 
-  const getRankIcon = (rank: number) => {
-    if (rank <= 3) {
-      return <EmojiEventsIcon sx={{ color: getRankColor(rank) }} />;
-    }
-    return null;
-  };
+  if (loading && leaderboard.length === 0) return <LoadingSpinner variant="fullPage" />;
+  if (error) return <Box sx={{ p: 4 }}><ErrorAlert message={error} onRetry={loadLeaderboard} /></Box>;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <FadeIn>
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <TrendingUpIcon fontSize="large" />
-            Leaderboard
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            See how you rank against other users
-          </Typography>
+    <Box sx={{ pb: 8 }}>
+      {/* Header Section */}
+      <MotionBox
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        sx={{ mb: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 2 }}
+      >
+        <Box>
+           <Typography variant="h3" sx={{ fontWeight: 900, mb: 1, fontFamily: 'Orbitron' }}>COMPETITIVE <GradientText>LATTICE</GradientText></Typography>
+           <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+              GLOBAL RANKINGS AND PERFORMANCE STANDINGS
+           </Typography>
         </Box>
+        <GlassCard sx={{ p: 1, px: 2, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+           <FormControlLabel
+             control={<Switch checked={!optedOut} onChange={handlePreferenceChange} color="primary" sx={{ m: 0 }} />}
+             label={<Typography variant="caption" sx={{ fontWeight: 900, fontFamily: 'Orbitron', letterSpacing: '0.1em' }}>PUBLIC VISIBILITY</Typography>}
+             sx={{ m: 0 }}
+           />
+        </GlassCard>
+      </MotionBox>
 
-        <Paper sx={{ mb: 3, p: 2 }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={!optedOut}
-                onChange={handlePreferenceChange}
-                color="primary"
-              />
-            }
-            label="Participate in leaderboard"
-          />
-          <Typography variant="caption" display="block" color="text.secondary" sx={{ ml: 4 }}>
-            {optedOut
-              ? 'You are currently opted out of the leaderboard'
-              : 'Your scores will be visible on the leaderboard'}
-          </Typography>
-        </Paper>
+      {/* Stats Summary */}
+      <Grid container spacing={4} sx={{ mb: 6 }}>
+         {[
+           { label: 'GLOBAL RANK', value: currentUserRank ? `#${currentUserRank}` : 'N/A', icon: <MilitaryTech />, color: theme.palette.primary.main },
+           { label: 'PARTICIPANTS', value: totalParticipants, icon: <Public />, color: theme.palette.secondary.main },
+           { label: 'ACTIVE CYCLE', value: period.toUpperCase().replace('_', ' '), icon: <AutoAwesome />, color: theme.palette.success.main },
+         ].map((stat, i) => (
+           <Grid key={i} size={{ xs: 12, md: 4 }}>
+              <GlassCard sx={{ p: 3, textAlign: 'center' }}>
+                 <Box sx={{ color: stat.color, mb: 1.5, opacity: 0.5 }}>{stat.icon}</Box>
+                 <Typography variant="h3" sx={{ fontWeight: 900, fontFamily: 'Orbitron', color: stat.color }}>{stat.value}</Typography>
+                 <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.1em' }}>{stat.label}</Typography>
+              </GlassCard>
+           </Grid>
+         ))}
+      </Grid>
 
-        <Paper sx={{ mb: 3 }}>
-          <Tabs
-            value={period}
-            onChange={(_, newValue) => setPeriod(newValue)}
-            centered
-          >
-            <Tab label="Weekly" value="weekly" />
-            <Tab label="All Time" value="all_time" />
-          </Tabs>
-        </Paper>
-
-        {currentUserRank && !optedOut && (
-          <Alert severity="info" sx={{ mb: 3 }}>
-            Your current rank: #{currentUserRank} out of {totalParticipants} participants
-          </Alert>
-        )}
+      {/* Leaderboard Module */}
+      <GlassCard sx={{ p: 0, overflow: 'hidden' }}>
+        <Tabs
+          value={period}
+          onChange={(_, v) => setPeriod(v)}
+          variant="fullWidth"
+          sx={{
+            borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+            '& .MuiTabs-indicator': { height: 4 },
+            '& .MuiTab-root': { py: 3, fontWeight: 900, fontFamily: 'Orbitron', letterSpacing: '0.1em' }
+          }}
+        >
+          <Tab label="WEEKLY STANDINGS" value="weekly" />
+          <Tab label="ALL-TIME ARCHIVE" value="all_time" />
+        </Tabs>
 
         {loading ? (
-          <LoadingSpinner variant="fullPage" text="Loading leaderboard..." />
-        ) : error ? (
-          <ErrorAlert
-            message={error}
-            onRetry={loadLeaderboard}
-          />
-        ) : leaderboard.length === 0 ? (
-          <Alert severity="info">
-            No leaderboard data available yet. Complete some interview sessions to appear on the leaderboard!
-          </Alert>
+          <Box sx={{ p: 10, textAlign: 'center' }}><CircularProgress /></Box>
         ) : (
-          <TableContainer component={Paper}>
+          <TableContainer>
             <Table>
-              <TableHead>
+              <TableHead sx={{ bgcolor: alpha(theme.palette.background.paper, 0.4) }}>
                 <TableRow>
-                  <TableCell>Rank</TableCell>
-                  <TableCell>User</TableCell>
-                  <TableCell align="right">Sessions</TableCell>
-                  <TableCell align="right">Avg Score</TableCell>
-                  <TableCell align="right">Total Score</TableCell>
+                  <TableCell sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>RANK</TableCell>
+                  <TableCell sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>OPERATIVE</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>SESSIONS</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>AVG RATING</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>AGGREGATE</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {leaderboard.map((entry) => (
-                  <TableRow
-                    key={`${entry.rank}-${entry.username}`}
-                    sx={{
-                      backgroundColor: entry.is_current_user ? 'action.selected' : 'inherit',
-                      fontWeight: entry.is_current_user ? 'bold' : 'normal',
-                    }}
-                  >
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {getRankIcon(entry.rank)}
-                        <Typography
-                          sx={{
-                            color: getRankColor(entry.rank),
-                            fontWeight: entry.rank <= 3 ? 'bold' : 'normal',
-                          }}
-                        >
-                          #{entry.rank}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar sx={{ width: 32, height: 32 }}>
-                          {entry.username.charAt(0).toUpperCase()}
-                        </Avatar>
-                        {entry.username}
-                        {entry.is_current_user && (
-                          <Chip label="You" size="small" color="primary" />
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right">{entry.sessions_completed}</TableCell>
-                    <TableCell align="right">{entry.average_score.toFixed(1)}%</TableCell>
-                    <TableCell align="right">{(entry.average_score * entry.sessions_completed).toFixed(1)}</TableCell>
-                  </TableRow>
-                ))}
+                {leaderboard.map((entry, index) => {
+                   const glowColor = getRankGlow(entry.rank);
+                   return (
+                     <TableRow 
+                       key={index} 
+                       sx={{ 
+                         bgcolor: entry.is_current_user ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
+                         '&:hover': { bgcolor: alpha(theme.palette.background.paper, 0.8) },
+                         transition: 'all 0.3s ease'
+                       }}
+                     >
+                       <TableCell sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}` }}>
+                          <Stack direction="row" spacing={2} alignItems="center">
+                             <Box sx={{ width: 24, display: 'flex', justifyContent: 'center' }}>
+                                {entry.rank <= 3 ? <EmojiEventsIcon sx={{ color: glowColor, filter: `drop-shadow(0 0 5px ${glowColor}66)` }} /> : null}
+                             </Box>
+                             <Typography variant="subtitle2" sx={{ fontWeight: 900, color: glowColor !== 'transparent' ? glowColor : 'text.primary', fontFamily: 'Orbitron' }}>#{entry.rank}</Typography>
+                          </Stack>
+                       </TableCell>
+                       <TableCell sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}` }}>
+                          <Stack direction="row" spacing={2} alignItems="center">
+                             <Avatar sx={{ width: 32, height: 32, bgcolor: entry.is_current_user ? 'primary.main' : 'background.paper', border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`, fontSize: '0.8rem', fontWeight: 900 }}>
+                                {entry.username.charAt(0).toUpperCase()}
+                             </Avatar>
+                             <Typography sx={{ fontWeight: 700, fontSize: '0.9rem' }}>{entry.username.toUpperCase()}</Typography>
+                             {entry.is_current_user && <Chip label="YOU" size="small" color="primary" sx={{ fontWeight: 900, height: 18, fontSize: '0.6rem' }} />}
+                          </Stack>
+                       </TableCell>
+                       <TableCell align="right" sx={{ fontWeight: 800, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}` }}>{entry.sessions_completed}</TableCell>
+                       <TableCell align="right" sx={{ fontWeight: 900, color: 'primary.main', borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}` }}>{entry.average_score.toFixed(1)}%</TableCell>
+                       <TableCell align="right" sx={{ fontWeight: 900, fontFamily: 'Orbitron', borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}` }}>{(entry.average_score * entry.sessions_completed).toFixed(0)}</TableCell>
+                     </TableRow>
+                   );
+                })}
               </TableBody>
             </Table>
           </TableContainer>
         )}
-      </FadeIn>
-    </Container>
+      </GlassCard>
+    </Box>
   );
 }
 
 export default LeaderboardPage;
-

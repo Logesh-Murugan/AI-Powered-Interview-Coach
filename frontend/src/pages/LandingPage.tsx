@@ -1,555 +1,794 @@
 /**
- * Landing Page - Material-UI Version
- * Next-level design using MUI components
+ * Premium Landing Page
+ * State-of-the-art AI-coach entry point with high-end visuals and animations
  */
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Container,
   Typography,
   Button,
-  Card,
-  CardContent,
   AppBar,
   Toolbar,
-  IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
   Chip,
   useTheme,
-  useMediaQuery,
+  Grid,
   alpha,
+  Stack,
+  LinearProgress,
+  Avatar,
+  AvatarGroup,
+  Divider,
 } from '@mui/material';
-import Grid from '@mui/material/GridLegacy';
+
 import {
-  Menu as MenuIcon,
-  ArrowForward,
   PlayArrow,
   CheckCircle,
-  School,
-  TrendingUp,
-  Assessment,
-  Business,
-  EmojiEvents,
-  AttachMoney,
   Psychology,
-  ChevronRight,
+  AutoAwesome,
+  Star,
+  Security,
+  FlashOn,
+  Timeline,
+  RocketLaunch,
+  KeyboardArrowRight,
+  TrendingUp,
+  School,
+  Business,
+  Insights,
 } from '@mui/icons-material';
 import { ROUTES } from '../config/app.config';
+import { GlassCard, GradientButton, GradientText } from '../components/common/PremiumComponents';
+import { useAppSelector } from '../store/hooks';
+import AuthModal from '../components/auth/AuthModal';
 
-const MotionBox = motion(Box);
-const MotionCard = motion(Card);
+const MotionBox = motion.create(Box);
+const MotionTypography = motion.create(Typography);
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const [scrolled, setScrolled] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<0 | 1>(0);
+
+  const { scrollYProgress } = useScroll();
+  const backgroundY = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
+
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+
+  const openLogin = () => {
+
+     setAuthTab(0);
+     setAuthModalOpen(true);
+  };
+
+  const openRegister = () => {
+     setAuthTab(1);
+     setAuthModalOpen(true);
+  };
 
   const features = [
-    {
-      icon: <School sx={{ fontSize: 48 }} />,
-      title: 'Resume-Aware AI',
-      description: 'Questions tailored to YOUR experience and background',
-      color: theme.palette.primary.main,
+    { 
+      icon: <Psychology />, 
+      title: 'RESUME ANALYSIS', 
+      desc: 'Our AI analyzes your experience to create practice interviews that match real-world roles.', 
+      color: '#6366f1' 
     },
-    {
-      icon: <Psychology sx={{ fontSize: 48 }} />,
-      title: 'Hybrid Intelligence',
-      description: 'Fast traditional AI + deep agent analysis for comprehensive feedback',
-      color: theme.palette.secondary.main,
+    { 
+      icon: <AutoAwesome />, 
+      title: 'SMART FEEDBACK', 
+      desc: 'Get immediate feedback on your answers, helping you improve both what you say and how you say it.', 
+      color: '#a855f7' 
     },
-    {
-      icon: <Assessment sx={{ fontSize: 48 }} />,
-      title: 'Progress Tracking',
-      description: 'Multi-dimensional analytics to track your improvement',
-      color: theme.palette.success.main,
+    { 
+      icon: <Timeline />, 
+      title: 'PROGRESS TRACKING', 
+      desc: 'Track your improvement across multiple skills so you know exactly where you are getting better.', 
+      color: '#ec4899' 
     },
-    {
-      icon: <Business sx={{ fontSize: 48 }} />,
-      title: 'Company Intel',
-      description: 'Real questions from top companies in your industry',
-      color: theme.palette.warning.main,
+    { 
+      icon: <Business />, 
+      title: 'ROLE-SPECIFIC PRACTICE', 
+      desc: 'Practice for specific roles at top companies like FAANG with high-quality mock interviews.', 
+      color: '#3b82f6' 
     },
-    {
-      icon: <EmojiEvents sx={{ fontSize: 48 }} />,
-      title: 'Gamification',
-      description: 'Achievements, streaks, and skill trees to keep you motivated',
-      color: theme.palette.error.main,
-    },
-    {
-      icon: <AttachMoney sx={{ fontSize: 48 }} />,
-      title: '100% Free',
-      description: 'Unlimited practice with zero cost, forever',
-      color: theme.palette.info.main,
-    },
+
   ];
 
+  const steps = [
+    { title: 'UPLOAD RESUME', desc: 'Securely upload your resume for our AI to analyze.', icon: <RocketLaunch color="primary" /> },
+    { title: 'PRACTICE INTERVIEW', desc: 'Practice with an AI that simulates real-world interview conditions.', icon: <Insights color="secondary" /> },
+    { title: 'GET BETTER', desc: 'Review your detailed performance report and improve your skills.', icon: <TrendingUp color="success" /> },
+  ];
+
+
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', overflowX: 'hidden', color: 'text.primary' }}>
+      {/* Cursor Follower */}
+      <MotionBox
+        sx={{
+          position: 'fixed',
+          width: 400,
+          height: 400,
+          borderRadius: '50%',
+          background: `radial-gradient(circle, ${alpha(theme.palette.primary.main, 0.15)} 0%, transparent 70%)`,
+          pointerEvents: 'none',
+          zIndex: 1,
+          left: -200,
+          top: -200,
+        }}
+        animate={{
+          x: mousePos.x,
+          y: mousePos.y,
+        }}
+        transition={{ type: 'spring', damping: 30, stiffness: 200, mass: 0.5 }}
+      />
+
+      {/* Auth Modal */}
+      <AuthModal 
+        open={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+        initialTab={authTab} 
+      />
+
+      {/* Hero Background Elements */}
+      <MotionBox 
+        style={{ y: backgroundY }}
+        sx={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.5 }}
+      >
+         <Box sx={{ position: 'absolute', top: '-10%', right: '-5%', width: 800, height: 800, bgcolor: alpha(theme.palette.primary.main, 0.15), filter: 'blur(180px)', borderRadius: '50%' }} />
+         <Box sx={{ position: 'absolute', bottom: '5%', left: '-10%', width: 700, height: 700, bgcolor: alpha(theme.palette.secondary.main, 0.15), filter: 'blur(180px)', borderRadius: '50%' }} />
+         <Box sx={{ 
+            position: 'absolute', 
+            top: 0, 
+            left: 0, 
+            width: '100%', 
+            height: '100%', 
+            backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(255,255,255,0.03) 1px, transparent 0)',
+            backgroundSize: '40px 40px',
+         }} />
+      </MotionBox>
+
       {/* Navigation */}
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
-          bgcolor: alpha(theme.palette.background.paper, 0.8),
-          backdropFilter: 'blur(20px)',
-          borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          bgcolor: scrolled ? alpha(theme.palette.background.paper, 0.7) : 'transparent',
+          backdropFilter: scrolled ? 'blur(25px)' : 'none',
+          borderBottom: scrolled ? `1px solid ${alpha(theme.palette.divider, 0.08)}` : 'none',
+          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+          zIndex: 1100,
         }}
       >
-        <Container maxWidth="lg">
-          <Toolbar disableGutters sx={{ py: 1 }}>
-            {/* Logo */}
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                flexGrow: 1,
-                cursor: 'pointer',
-              }}
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 2,
+        <Container maxWidth="xl">
+          <Toolbar sx={{ py: { xs: 1.5, md: 2 }, justifyContent: 'space-between' }}>
+            <Stack direction="row" spacing={1.5} alignItems="center" sx={{ cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+               <Box sx={{ 
+                  width: 42, 
+                  height: 42, 
+                  borderRadius: 2, 
                   background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: 18,
-                }}
-              >
-                IM
-              </Box>
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 'bold',
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                InterviewMaster.AI
-              </Typography>
-            </Box>
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  fontWeight: 900, 
+                  color: 'white', 
+                  fontFamily: 'Orbitron',
+                  boxShadow: `0 8px 20px ${alpha(theme.palette.primary.main, 0.3)}`
+               }}>IM</Box>
+               <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'Orbitron', letterSpacing: '0.15em', display: { xs: 'none', sm: 'block' } }}>
+                <GradientText>INTERVIEW</GradientText>MASTER
+               </Typography>
+            </Stack>
+            
+            <Stack direction="row" spacing={{ xs: 1, md: 4 }} alignItems="center">
+               <Button color="inherit" sx={{ fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.1em', display: { xs: 'none', md: 'flex' } }}>TECHNOLOGY</Button>
+               <Button color="inherit" sx={{ fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.1em', display: { xs: 'none', md: 'flex' } }}>ECOSYSTEM</Button>
+               
+               {isAuthenticated ? (
+                 <GradientButton onClick={() => navigate(ROUTES.DASHBOARD)} sx={{ px: 4, borderRadius: 2.5, fontWeight: 900 }}>DASHBOARD</GradientButton>
+               ) : (
+                 <Stack direction="row" spacing={2}>
+                    <Button onClick={openLogin} sx={{ fontWeight: 900, color: 'text.primary', border: `1px solid ${alpha(theme.palette.text.primary, 0.1)}`, px: 3, borderRadius: 2.5 }}>SIGN IN</Button>
+                    <GradientButton onClick={openRegister} sx={{ px: 4, borderRadius: 2.5, fontWeight: 900 }}>GET STARTED</GradientButton>
+                 </Stack>
+               )}
 
-            {/* Desktop Menu */}
-            {!isMobile && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Button color="inherit" href="#features">
-                  Features
-                </Button>
-                <Button color="inherit" href="#how-it-works">
-                  How It Works
-                </Button>
-                <Button
-                  variant="contained"
-                  onClick={() => navigate(ROUTES.LOGIN)}
-                  sx={{
-                    borderRadius: 2,
-                    px: 3,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                  }}
-                >
-                  Get Started Free
-                </Button>
-              </Box>
-            )}
-
-            {/* Mobile Menu Button */}
-            {isMobile && (
-              <IconButton
-                color="inherit"
-                onClick={() => setMobileMenuOpen(true)}
-                edge="end"
-              >
-                <MenuIcon />
-              </IconButton>
-            )}
+            </Stack>
           </Toolbar>
         </Container>
       </AppBar>
 
-      {/* Mobile Drawer */}
-      <Drawer
-        anchor="right"
-        open={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-      >
-        <Box sx={{ width: 250, pt: 2 }}>
-          <List>
-            <ListItem disablePadding>
-              <ListItemButton href="#features" onClick={() => setMobileMenuOpen(false)}>
-                <ListItemText primary="Features" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem disablePadding>
-              <ListItemButton href="#how-it-works" onClick={() => setMobileMenuOpen(false)}>
-                <ListItemText primary="How It Works" />
-              </ListItemButton>
-            </ListItem>
-            <ListItem sx={{ px: 2, pt: 2 }}>
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  navigate(ROUTES.LOGIN);
-                }}
-              >
-                Get Started Free
-              </Button>
-            </ListItem>
-          </List>
-        </Box>
-      </Drawer>
-
       {/* Hero Section */}
-      <Box
-        sx={{
-          pt: { xs: 12, md: 16 },
-          pb: { xs: 8, md: 12 },
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.light, 0.1)}, ${alpha(theme.palette.secondary.light, 0.1)})`,
-        }}
-      >
-        <Container maxWidth="lg">
-          <Grid container spacing={6} alignItems="center">
-            {/* Left Content */}
-            <Grid item xs={12} md={6}>
-              <MotionBox
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <Chip
-                  label="✨ AI-Powered Interview Mastery"
-                  sx={{
-                    mb: 3,
-                    bgcolor: alpha(theme.palette.primary.main, 0.1),
-                    color: theme.palette.primary.main,
-                    fontWeight: 600,
-                    border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                  }}
-                />
+      <Container maxWidth="xl" sx={{ pt: { xs: 22, md: 30 }, pb: { xs: 10, md: 20 }, position: 'relative', zIndex: 1 }}>
+         <Grid container spacing={10} alignItems="center">
+            <Grid size={{ xs: 12, lg: 7 }}>
+               <MotionBox
+                 initial={{ opacity: 0, y: 40 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ duration: 0.8, ease: "easeOut" }}
+               >
+                  <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 4 }}>
+                    <Chip 
+                      label="AI-POWERED INTELLIGENCE" 
+                      icon={<FlashOn sx={{ fontSize: '0.9rem !important' }} />}
+                      sx={{ 
+                        fontWeight: 1000, 
+                        fontFamily: 'Orbitron', 
+                        fontSize: '0.7rem',
+                        bgcolor: alpha(theme.palette.primary.main, 0.1), 
+                        color: 'primary.main', 
+                        border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                        letterSpacing: '0.1em',
+                        px: 1
+                      }} 
+                    />
+                    <Typography variant="caption" sx={{ fontWeight: 900, opacity: 0.5, letterSpacing: '0.2em' }}>READY</Typography>
+                  </Stack>
 
-                <Typography
-                  variant="h2"
-                  component="h1"
-                  sx={{
-                    fontWeight: 800,
-                    mb: 2,
-                    fontSize: { xs: '2.5rem', md: '3.5rem', lg: '4rem' },
-                    lineHeight: 1.2,
-                  }}
-                >
-                  Transform Your
-                </Typography>
-                <Typography
-                  variant="h2"
-                  component="h1"
-                  sx={{
-                    fontWeight: 800,
-                    mb: 3,
-                    fontSize: { xs: '2.5rem', md: '3.5rem', lg: '4rem' },
-                    lineHeight: 1.2,
-                    background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.error.main})`,
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}
-                >
-                  Interview Game
-                </Typography>
-
-                <Typography
-                  variant="h6"
-                  color="text.secondary"
-                  sx={{ mb: 4, lineHeight: 1.6 }}
-                >
-                  Master interviews with AI-powered coaching that adapts to your resume,
-                  tracks your progress, and helps you land offers at top companies.
-                </Typography>
-
-                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 4 }}>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    endIcon={<ArrowForward />}
-                    onClick={() => navigate(ROUTES.REGISTER)}
-                    sx={{
-                      py: 1.5,
-                      px: 4,
-                      borderRadius: 2,
-                      fontSize: '1.1rem',
-                      background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                    }}
-                  >
-                    Start Free Trial
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="large"
-                    startIcon={<PlayArrow />}
-                    sx={{
-                      py: 1.5,
-                      px: 4,
-                      borderRadius: 2,
-                      fontSize: '1.1rem',
-                      borderWidth: 2,
-                      '&:hover': { borderWidth: 2 },
-                    }}
-                  >
-                    Watch Demo
-                  </Button>
-                </Box>
-
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircle color="success" fontSize="small" />
-                    <Typography variant="body2" color="text.secondary">
-                      No credit card required
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CheckCircle color="success" fontSize="small" />
-                    <Typography variant="body2" color="text.secondary">
-                      Free forever
-                    </Typography>
-                  </Box>
-                </Box>
-              </MotionBox>
-            </Grid>
-
-            {/* Right Content - Preview Card */}
-            <Grid item xs={12} md={6}>
-              <MotionBox
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3, duration: 0.6 }}
-              >
-                <Card
-                  elevation={8}
-                  sx={{
-                    borderRadius: 4,
-                    bgcolor: alpha(theme.palette.background.paper, 0.8),
-                    backdropFilter: 'blur(20px)',
-                    border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
-                  }}
-                >
-                  <CardContent sx={{ p: 4 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
-                      <Box
-                        sx={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: '50%',
-                          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
+                  
+                  <MotionTypography variant="h1" sx={{ 
+                    fontWeight: 900, 
+                    lineHeight: 0.95, 
+                    mb: 3, 
+                    fontSize: { xs: '3.8rem', md: '5.5rem', lg: '6.5rem' }, 
+                    fontFamily: 'Orbitron', 
+                    color: 'white',
+                    letterSpacing: '-0.02em'
+                  }}>
+                    EVOLVE YOUR <br />
+                    <GradientText shadow>INTERVIEW</GradientText> <br />
+                    INTELLIGENCE
+                  </MotionTypography>
+                  
+                  <Typography variant="h5" color="text.secondary" sx={{ maxWidth: 700, mb: 8, lineHeight: 1.7, fontWeight: 500, fontSize: { xs: '1.1rem', md: '1.25rem' } }}>
+                    The world's most advanced AI-agent optimized for interview simulations. 
+                    Augment your professional value and synchronize with global hiring benchmarks 
+                    using our hybrid-reasoning engine.
+                  </Typography>
+                  
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3}>
+                     <GradientButton 
+                        size="large" 
+                        onClick={isAuthenticated ? () => navigate(ROUTES.DASHBOARD) : openRegister} 
+                        sx={{ 
+                          py: 2.5, 
+                          px: 6, 
+                          fontSize: '1.1rem', 
+                          fontFamily: 'Orbitron',
+                          borderRadius: 3,
+                          boxShadow: `0 20px 40px ${alpha(theme.palette.primary.main, 0.25)}`
                         }}
                       >
-                        <Psychology />
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" color="text.secondary">
-                          AI Interview Coach
-                        </Typography>
-                        <Typography variant="h6" fontWeight="bold">
-                          Ready to Practice
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    {['Resume Analysis', 'Mock Interview', 'AI Feedback'].map((feature, i) => (
-                      <Card
-                        key={feature}
-                        sx={{
-                          mb: 2,
-                          bgcolor: alpha(theme.palette.primary.main, 0.05),
-                          border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                        GET STARTED
+                      </GradientButton>
+                     <Button 
+                        variant="outlined" 
+                        size="large" 
+                        startIcon={<PlayArrow />} 
+                        sx={{ 
+                          py: 2, 
+                          px: 4, 
+                          borderRadius: 3, 
+                          fontWeight: 900, 
+                          borderWidth: 2, 
+                          borderColor: alpha(theme.palette.text.primary, 0.1),
+                          '&:hover': { borderWidth: 2, borderColor: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05) } 
                         }}
                       >
-                        <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                              <Typography variant="h5">
-                                {i === 0 ? '📄' : i === 1 ? '💬' : '✨'}
-                              </Typography>
-                              <Box>
-                                <Typography variant="body1" fontWeight="600">
-                                  {feature}
-                                </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  Active
-                                </Typography>
-                              </Box>
-                            </Box>
-                            <ChevronRight color="primary" />
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </CardContent>
-                </Card>
-              </MotionBox>
+                        SEE HOW IT WORKS
+                      </Button>
+                  </Stack>
+
+                  
+                  <Box sx={{ mt: 8 }}>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                       <AvatarGroup max={4}>
+                         {[1,2,3,4,5].map(i => (
+                           <Avatar key={i} sx={{ width: 32, height: 32, border: `2px solid ${theme.palette.background.default}` }} src={`https://i.pravatar.cc/100?img=${i+10}`} />
+                         ))}
+                       </AvatarGroup>
+                       <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em' }}>
+                        <span style={{ color: 'white', fontWeight: 1000 }}>50K+ CANDIDATES</span> JOINED THIS MONTH
+                       </Typography>
+
+                    </Stack>
+                  </Box>
+               </MotionBox>
             </Grid>
-          </Grid>
-        </Container>
+            
+            <Grid size={{ xs: 12, lg: 5 }}>
+               <MotionBox
+                 initial={{ opacity: 0, scale: 0.9, rotateY: 20 }}
+                 animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                 transition={{ delay: 0.2, duration: 1.2, ease: "easeOut" }}
+                 sx={{ position: 'relative', perspective: '1000px' }}
+               >
+                  {/* Floating AI Analytics Preview */}
+                  <GlassCard sx={{ 
+                    p: 0, 
+                    borderRadius: 8, 
+                    overflow: 'hidden', 
+                    border: `1px solid ${alpha(theme.palette.primary.main, 0.25)}`, 
+                    boxShadow: `0 40px 100px ${alpha(theme.palette.background.paper, 0.5)}, 0 0 40px ${alpha(theme.palette.primary.main, 0.1)}`,
+                    transform: 'rotateX(2deg) rotateY(-5deg)',
+                    transition: 'all 0.5s ease',
+                    '&:hover': { transform: 'rotateX(0deg) rotateY(0deg)', borderColor: 'primary.main' }
+                  }}>
+                     <Box sx={{ p: 3.5, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.08)}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: alpha(theme.palette.background.paper, 0.6) }}>
+                        <Stack direction="row" spacing={2} alignItems="center">
+                           <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: 'error.main', boxShadow: '0 0 15px #f43f5e', animation: 'pulse 2s infinite' }} />
+                           <Typography variant="caption" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', letterSpacing: '0.1em' }}>AI ANALYZER: READY</Typography>
+                        </Stack>
+                        <Chip label="SECURE" size="small" variant="outlined" sx={{ fontWeight: 900, height: 22, fontSize: '0.65rem' }} />
+                     </Box>
+
+                     
+                     <Box sx={{ p: 5, bgcolor: alpha(theme.palette.background.paper, 0.2) }}>
+                        <Stack spacing={4}>
+                           {[
+                             { t: 'RESUME ANALYSIS', v: 94, c: theme.palette.primary.main },
+                             { t: 'SKILL ALIGNMENT', v: 82, c: theme.palette.secondary.main },
+                             { t: 'INTERVIEW PERFORMANCE', v: 88, c: '#10b981' },
+                           ].map((item, i) => (
+
+                             <Box key={i}>
+                                <Stack direction="row" justifyContent="space-between" sx={{ mb: 2 }}>
+                                   <Typography variant="caption" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', letterSpacing: '0.05em', opacity: 0.8 }}>{item.t}</Typography>
+                                   <Typography variant="caption" sx={{ fontWeight: 1000, color: item.c }}>{item.v}%</Typography>
+                                </Stack>
+                                <Box sx={{ height: 6, width: '100%', bgcolor: alpha(theme.palette.divider, 0.05), borderRadius: 3, overflow: 'hidden' }}>
+                                   <MotionBox 
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${item.v}%` }}
+                                      transition={{ delay: 1 + (i * 0.2), duration: 1.5 }}
+                                      sx={{ height: '100%', bgcolor: item.c, boxShadow: `0 0 10px ${alpha(item.c, 0.5)}` }} 
+                                   />
+                                </Box>
+                             </Box>
+                           ))}
+                        </Stack>
+                     </Box>
+                     
+                     <Box sx={{ p: 5, textAlign: 'center', borderTop: `1px solid ${alpha(theme.palette.divider, 0.05)}` }}>
+                        <Typography variant="body2" sx={{ mb: 3, opacity: 0.6, fontStyle: 'italic', fontSize: '0.8rem' }}>
+                          "AI Analysis: High confidence in technical sector 4, recommended focus on situational leadership vectors."
+                        </Typography>
+                        <GradientButton fullWidth size="large" sx={{ fontFamily: 'Orbitron', py: 2 }}>GET FULL REPORT</GradientButton>
+                     </Box>
+
+                  </GlassCard>
+
+                  {/* Decorative Tech Elements */}
+                  <Box sx={{ position: 'absolute', top: -40, right: -30, p: 2.5, borderRadius: 4, bgcolor: 'background.paper', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`, zIndex: 10 }}>
+                     <Stack direction="row" spacing={1.5} alignItems="center">
+                        <AutoAwesome color="primary" sx={{ fontSize: 28 }} />
+                        <Typography variant="body2" sx={{ fontWeight: 1000, letterSpacing: '0.1em' }}>AUTO-OPTIMIZED</Typography>
+                     </Stack>
+                  </Box>
+                  
+                  <Box sx={{ position: 'absolute', bottom: 40, left: -50, p: 2.5, borderRadius: 4, bgcolor: 'background.paper', boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: `1px solid ${alpha(theme.palette.secondary.main, 0.3)}`, zIndex: 10, display: { xs: 'none', md: 'block' } }}>
+                     <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Security color="secondary" />
+                        <Typography variant="body2" sx={{ fontWeight: 1000, letterSpacing: '0.1em' }}>SOC2 COMPLIANT</Typography>
+                     </Stack>
+                  </Box>
+               </MotionBox>
+            </Grid>
+         </Grid>
+      </Container>
+
+      {/* How It Works Section */}
+      <Box sx={{ py: 25, position: 'relative' }}>
+         <Container maxWidth="xl">
+            <Box sx={{ textAlign: 'center', mb: 15 }}>
+               <Typography variant="overline" sx={{ fontWeight: 1000, color: 'primary.main', letterSpacing: '0.4em' }}>THE PROCESS</Typography>
+               <Typography variant="h2" sx={{ fontWeight: 900, mt: 2, mb: 3, fontFamily: 'Orbitron', color: 'white' }}>HOW TO <GradientText>GET STARTED</GradientText></Typography>
+               <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto', fontWeight: 500 }}>Improve your interview skills in three simple steps.</Typography>
+
+            </Box>
+            
+            <Grid container spacing={4}>
+               {steps.map((step, i) => (
+                 <Grid key={i} size={{ xs: 12, md: 4 }}>
+                   <MotionBox
+                     initial={{ opacity: 0, y: 30 }}
+                     whileInView={{ opacity: 1, y: 0 }}
+                     viewport={{ once: true }}
+                     transition={{ delay: i * 0.2 }}
+                     sx={{ height: '100%' }}
+                   >
+                     <GlassCard sx={{ 
+                       p: 6, 
+                       height: '100%', 
+                       textAlign: 'center', 
+                       position: 'relative',
+                       '&:hover': { transform: 'translateY(-10px)', borderColor: 'primary.main' }
+                     }}>
+                       <Box sx={{ 
+                         width: 80, 
+                         height: 80, 
+                         borderRadius: '50%', 
+                         bgcolor: alpha(theme.palette.background.paper, 0.5), 
+                         display: 'flex', 
+                         alignItems: 'center', 
+                         justifyContent: 'center', 
+                         mx: 'auto', 
+                         mb: 4,
+                         border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                         fontSize: 32
+                       }}>
+                         {step.icon}
+                       </Box>
+                       <Typography variant="h5" sx={{ fontWeight: 1000, mb: 2, fontFamily: 'Orbitron' }}>{step.title}</Typography>
+                       <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500, lineHeight: 1.8 }}>{step.desc}</Typography>
+                       
+                       {i < 2 && (
+                         <Box sx={{ display: { xs: 'none', md: 'block' }, position: 'absolute', right: -20, top: '40%', zIndex: 5 }}>
+                            <KeyboardArrowRight sx={{ fontSize: 40, opacity: 0.2, color: 'primary.main' }} />
+                         </Box>
+                       )}
+                     </GlassCard>
+                   </MotionBox>
+                 </Grid>
+               ))}
+            </Grid>
+         </Container>
       </Box>
 
-      {/* Features Section */}
-      <Box id="features" sx={{ py: { xs: 8, md: 12 }, bgcolor: 'background.paper' }}>
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center', mb: 8 }}>
-            <Typography
-              variant="h3"
-              component="h2"
-              fontWeight="bold"
-              sx={{ mb: 2, fontSize: { xs: '2rem', md: '3rem' } }}
-            >
-              Everything You Need to{' '}
-              <Box
-                component="span"
-                sx={{
-                  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                Ace Interviews
-              </Box>
-            </Typography>
-            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 800, mx: 'auto' }}>
-              Powerful features designed to transform your interview preparation
-            </Typography>
-          </Box>
-
-          <Grid container spacing={3}>
-            {features.map((feature, index) => (
-              <Grid item xs={12} sm={6} md={4} key={index}>
-                <MotionCard
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  elevation={2}
-                  sx={{
-                    height: '100%',
-                    borderRadius: 3,
-                    transition: 'all 0.3s',
-                    '&:hover': {
-                      transform: 'translateY(-8px)',
-                      boxShadow: theme.shadows[8],
-                    },
-                  }}
-                >
-                  <CardContent sx={{ p: 4 }}>
-                    <Box
-                      sx={{
-                        color: feature.color,
-                        mb: 2,
-                      }}
+      {/* Capabilities Section */}
+      <Box id="features" sx={{ py: 25, bgcolor: alpha(theme.palette.background.paper, 0.3), position: 'relative' }}>
+         <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `linear-gradient(180deg, ${alpha(theme.palette.background.default, 0.8)} 0%, transparent 50%, ${alpha(theme.palette.background.default, 0.8)} 100%)`, zIndex: 0 }} />
+         
+         <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+            <Box sx={{ textAlign: 'center', mb: 15 }}>
+               <Typography variant="h2" sx={{ fontWeight: 900, mb: 3, fontFamily: 'Orbitron', color: 'white' }}>AUGMENTED <GradientText>CAPABILITIES</GradientText></Typography>
+               <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 800, mx: 'auto', fontWeight: 500 }}>Our neural network is trained on 10M+ data points from high-performance career paths to provide elite-level coaching.</Typography>
+            </Box>
+            
+            <Grid container spacing={5}>
+               {features.map((f, i) => (
+                 <Grid key={i} size={{ xs: 12, md: 6, lg: 3 }}>
+                    <MotionBox
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.15 }}
+                      sx={{ height: '100%' }}
                     >
-                      {feature.icon}
-                    </Box>
-                    <Typography variant="h6" fontWeight="bold" gutterBottom>
-                      {feature.title}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {feature.description}
-                    </Typography>
-                  </CardContent>
-                </MotionCard>
-              </Grid>
-            ))}
-          </Grid>
-        </Container>
+                       <GlassCard sx={{ 
+                          p: 6, 
+                          height: '100%', 
+                          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)', 
+                          display: 'flex',
+                          flexDirection: 'column',
+                          '&:hover': { 
+                            borderColor: f.color, 
+                            boxShadow: `0 30px 60px ${alpha(f.color, 0.1)}`,
+                            transform: 'translateY(-12px)'
+                          } 
+                       }}>
+                          <Box sx={{ 
+                            p: 2.5, 
+                            borderRadius: 4, 
+                            bgcolor: alpha(f.color, 0.1), 
+                            color: f.color, 
+                            display: 'inline-flex', 
+                            mb: 4,
+                            width: 'fit-content',
+                            boxShadow: `0 0 20px ${alpha(f.color, 0.2)}`
+                          }}>{f.icon}</Box>
+                          <Typography variant="h6" sx={{ fontWeight: 1000, mb: 2, fontFamily: 'Orbitron', letterSpacing: '0.02em' }}>{f.title}</Typography>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, lineHeight: 1.8, mb: 4, flex: 1 }}>{f.desc}</Typography>
+                          
+                          <Stack direction="row" spacing={1} alignItems="center" sx={{ opacity: 0.4, transition: 'all 0.3s', '&:hover': { opacity: 1 } }}>
+                             <Typography variant="caption" sx={{ fontWeight: 1000, letterSpacing: '0.1em' }}>LEARN MORE</Typography>
+                             <KeyboardArrowRight fontSize="small" />
+                          </Stack>
+                       </GlassCard>
+                    </MotionBox>
+                 </Grid>
+               ))}
+            </Grid>
+         </Container>
       </Box>
 
-      {/* CTA Section */}
-      <Box
-        sx={{
-          py: { xs: 8, md: 12 },
-          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.error.main})`,
-          color: 'white',
-        }}
-      >
-        <Container maxWidth="md">
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography
-              variant="h3"
-              component="h2"
-              fontWeight="bold"
-              sx={{ mb: 2, fontSize: { xs: '2rem', md: '3rem' } }}
-            >
-              Ready to Land Your Dream Job?
-            </Typography>
-            <Typography variant="h6" sx={{ mb: 4, opacity: 0.9, maxWidth: 600, mx: 'auto' }}>
-              Join thousands of successful candidates who used InterviewMaster AI
-            </Typography>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={() => navigate(ROUTES.REGISTER)}
-              sx={{
-                py: 2,
-                px: 6,
-                fontSize: '1.2rem',
-                borderRadius: 2,
-                bgcolor: 'white',
-                color: theme.palette.primary.main,
-                fontWeight: 'bold',
-                '&:hover': {
-                  bgcolor: alpha(theme.palette.common.white, 0.9),
-                },
-              }}
-            >
-              Start Practicing Free →
-            </Button>
-          </Box>
-        </Container>
+      {/* Voice & Tone Analysis Feature Section */}
+      <Box sx={{ py: 25, position: 'relative', overflow: 'hidden' }}>
+         <Container maxWidth="xl">
+            <Grid container spacing={10} alignItems="center">
+               <Grid size={{ xs: 12, lg: 6 }}>
+                  <MotionBox
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ once: true }}
+                    sx={{ position: 'relative' }}
+                  >
+                     <GlassCard sx={{ p: 0, borderRadius: 8, overflow: 'hidden', border: `1px solid ${alpha(theme.palette.secondary.main, 0.2)}` }}>
+                        <Box sx={{ p: 3, bgcolor: alpha(theme.palette.secondary.main, 0.1), borderBottom: `1px solid ${alpha(theme.palette.divider, 0.05)}` }}>
+                           <Typography variant="caption" sx={{ fontWeight: 1000, color: 'secondary.main', fontFamily: 'Orbitron' }}>VOICE ANALYSIS MODULE</Typography>
+                        </Box>
+                        <Box sx={{ p: 5 }}>
+                           <Stack direction="row" spacing={1} alignItems="flex-end" sx={{ height: 60, mb: 4, justifyContent: 'center' }}>
+                              {[0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 0.4, 0.6, 0.9, 0.3, 0.7].map((h, i) => (
+                                <MotionBox
+                                  key={i}
+                                  animate={{ height: [`${h * 100}%`, `${(1-h) * 100}%`, `${h * 100}%`] }}
+                                  transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
+                                  sx={{ width: 6, bgcolor: 'secondary.main', borderRadius: 3, opacity: 0.6 }}
+                                />
+                              ))}
+                           </Stack>
+                           
+                           <Stack spacing={3}>
+                              <Box>
+                                 <Typography variant="caption" sx={{ fontWeight: 900, opacity: 0.6, display: 'block', mb: 1 }}>TONE CONFIDENCE</Typography>
+                                 <LinearProgress variant="determinate" value={85} color="secondary" sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.secondary.main, 0.1) }} />
+                              </Box>
+                              <Box>
+                                 <Typography variant="caption" sx={{ fontWeight: 900, opacity: 0.6, display: 'block', mb: 1 }}>SPEAKING PACE</Typography>
+                                 <LinearProgress variant="determinate" value={92} color="success" sx={{ height: 6, borderRadius: 3, bgcolor: alpha(theme.palette.success.main, 0.1) }} />
+                              </Box>
+                           </Stack>
+                        </Box>
+                     </GlassCard>
+                  </MotionBox>
+               </Grid>
+               
+               <Grid size={{ xs: 12, lg: 6 }}>
+                  <MotionBox
+                    initial={{ opacity: 0, x: 50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                  >
+                     <Typography variant="h3" sx={{ fontWeight: 900, mb: 4, fontFamily: 'Orbitron' }}>VOICE & <GradientText shadow>TONE ANALYSIS</GradientText></Typography>
+                     <Typography variant="body1" color="text.secondary" sx={{ mb: 6, fontSize: '1.2rem', lineHeight: 1.8 }}>
+                        Our AI doesn't just evaluate what you say—it analyzes how you say it. 
+                        Get feedback on your speaking pace, confidence levels, and tone of voice 
+                        to ensure you sound as professional as you are across all simulations.
+                     </Typography>
+                     <Button variant="outlined" color="secondary" size="large" sx={{ borderRadius: 3, px: 4, py: 1.5, fontWeight: 900, borderWidth: 2, '&:hover': { borderWidth: 2 } }}>TRY VOICE COACH</Button>
+                  </MotionBox>
+               </Grid>
+            </Grid>
+         </Container>
       </Box>
+
+      {/* Intelligence Preview Section */}
+
+      <Container maxWidth="xl" sx={{ py: 25 }}>
+         <Grid container spacing={10} alignItems="center">
+            <Grid size={{ xs: 12, lg: 6 }} sx={{ order: { xs: 2, lg: 1 } }}>
+               <Box sx={{ position: 'relative' }}>
+                  <Box sx={{ 
+                    position: 'absolute', 
+                    top: '50%', 
+                    left: '50%', 
+                    transform: 'translate(-50%, -50%)', 
+                    width: '120%', 
+                    height: '120%', 
+                    bgcolor: alpha(theme.palette.primary.main, 0.05), 
+                    filter: 'blur(100px)', 
+                    borderRadius: '50%',
+                    zIndex: 0
+                  }} />
+                  <MotionBox
+                    initial={{ opacity: 0, x: -50 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    sx={{ position: 'relative', zIndex: 1 }}
+                  >
+                     <GlassCard sx={{ p: 6, borderRadius: 8, border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                        <Stack spacing={4}>
+                           <Box sx={{ borderLeft: `4px solid ${theme.palette.primary.main}`, pl: 3 }}>
+                              <Typography variant="h6" fontWeight="1000" sx={{ mb: 1, fontFamily: 'Orbitron' }}>AI-DRIVEN FEEDBACK</Typography>
+                              <Typography variant="body2" color="text.secondary">"Candidate demonstrates strong technical recursion knowledge but clarity in situational response lags by 15%."</Typography>
+                           </Box>
+                           <Box sx={{ borderLeft: `4px solid ${theme.palette.secondary.main}`, pl: 3 }}>
+                              <Typography variant="h6" fontWeight="1000" sx={{ mb: 1, fontFamily: 'Orbitron' }}>GROWTH MAPPING</Typography>
+                              <Typography variant="body2" color="text.secondary">Projected 34% increase in offer probability after 3 adaptive logic sessions.</Typography>
+                           </Box>
+                           <Box sx={{ borderLeft: `4px solid #10b981`, pl: 3 }}>
+                              <Typography variant="h6" fontWeight="1000" sx={{ mb: 1, fontFamily: 'Orbitron' }}>SENTIMENT ANALYSIS</Typography>
+                              <Typography variant="body2" color="text.secondary">Confidence vector is stable. Sentiment scores optimal for leadership-track interviews.</Typography>
+                           </Box>
+                        </Stack>
+                     </GlassCard>
+                  </MotionBox>
+               </Box>
+            </Grid>
+            
+            <Grid size={{ xs: 12, lg: 6 }} sx={{ order: { xs: 1, lg: 2 } }}>
+               <MotionBox
+                 initial={{ opacity: 0, x: 50 }}
+                 whileInView={{ opacity: 1, x: 0 }}
+                 viewport={{ once: true }}
+               >
+                  <Typography variant="overline" sx={{ fontWeight: 1000, color: 'primary.main', letterSpacing: '0.4em' }}>AUGMENTED REACH</Typography>
+                  <Typography variant="h3" sx={{ fontWeight: 900, my: 3, fontFamily: 'Orbitron', color: 'white' }}>ELITE <GradientText>DIAGNOSTICS</GradientText></Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 6, fontSize: '1.2rem', lineHeight: 2 }}>
+                    Unlike traditional boards, we utilize real-time structural analysis of your answers. 
+                    Our AI doesn't just listen—it reasons through your logic to identify depth 
+                    irregularities and content gaps in milliseconds.
+                  </Typography>
+                  
+                  <Stack spacing={3}>
+                     {[
+                       { icon: <School color="primary" />, text: 'Adaptive Study Plans tailored to your profile' },
+                       { icon: <Business color="primary" />, text: 'Company-specific situational logic patterns' },
+                       { icon: <Psychology color="primary" />, text: 'Behavioral telemetry and posture analysis' },
+                     ].map((item, i) => (
+                       <Stack key={i} direction="row" spacing={2} alignItems="center">
+                          <Box sx={{ p: 1, borderRadius: 1.5, bgcolor: alpha(theme.palette.primary.main, 0.1) }}>{item.icon}</Box>
+                          <Typography variant="body2" fontWeight="900" sx={{ letterSpacing: '0.05em' }}>{item.text.toUpperCase()}</Typography>
+                       </Stack>
+                     ))}
+                  </Stack>
+               </MotionBox>
+            </Grid>
+         </Grid>
+      </Container>
+
+      {/* Final CTA */}
+      <Container maxWidth="lg" sx={{ py: 25 }}>
+         <MotionBox
+           initial={{ opacity: 0, scale: 0.95 }}
+           whileInView={{ opacity: 1, scale: 1 }}
+           viewport={{ once: true }}
+         >
+            <GlassCard sx={{ 
+              p: { xs: 6, md: 12 }, 
+              textAlign: 'center', 
+              position: 'relative', 
+              overflow: 'hidden', 
+              borderRadius: 10,
+              background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.secondary.main, 0.15)} 100%)`,
+              border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`
+            }}>
+               <Box sx={{ 
+                  position: 'absolute', 
+                  top: 0, 
+                  left: 0, 
+                  width: '100%', 
+                  height: '100%', 
+                  opacity: 0.05, 
+                  background: 'radial-gradient(circle at center, white 1px, transparent 1px)', 
+                  backgroundSize: '30px 30px' 
+               }} />
+               <Typography variant="h2" sx={{ fontWeight: 900, mb: 4, fontFamily: 'Orbitron', color: 'white', fontSize: { xs: '2.5rem', md: '4rem' } }}>
+                READY TO <GradientText shadow>LAND THE OFFER?</GradientText>
+               </Typography>
+               <Typography variant="h6" color="text.secondary" sx={{ mb: 8, fontWeight: 500, maxWidth: 800, mx: 'auto' }}>
+                Join the elite cohort of candidates using InterviewMaster AI to dominate their sectors and secure top-tier placements.
+               </Typography>
+               
+               <GradientButton 
+                  size="large" 
+                  onClick={isAuthenticated ? () => navigate(ROUTES.DASHBOARD) : openRegister}  
+                  sx={{ 
+                    py: 3, 
+                    px: { xs: 6, md: 10 }, 
+                    fontSize: '1.6rem', 
+                    fontFamily: 'Orbitron',
+                    borderRadius: 4,
+                    boxShadow: `0 20px 60px ${alpha(theme.palette.primary.main, 0.3)}`
+                  }}
+               >
+                  GET STARTED
+               </GradientButton>
+
+            </GlassCard>
+         </MotionBox>
+      </Container>
 
       {/* Footer */}
-      <Box
-        component="footer"
-        sx={{
-          py: 6,
-          bgcolor: theme.palette.grey[900],
-          color: theme.palette.grey[400],
-        }}
-      >
-        <Container maxWidth="lg">
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="h5" fontWeight="bold" sx={{ mb: 1, color: 'white' }}>
-              InterviewMaster<Box component="span" sx={{ color: theme.palette.primary.main }}>.AI</Box>
-            </Typography>
-            <Typography variant="body2">
-              © 2026 InterviewMaster AI. All rights reserved.
-            </Typography>
-          </Box>
-        </Container>
+      <Box component="footer" sx={{ py: 15, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`, bgcolor: alpha(theme.palette.background.paper, 0.2) }}>
+         <Container maxWidth="xl">
+            <Grid container spacing={8} sx={{ mb: 10 }}>
+               <Grid size={{ xs: 12, md: 4 }}>
+                  <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
+                    <Box sx={{ 
+                        width: 36, 
+                        height: 36, 
+                        borderRadius: 1.5, 
+                        background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        fontWeight: 900, 
+                        color: 'white', 
+                        fontFamily: 'Orbitron'
+                    }}>IM</Box>
+                    <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', letterSpacing: '0.1em' }}>INTERVIEWMASTER</Typography>
+                  </Stack>
+
+                  <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 2, mb: 4, maxWidth: 300 }}>
+                    Helping candidates land their dream jobs with the power of artificial intelligence.
+                  </Typography>
+
+               </Grid>
+               
+               <Grid size={{ xs: 12, md: 8 }}>
+                  <Grid container spacing={4}>
+                      {[
+                        { title: 'PRODUCT', links: ['Neural Engine', 'AI Pro', 'Questions', 'Progress'] },
+                        { title: 'ECOSYSTEM', links: ['FAANG Training', 'Mock Interviews', 'Study Plans', 'Leaderboards'] },
+                        { title: 'RESOURCES', links: ['Career Advice', 'Achievements', 'Settings'] },
+                        { title: 'LEGAL', links: ['Terms', 'Privacy', 'Security'] },
+                      ].map((col, i) => (
+                       <Grid key={i} size={{ xs: 6, sm: 3 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 1000, display: 'block', mb: 3, letterSpacing: '0.2em', color: 'primary.main' }}>{col.title}</Typography>
+                          <Stack spacing={2}>
+                             {col.links.map(link => (
+                               <Link key={link} href="#" sx={{ color: 'text.secondary', textDecoration: 'none', fontSize: '0.85rem', fontWeight: 700, '&:hover': { color: 'text.primary' } }}>{link}</Link>
+                             ))}
+                          </Stack>
+                       </Grid>
+                     ))}
+                  </Grid>
+               </Grid>
+            </Grid>
+            
+            <Divider sx={{ opacity: 0.05, mb: 6 }} />
+            
+            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems="center" spacing={4}>
+               <Typography variant="caption" sx={{ fontWeight: 900, opacity: 0.4, color: 'text.secondary', letterSpacing: '0.1em' }}>
+                © 2026 INTERVIEW MASTER AI. ALL RIGHTS RESERVED.
+               </Typography>
+               <Stack direction="row" spacing={3} sx={{ opacity: 0.5 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 1000 }}>SECURE & PRIVATE</Typography>
+                  <Typography variant="caption" sx={{ fontWeight: 1000 }}>POWERED BY AI PRO</Typography>
+               </Stack>
+            </Stack>
+
+         </Container>
       </Box>
     </Box>
+  );
+};
+
+// Internal Link wrapper
+const Link = ({ children, href, sx }: any) => {
+  const theme = useTheme();
+  return (
+    <Typography
+      component="a"
+      href={href}
+      sx={{
+        color: 'text.secondary',
+        textDecoration: 'none',
+        fontSize: '0.85rem',
+        fontWeight: 700,
+        transition: 'all 0.3s',
+        '&:hover': { color: 'primary.main' },
+        ...sx
+      }}
+    >
+      {children}
+    </Typography>
   );
 };
 

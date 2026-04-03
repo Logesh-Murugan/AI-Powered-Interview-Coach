@@ -5,6 +5,7 @@ Tests the 4 custom tools for company coaching.
 
 Requirements: 29.1, 29.3-29.7
 """
+import json
 import pytest
 from unittest.mock import Mock
 from sqlalchemy.orm import Session
@@ -36,7 +37,7 @@ class TestCompanyResearchTool:
     def test_research_known_company(self):
         """Test researching a known company"""
         tool = CompanyResearchTool()
-        result = tool._run("Google")
+        result = json.loads(tool._run("Google"))
         
         assert isinstance(result, dict)
         assert 'culture' in result
@@ -49,7 +50,7 @@ class TestCompanyResearchTool:
     def test_research_unknown_company(self):
         """Test researching an unknown company returns generic template"""
         tool = CompanyResearchTool()
-        result = tool._run("Unknown Startup Inc")
+        result = json.loads(tool._run("Unknown Startup Inc"))
         
         assert isinstance(result, dict)
         assert 'culture' in result
@@ -59,9 +60,9 @@ class TestCompanyResearchTool:
     def test_research_case_insensitive(self):
         """Test company name is case-insensitive"""
         tool = CompanyResearchTool()
-        result1 = tool._run("google")
-        result2 = tool._run("GOOGLE")
-        result3 = tool._run("Google")
+        result1 = json.loads(tool._run("google"))
+        result2 = json.loads(tool._run("GOOGLE"))
+        result3 = json.loads(tool._run("Google"))
         
         assert result1 == result2 == result3
 
@@ -78,7 +79,7 @@ class TestInterviewPatternTool:
     def test_analyze_known_company_patterns(self, mock_db):
         """Test analyzing patterns for known company"""
         tool = InterviewPatternTool(db=mock_db)
-        result = tool._run("Amazon")
+        result = json.loads(tool._run("Amazon"))
         
         assert isinstance(result, dict)
         assert 'common_categories' in result
@@ -91,7 +92,7 @@ class TestInterviewPatternTool:
     def test_analyze_unknown_company_patterns(self, mock_db):
         """Test analyzing patterns for unknown company returns generic"""
         tool = InterviewPatternTool(db=mock_db)
-        result = tool._run("Unknown Company")
+        result = json.loads(tool._run("Unknown Company"))
         
         assert isinstance(result, dict)
         assert 'common_categories' in result
@@ -100,7 +101,7 @@ class TestInterviewPatternTool:
     def test_difficulty_distribution_structure(self, mock_db):
         """Test difficulty distribution has correct structure"""
         tool = InterviewPatternTool(db=mock_db)
-        result = tool._run("Microsoft")
+        result = json.loads(tool._run("Microsoft"))
         
         assert 'difficulty_distribution' in result
         dist = result['difficulty_distribution']
@@ -147,7 +148,7 @@ class TestSTARMethodTool:
         mock_db.query.return_value.filter.return_value.first.return_value = mock_resume
         
         tool = STARMethodTool(db=mock_db)
-        result = tool._run(1)
+        result = json.loads(tool._run(1))
         
         assert isinstance(result, list)
         assert len(result) > 0
@@ -166,7 +167,7 @@ class TestSTARMethodTool:
         mock_db.query.return_value.filter.return_value.first.return_value = None
         
         tool = STARMethodTool(db=mock_db)
-        result = tool._run(1)
+        result = json.loads(tool._run(1))
         
         assert isinstance(result, list)
         assert len(result) == 0
@@ -185,7 +186,7 @@ class TestSTARMethodTool:
         mock_db.query.return_value.filter.return_value.first.return_value = mock_resume
         
         tool = STARMethodTool(db=mock_db)
-        result = tool._run(1)
+        result = json.loads(tool._run(1))
         
         assert len(result) <= 5
 
@@ -202,7 +203,7 @@ class TestConfidenceTool:
     def test_generate_confidence_tips(self):
         """Test generating confidence tips"""
         tool = ConfidenceTool()
-        result = tool._run("Google", "Software Engineer")
+        result = json.loads(tool._run("Google", "Software Engineer"))
         
         assert isinstance(result, dict)
         assert 'confidence_tips' in result
@@ -215,7 +216,7 @@ class TestConfidenceTool:
     def test_tips_include_company_name(self):
         """Test tips include company name"""
         tool = ConfidenceTool()
-        result = tool._run("Amazon")
+        result = json.loads(tool._run("Amazon"))
         
         tips_text = ' '.join(result['confidence_tips'])
         checklist_text = ' '.join(result['pre_interview_checklist'])
@@ -225,7 +226,7 @@ class TestConfidenceTool:
     def test_role_specific_tips_engineer(self):
         """Test role-specific tips for engineer"""
         tool = ConfidenceTool()
-        result = tool._run("Google", "Software Engineer")
+        result = json.loads(tool._run("Google", "Software Engineer"))
         
         all_text = ' '.join(result['confidence_tips'] + result['pre_interview_checklist'])
         assert 'algorithm' in all_text.lower() or 'coding' in all_text.lower()
@@ -233,7 +234,7 @@ class TestConfidenceTool:
     def test_role_specific_tips_manager(self):
         """Test role-specific tips for manager"""
         tool = ConfidenceTool()
-        result = tool._run("Microsoft", "Engineering Manager")
+        result = json.loads(tool._run("Microsoft", "Engineering Manager"))
         
         all_text = ' '.join(result['confidence_tips'] + result['pre_interview_checklist'])
         assert 'leadership' in all_text.lower() or 'team' in all_text.lower()

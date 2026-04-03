@@ -1,17 +1,13 @@
 /**
- * Admin Dashboard Page
- * System metrics and user management for admin users
+ * Premium Admin Dashboard
+ * High-end System Command & User Matrix Control
  */
 
 import React, { useEffect, useState } from 'react';
 import {
-    Container,
     Box,
     Typography,
-    Paper,
     Grid,
-    Card,
-    CardContent,
     Table,
     TableHead,
     TableBody,
@@ -20,11 +16,9 @@ import {
     TableContainer,
     TablePagination,
     Chip,
-    Button,
     TextField,
     Select,
     MenuItem,
-    Alert,
     IconButton,
     Stack,
     Divider,
@@ -34,6 +28,9 @@ import {
     DialogContentText,
     DialogActions,
     CircularProgress,
+    alpha,
+    useTheme,
+    Button,
 } from '@mui/material';
 import {
     People,
@@ -45,9 +42,16 @@ import {
     Block,
     CheckCircle,
     Delete,
+    Terminal,
+    Hub
 } from '@mui/icons-material';
 import apiService from '../../services/api.service';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ErrorAlert from '../../components/common/ErrorAlert';
+import { GlassCard, GradientButton, GradientText } from '../../components/common/PremiumComponents';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion.create(Box);
 
 interface SystemMetrics {
     users: {
@@ -93,6 +97,7 @@ interface AdminUser {
 }
 
 const AdminDashboardPage: React.FC = () => {
+    const theme = useTheme();
     const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
     const [users, setUsers] = useState<AdminUser[]>([]);
     const [loading, setLoading] = useState(true);
@@ -109,7 +114,7 @@ const AdminDashboardPage: React.FC = () => {
             const res = await apiService.get('/admin/metrics');
             setMetrics(res.data as SystemMetrics);
         } catch (err: any) {
-            console.error('Failed to load metrics:', err);
+            console.error('Metrics fail:', err);
         }
     };
 
@@ -124,7 +129,7 @@ const AdminDashboardPage: React.FC = () => {
             setUsers(data.users);
             setTotalUsers(data.total);
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Failed to load users');
+            setError(err.response?.data?.detail || 'USER MATRIX SYNC FAILED');
         }
     };
 
@@ -147,7 +152,7 @@ const AdminDashboardPage: React.FC = () => {
             await apiService.patch(`/admin/users/${userId}/status?new_status=${newStatus}`);
             loadUsers(page);
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Failed to update user status');
+            setError(err.response?.data?.detail || 'STATUS UPDATE FAILED');
         }
         setActionLoading(false);
     };
@@ -161,216 +166,166 @@ const AdminDashboardPage: React.FC = () => {
             loadUsers(page);
             loadMetrics();
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Failed to delete user');
+            setError(err.response?.data?.detail || 'USER DELETION FAILED');
         }
         setActionLoading(false);
     };
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'active': return 'success';
-            case 'suspended': return 'error';
-            case 'locked': return 'warning';
-            case 'pending_verification': return 'info';
-            default: return 'default';
+            case 'active': return theme.palette.success.main;
+            case 'suspended': return theme.palette.error.main;
+            case 'locked': return theme.palette.warning.main;
+            default: return theme.palette.text.disabled;
         }
     };
 
-    if (loading) {
-        return (
-            <Container maxWidth="xl" sx={{ mt: 4 }}>
-                <LoadingSpinner variant="fullPage" size="large" text="Loading admin dashboard..." />
-            </Container>
-        );
-    }
+    if (loading) return <LoadingSpinner variant="fullPage" size="large" />;
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-            {/* Header */}
-            <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ pb: 8 }}>
+            {/* Premium Header */}
+            <MotionBox
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                sx={{ mb: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}
+            >
                 <Box>
-                    <Typography variant="h4" fontWeight="bold">Admin Dashboard</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        System metrics & user management
+                    <Typography variant="h3" sx={{ fontWeight: 900, mb: 1, fontFamily: 'Orbitron' }}>SYSTEM <GradientText>COMMAND</GradientText></Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+                        CORE TELEMETRY AND USER MATRIX MANAGEMENT
                     </Typography>
                 </Box>
-                <Button
+                <GradientButton
                     variant="outlined"
                     startIcon={<Refresh />}
                     onClick={() => { loadMetrics(); loadUsers(page); }}
                 >
-                    Refresh
-                </Button>
-            </Box>
+                    REFRESH LATTICE
+                </GradientButton>
+            </MotionBox>
 
-            {error && (
-                <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 3 }}>
-                    {error}
-                </Alert>
-            )}
+            {error && <ErrorAlert message={error} onDismiss={() => setError(null)} sx={{ mb: 4 }} />}
 
-            {/* System Metrics Cards */}
+            {/* System Metrics Matrix */}
             {metrics && (
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white' }}>
-                            <CardContent>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                    <Box>
-                                        <Typography variant="h3" fontWeight="bold">{metrics.users.total}</Typography>
-                                        <Typography variant="body2" sx={{ opacity: 0.8 }}>Total Users</Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                                            +{metrics.users.new_this_week} this week
-                                        </Typography>
-                                    </Box>
-                                    <People sx={{ fontSize: 48, opacity: 0.3 }} />
-                                </Stack>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Card sx={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white' }}>
-                            <CardContent>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                    <Box>
-                                        <Typography variant="h3" fontWeight="bold">{metrics.interviews.total_sessions}</Typography>
-                                        <Typography variant="body2" sx={{ opacity: 0.8 }}>Total Interviews</Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                                            {metrics.interviews.completion_rate}% completion rate
-                                        </Typography>
-                                    </Box>
-                                    <Assessment sx={{ fontSize: 48, opacity: 0.3 }} />
-                                </Stack>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Card sx={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', color: 'white' }}>
-                            <CardContent>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                    <Box>
-                                        <Typography variant="h3" fontWeight="bold">{metrics.questions.total_in_database}</Typography>
-                                        <Typography variant="body2" sx={{ opacity: 0.8 }}>Questions in DB</Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                                            Avg score: {metrics.evaluations.average_score}%
-                                        </Typography>
-                                    </Box>
-                                    <Quiz sx={{ fontSize: 48, opacity: 0.3 }} />
-                                </Stack>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                        <Card sx={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', color: 'white' }}>
-                            <CardContent>
-                                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                                    <Box>
-                                        <Typography variant="h3" fontWeight="bold">{metrics.ai_providers.length}</Typography>
-                                        <Typography variant="body2" sx={{ opacity: 0.8 }}>AI Providers</Typography>
-                                        <Typography variant="caption" sx={{ opacity: 0.7 }}>
-                                            {metrics.ai_providers[0]?.model || 'N/A'}
-                                        </Typography>
-                                    </Box>
-                                    <SmartToy sx={{ fontSize: 48, opacity: 0.3 }} />
-                                </Stack>
-                            </CardContent>
-                        </Card>
-                    </Grid>
+                <Grid container spacing={3} sx={{ mb: 6 }}>
+                    {[
+                        { label: 'TOTAL NODES', value: metrics.users.total, icon: <People />, color: theme.palette.primary.main },
+                        { label: 'ACTIVE SESSIONS', value: metrics.interviews.total_sessions, icon: <Assessment />, color: theme.palette.secondary.main },
+                        { label: 'DATABASE VECTOR', value: metrics.questions.total_in_database, icon: <Quiz />, color: theme.palette.warning.main },
+                        { label: 'AI CORES', value: metrics.ai_providers.length, icon: <SmartToy />, color: theme.palette.success.main },
+                    ].map((stat, i) => (
+                        <Grid key={i} size={{ xs: 12, sm: 6, md: 3 }}>
+                            <GlassCard sx={{ p: 3, textAlign: 'center', borderTop: `4px solid ${stat.color}`, height: '100%' }}>
+                                <Box sx={{ color: stat.color, mb: 1.5, opacity: 0.5 }}>{stat.icon}</Box>
+                                <Typography variant="h3" sx={{ fontWeight: 900, fontFamily: 'Orbitron', color: stat.color }}>{stat.value}</Typography>
+                                <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.1em' }}>{stat.label}</Typography>
+                            </GlassCard>
+                        </Grid>
+                    ))}
                 </Grid>
             )}
 
-            {/* AI Provider Details */}
-            {metrics && metrics.ai_providers.length > 0 && (
-                <Paper sx={{ p: 3, mb: 4 }}>
-                    <Typography variant="h6" gutterBottom>AI Providers</Typography>
-                    <Divider sx={{ mb: 2 }} />
-                    <Grid container spacing={2}>
+            {/* AI Provider Cluster */}
+            {metrics && (
+                <GlassCard sx={{ p: 4, mb: 6 }}>
+                    <Stack direction="row" spacing={1.5} alignItems="center" mb={3}>
+                        <Hub sx={{ color: 'primary.main' }} />
+                        <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron' }}>AI PROVIDER CLUSTER</Typography>
+                    </Stack>
+                    <Grid container spacing={3}>
                         {metrics.ai_providers.map((p) => (
-                            <Grid size={{ xs: 12, sm: 4 }} key={p.name}>
-                                <Card variant="outlined">
-                                    <CardContent>
-                                        <Typography variant="subtitle1" fontWeight="bold">{p.name}</Typography>
-                                        <Typography variant="body2" color="text.secondary">Model: {p.model}</Typography>
-                                        <Typography variant="body2" color="text.secondary">Quota: {p.quota_limit}/day</Typography>
-                                        <Chip label={`Priority ${p.priority}`} size="small" color="primary" sx={{ mt: 1 }} />
-                                    </CardContent>
-                                </Card>
+                            <Grid size={{ xs: 12, md: 4 }} key={p.name}>
+                                <Box sx={{ p: 2, borderRadius: 3, bgcolor: alpha(theme.palette.background.paper, 0.3), border: `1px solid ${alpha(theme.palette.divider, 0.1)}` }}>
+                                    <Typography variant="body2" sx={{ fontWeight: 900, mb: 0.5 }}>{p.name.toUpperCase()}</Typography>
+                                    <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', display: 'block', mb: 1.5 }}>MODEL: {p.model}</Typography>
+                                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                                       <Chip label={`PRIORITY ${p.priority}`} size="small" sx={{ fontWeight: 900, height: 18, fontSize: '0.6rem' }} />
+                                       <Typography variant="caption" sx={{ fontWeight: 800 }}>QUOTA: {p.quota_limit}/DAY</Typography>
+                                    </Stack>
+                                </Box>
                             </Grid>
                         ))}
                     </Grid>
-                </Paper>
+                </GlassCard>
             )}
 
-            {/* User Management */}
-            <Paper sx={{ p: 3 }}>
-                <Typography variant="h6" gutterBottom>User Management</Typography>
-                <Divider sx={{ mb: 2 }} />
+            {/* User Matrix Control */}
+            <GlassCard sx={{ p: 0, overflow: 'hidden' }}>
+                <Box sx={{ p: 4, borderBottom: `1px solid ${alpha(theme.palette.divider, 0.1)}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                    <Stack direction="row" spacing={1.5} alignItems="center">
+                        <Terminal sx={{ color: 'secondary.main' }} />
+                        <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron' }}>USER MATRIX CONTROL</Typography>
+                    </Stack>
+                    <Stack direction="row" spacing={2}>
+                        <TextField
+                            size="small"
+                            placeholder="SEARCH OPERATIVE..."
+                            value={search}
+                            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+                            InputProps={{ 
+                                startAdornment: <Search sx={{ mr: 1, color: 'text.secondary', fontSize: 18 }} />,
+                                sx: { borderRadius: 3, fontWeight: 700, fontFamily: 'Orbitron', fontSize: '0.75rem', width: 250 } 
+                            }}
+                        />
+                        <Select
+                            size="small"
+                            value={statusFilter}
+                            onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
+                            displayEmpty
+                            sx={{ borderRadius: 3, fontWeight: 800, fontFamily: 'Orbitron', fontSize: '0.75rem', minWidth: 150 }}
+                        >
+                            <MenuItem value="" sx={{ fontWeight: 800 }}>ALL STATUSES</MenuItem>
+                            <MenuItem value="active" sx={{ fontWeight: 800 }}>ACTIVE ONLY</MenuItem>
+                            <MenuItem value="suspended" sx={{ fontWeight: 800 }}>SUSPENDED</MenuItem>
+                            <MenuItem value="locked" sx={{ fontWeight: 800 }}>LOCKED</MenuItem>
+                        </Select>
+                    </Stack>
+                </Box>
 
-                {/* Filters */}
-                <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-                    <TextField
-                        size="small"
-                        placeholder="Search by name or email..."
-                        value={search}
-                        onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-                        InputProps={{ startAdornment: <Search sx={{ mr: 1, color: 'text.secondary' }} /> }}
-                        sx={{ minWidth: 300 }}
-                    />
-                    <Select
-                        size="small"
-                        value={statusFilter}
-                        onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }}
-                        displayEmpty
-                        sx={{ minWidth: 180 }}
-                    >
-                        <MenuItem value="">All Statuses</MenuItem>
-                        <MenuItem value="active">Active</MenuItem>
-                        <MenuItem value="suspended">Suspended</MenuItem>
-                        <MenuItem value="locked">Locked</MenuItem>
-                        <MenuItem value="pending_verification">Pending</MenuItem>
-                    </Select>
-                </Stack>
-
-                {/* Users Table */}
                 <TableContainer>
                     <Table size="small">
-                        <TableHead>
+                        <TableHead sx={{ bgcolor: alpha(theme.palette.background.paper, 0.4) }}>
                             <TableRow>
-                                <TableCell>ID</TableCell>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Email</TableCell>
-                                <TableCell>Role</TableCell>
-                                <TableCell>Status</TableCell>
-                                <TableCell>Streak</TableCell>
-                                <TableCell>Joined</TableCell>
-                                <TableCell align="right">Actions</TableCell>
+                                <TableCell sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>ID</TableCell>
+                                <TableCell sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>OPERATIVE</TableCell>
+                                <TableCell sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>ROLE</TableCell>
+                                <TableCell sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>STATUS</TableCell>
+                                <TableCell sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>STREAK</TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 900, color: 'text.secondary', border: 'none' }}>ACTIONS</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
                             {users.map((user) => (
-                                <TableRow key={user.id} hover>
-                                    <TableCell>{user.id}</TableCell>
-                                    <TableCell>{user.name}</TableCell>
-                                    <TableCell>{user.email}</TableCell>
-                                    <TableCell>{user.target_role || '—'}</TableCell>
-                                    <TableCell>
+                                <TableRow key={user.id} hover sx={{ '&:hover': { bgcolor: alpha(theme.palette.background.paper, 0.6) } }}>
+                                    <TableCell sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}`, fontWeight: 800 }}>{user.id}</TableCell>
+                                    <TableCell sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}` }}>
+                                        <Box>
+                                            <Typography variant="body2" sx={{ fontWeight: 800 }}>{user.name.toUpperCase()}</Typography>
+                                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>{user.email}</Typography>
+                                        </Box>
+                                    </TableCell>
+                                    <TableCell sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}`, fontWeight: 700, fontSize: '0.8rem' }}>{user.target_role?.toUpperCase() || '—'}</TableCell>
+                                    <TableCell sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}` }}>
                                         <Chip
-                                            label={user.account_status}
-                                            color={getStatusColor(user.account_status) as any}
-                                            size="small"
+                                            label={user.account_status.toUpperCase()}
+                                            sx={{ 
+                                                fontWeight: 900, 
+                                                fontSize: '0.6rem', 
+                                                height: 20, 
+                                                bgcolor: alpha(getStatusColor(user.account_status), 0.1), 
+                                                color: getStatusColor(user.account_status) 
+                                            }}
                                         />
                                     </TableCell>
-                                    <TableCell>{user.current_streak}🔥</TableCell>
-                                    <TableCell>
-                                        {user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
-                                    </TableCell>
-                                    <TableCell align="right">
+                                    <TableCell sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}`, fontWeight: 900, color: 'warning.main' }}>{user.current_streak}🔥</TableCell>
+                                    <TableCell align="right" sx={{ borderBottom: `1px solid ${alpha(theme.palette.divider, 0.03)}` }}>
                                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
                                             {user.account_status === 'active' ? (
                                                 <IconButton
                                                     size="small"
                                                     color="warning"
-                                                    title="Suspend"
                                                     onClick={() => handleStatusChange(user.id, 'suspended')}
                                                     disabled={actionLoading}
                                                 >
@@ -380,7 +335,6 @@ const AdminDashboardPage: React.FC = () => {
                                                 <IconButton
                                                     size="small"
                                                     color="success"
-                                                    title="Activate"
                                                     onClick={() => handleStatusChange(user.id, 'active')}
                                                     disabled={actionLoading}
                                                 >
@@ -390,7 +344,6 @@ const AdminDashboardPage: React.FC = () => {
                                             <IconButton
                                                 size="small"
                                                 color="error"
-                                                title="Delete"
                                                 onClick={() => setDeleteDialog(user)}
                                                 disabled={actionLoading}
                                             >
@@ -400,44 +353,51 @@ const AdminDashboardPage: React.FC = () => {
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {users.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={8} align="center" sx={{ py: 4 }}>
-                                        <Typography color="text.secondary">No users found</Typography>
-                                    </TableCell>
-                                </TableRow>
-                            )}
                         </TableBody>
                     </Table>
                 </TableContainer>
 
-                <TablePagination
-                    component="div"
-                    count={totalUsers}
-                    page={page}
-                    onPageChange={(_, p) => setPage(p)}
-                    rowsPerPage={10}
-                    rowsPerPageOptions={[10]}
-                />
-            </Paper>
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'center', bgcolor: alpha(theme.palette.background.paper, 0.2) }}>
+                    <TablePagination
+                        component="div"
+                        count={totalUsers}
+                        page={page}
+                        onPageChange={(_, p) => setPage(p)}
+                        rowsPerPage={10}
+                        rowsPerPageOptions={[10]}
+                        sx={{ border: 'none', '& .MuiTablePagination-selectLabel, & .MuiTablePagination-input': { fontWeight: 800 } }}
+                    />
+                </Box>
+            </GlassCard>
 
-            {/* Delete Confirmation */}
-            <Dialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)}>
-                <DialogTitle>Delete User?</DialogTitle>
+            {/* Premium Confirm Dialog */}
+            <Dialog 
+                open={!!deleteDialog} 
+                onClose={() => setDeleteDialog(null)}
+                PaperProps={{ 
+                    sx: { 
+                        bgcolor: 'background.paper', 
+                        backgroundImage: 'none', 
+                        borderRadius: 6, 
+                        border: `1px solid ${alpha(theme.palette.error.main, 0.3)}`,
+                        p: 2
+                    } 
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 900, fontFamily: 'Orbitron', color: 'error.main' }}>DELETE OPERATIVE?</DialogTitle>
                 <DialogContent>
-                    <DialogContentText>
-                        Are you sure you want to permanently delete <strong>{deleteDialog?.name}</strong> ({deleteDialog?.email})?
-                        This action cannot be undone.
+                    <DialogContentText sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                        PERMANENT DELETION OF <strong style={{ color: theme.palette.text.primary }}>{deleteDialog?.name.toUpperCase()}</strong>. THIS ACTION IS IRREVERSIBLE.
                     </DialogContentText>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setDeleteDialog(null)}>Cancel</Button>
-                    <Button onClick={handleDelete} color="error" disabled={actionLoading}>
-                        {actionLoading ? <CircularProgress size={20} /> : 'Delete'}
-                    </Button>
+                <DialogActions sx={{ p: 3 }}>
+                    <Button onClick={() => setDeleteDialog(null)} sx={{ fontWeight: 900 }}>CANCEL</Button>
+                    <GradientButton onClick={handleDelete} sx={{ bgcolor: 'error.main', color: 'white' }} disabled={actionLoading}>
+                        {actionLoading ? <CircularProgress size={20} color="inherit" /> : 'CONFIRM PURGE'}
+                    </GradientButton>
                 </DialogActions>
             </Dialog>
-        </Container>
+        </Box>
     );
 };
 

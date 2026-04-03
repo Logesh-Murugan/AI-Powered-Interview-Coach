@@ -1,37 +1,39 @@
 /**
- * Enhanced Interview Session Page
- * With animations, better timer, and smooth transitions
- * 
- * Requirements: 15.1-17.7
+ * Premium Interview Session Page
+ * High-end AI "Mission Control" simulation interface
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
-  Container,
-  Paper,
   Typography,
   TextField,
   Button,
-  LinearProgress,
-  Alert,
   Chip,
   Stack,
-  Fade,
   CircularProgress,
   ToggleButton,
   ToggleButtonGroup,
+  alpha,
+  useTheme,
+  IconButton,
+  Grid,
 } from '@mui/material';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
-import { Send, Timer, NavigateNext, NavigateBefore, CheckCircle, Save, Edit, Mic } from '@mui/icons-material';
+import { Send, Timer, NavigateNext, NavigateBefore, Save, Edit, Mic, Psychology, DragIndicator, GpsFixed, Fullscreen, FullscreenExit, Videocam, VideocamOff } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import apiService from '../../services/api.service';
-import FadeIn from '../../components/animations/FadeIn';
 import { RecordingControls } from '../../components/interview/RecordingControls';
+import { VideoPreview } from '../../components/interview/VideoPreview';
 import recordingService from '../../services/recordingService';
+import { useMediaRecorder } from '../../hooks/useMediaRecorder';
+import logger from '../../utils/logger';
 import type { RecordingResult } from '../../types/recording';
+import { GlassCard, GradientButton } from '../../components/common/PremiumComponents';
+
+const MotionBox = motion.create(Box);
 
 interface Question {
   id: number;
@@ -52,6 +54,7 @@ function InterviewSessionPage() {
   const { id: sessionId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useTheme();
   
   const [question, setQuestion] = useState<Question | null>(null);
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
@@ -62,13 +65,29 @@ function InterviewSessionPage() {
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<string>('');
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [hasSavedDraft, setHasSavedDraft] = useState(false); // Track if we've ever saved a draft
-  const [hasSubmitted, setHasSubmitted] = useState(false); // Prevent duplicate submissions
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [recordingResult, setRecordingResult] = useState<RecordingResult | null>(null);
   const [uploadingRecording, setUploadingRecording] = useState(false);
   const [recordingUploaded, setRecordingUploaded] = useState(false);
-  const [answerMode, setAnswerMode] = useState<'text' | 'speech'>('text'); // New: Answer mode selector
+  const [answerMode, setAnswerMode] = useState<'text' | 'speech'>('text');
+
+  const {
+    stream,
+    isRecording,
+    recordingTime,
+    permissionError,
+    recordingError,
+    hasPermission,
+    isSupported,
+    formattedTime,
+    requestPermissions,
+    startRecording,
+    pauseRecording,
+    resumeRecording,
+    stopRecording,
+    isPaused
+  } = useMediaRecorder();
   
   const autoSaveTimerRef = useRef<number | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
@@ -76,50 +95,43 @@ function InterviewSessionPage() {
 
   const loadSessionInfo = useCallback(async () => {
     if (!sessionId) return;
-    
     try {
       const response = await apiService.get(`/interviews/${sessionId}`);
       setSessionInfo(response.data as SessionInfo);
     } catch (err) {
-      console.error('Failed to load session info:', err);
+      console.error('Info load fail:', err);
     }
   }, [sessionId]);
 
   const loadQuestion = useCallback(async (questionNumber: number) => {
     if (!sessionId) return;
-    
     setLoading(true);
     setError(null);
-    setHasSubmitted(false); // Reset submission flag for new question
-    setRecordingResult(null); // Reset recording state
+    setHasSubmitted(false);
+    setRecordingResult(null);
     setRecordingUploaded(false);
-    
     try {
       const response = await apiService.get(`/interviews/${sessionId}/questions/${questionNumber}`);
       const questionData = response.data as Question;
-      
       setQuestion(questionData);
       setTimeRemaining(questionData.time_limit_seconds);
       
-      // Only fetch draft if we've saved one before (avoids unnecessary 404s)
       if (hasSavedDraft) {
         try {
           const draftResponse = await apiService.get(`/interviews/${sessionId}/drafts/${questionData.id}`);
-          const draftData = draftResponse.data as { draft_text: string; last_saved_at: string };
+          const draftData = draftResponse.data as { draft_text: string };
           setAnswer(draftData.draft_text || '');
           setDraft(draftData.draft_text || '');
         } catch {
-          // Draft doesn't exist - start fresh
           setAnswer('');
           setDraft('');
         }
       } else {
-        // No drafts saved yet - start fresh
         setAnswer('');
         setDraft('');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load question');
+      setError(err.message || 'Transmission error.');
     } finally {
       setLoading(false);
     }
@@ -127,22 +139,13 @@ function InterviewSessionPage() {
 
   const saveDraft = useCallback(async (text: string) => {
     if (!sessionId || !question || text === draft) return;
-    
     setSaving(true);
-    setSaved(false);
-    
     try {
-      await apiService.post(
-        `/interviews/${sessionId}/drafts?question_id=${question.id}`,
-        { draft_text: text }
-      );
+      await apiService.post(`/interviews/${sessionId}/drafts?question_id=${question.id}`, { draft_text: text });
       setDraft(text);
-      setHasSavedDraft(true); // Mark that we've saved at least one draft
+      setHasSavedDraft(true);
       setSaving(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
     } catch (err) {
-      console.error('Failed to save draft:', err);
       setSaving(false);
     }
   }, [sessionId, question, draft]);
@@ -150,606 +153,299 @@ function InterviewSessionPage() {
   const handleAnswerChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     setAnswer(text);
-    
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-    
-    autoSaveTimerRef.current = setTimeout(() => {
-      saveDraft(text);
-    }, 30000);
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => saveDraft(text), 30000);
   };
 
   const handleNavigateQuestion = async (direction: 'prev' | 'next') => {
-    if (!question) return;
+    if (!question || !sessionInfo) return;
+    if (answer && answer !== draft) await saveDraft(answer);
     
-    // Save current draft before navigating
-    if (answer && answer !== draft) {
-      await saveDraft(answer);
+    let newQuestionNumber = question.question_number;
+    if (direction === 'next') {
+      if (question.question_number >= sessionInfo.question_count) return;
+      newQuestionNumber = question.question_number + 1;
+    } else {
+      if (question.question_number <= 1) return;
+      newQuestionNumber = question.question_number - 1;
     }
-    
-    const newQuestionNumber = direction === 'next' 
-      ? question.question_number + 1 
-      : question.question_number - 1;
     
     loadQuestion(newQuestionNumber);
-  };
-
-  const handleSubmit = async () => {
-    if (!sessionId || !question) return;
-    
-    // Prevent duplicate submissions
-    if (hasSubmitted || submitting) {
-      console.log('Submission already in progress, ignoring duplicate click');
-      return;
-    }
-    
-    // Check submission requirements based on mode
-    const hasText = answer.length >= 10;
-    const hasRecording = recordingResult && recordingResult.audioBlob;
-    
-    if (answerMode === 'text' && !hasText) {
-      setError('Please provide a text answer (minimum 10 characters)');
-      return;
-    }
-    
-    if (answerMode === 'speech' && !hasRecording) {
-      setError('Please record your answer using the microphone');
-      return;
-    }
-    
-    if (answer.length > 5000) {
-      setError('Answer must not exceed 5000 characters');
-      return;
-    }
-    
-    setSubmitting(true);
-    setHasSubmitted(true); // Mark as submitted immediately
-    setError(null);
-    
-    try {
-      // In speech mode, ensure recording is uploaded and transcribed first
-      if (answerMode === 'speech' && recordingResult && !recordingUploaded) {
-        await handleRecordingUpload();
-        // The transcription will populate the answer field automatically
-      }
-      
-      // Submit answer (in speech mode, answer_text will contain transcription)
-      const response = await apiService.post(
-        `/interviews/${sessionId}/answers?question_id=${question.id}`,
-        { answer_text: answer || "" }
-      );
-      
-      const responseData = response.data as {
-        all_questions_answered: boolean;
-        session_completed: boolean;
-      };
-      
-      const { all_questions_answered, session_completed } = responseData;
-      
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-      
-      // Delete draft after successful submission
-      try {
-        await apiService.delete(`/interviews/${sessionId}/drafts/${question.id}`);
-        setDraft(''); // Clear local draft state
-      } catch (err) {
-        console.error('Failed to delete draft:', err);
-        // Don't fail the submission if draft deletion fails
-      }
-
-      // Upload recording if available
-      if (recordingResult && !recordingUploaded) {
-        try {
-          await handleRecordingUpload();
-        } catch (recordingError) {
-          console.error('Recording upload failed:', recordingError);
-          // Don't fail the submission if recording upload fails
-          setError('Answer submitted successfully, but recording upload failed. You can continue to the next question.');
-        }
-      }
-      
-      if (session_completed || all_questions_answered) {
-        navigate(`/interviews/${sessionId}/summary`);
-      } else {
-        loadQuestion(question.question_number + 1);
-      }
-    } catch (err: any) {
-      // Only reset hasSubmitted on error so user can retry
-      setHasSubmitted(false);
-      setError(err.message || 'Failed to submit answer');
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const handleRecordingComplete = useCallback((result: RecordingResult) => {
     setRecordingResult(result);
     setRecordingUploaded(false);
-    console.log('Recording completed:', result);
+    logger.log('Recording completed', result);
   }, []);
 
-  const handleRecordingUpload = async () => {
-    if (!recordingResult || !sessionId || !question) {
-      return;
+  const handleSubmit = async () => {
+    if (!sessionId || !question || hasSubmitted || submitting) return;
+    
+    // Auto-stop recording if it's still running
+    if (isRecording) {
+      await stopRecording();
     }
 
-    setUploadingRecording(true);
-    setError(null);
-
+    setSubmitting(true);
+    setHasSubmitted(true);
     try {
-      const files = recordingService.createUploadFiles(recordingResult);
+      let finalAnswer = answer;
       
-      const uploadResponse = await recordingService.uploadRecording({
-        sessionId: parseInt(sessionId),
-        questionId: question.id,
-        audioFile: files.audioFile,
-        videoFile: files.videoFile
-      });
+      // Handle speech mode processing
+      if (answerMode === 'speech') {
+        setUploadingRecording(true);
+        try {
+          // If we just stopped recording, wait a moment for the blob to be ready
+          if (isRecording) await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // Wait for recordingResult to be populated by the callback
+          let currentResult = recordingResult;
+          if (!currentResult && isRecording) {
+            for (let i = 0; i < 20; i++) {
+              await new Promise(resolve => setTimeout(resolve, 200));
+              if (recordingResult) {
+                currentResult = recordingResult;
+                break;
+              }
+            }
+          }
 
-      console.log('Recording uploaded successfully:', uploadResponse);
-      setRecordingUploaded(true);
-      
-      // If transcription is available and text field is empty, populate it
-      if (uploadResponse.transcription && !answer.trim()) {
-        setAnswer(uploadResponse.transcription);
-        console.log('Populated text field with transcription:', uploadResponse.transcription);
-      }
-      
-      // Show success message with transcription if available
-      if (uploadResponse.transcription) {
-        console.log('Transcription:', uploadResponse.transcription);
-      }
-      
-      if (uploadResponse.voice_analysis) {
-        console.log('Voice analysis:', uploadResponse.voice_analysis);
+          if (currentResult) {
+            const files = recordingService.createUploadFiles(currentResult);
+            const uploadResponse = await recordingService.uploadRecording({
+              sessionId: parseInt(sessionId),
+              questionId: question.id,
+              audioFile: files.audioFile,
+              videoFile: files.videoFile
+            });
+            setRecordingUploaded(true);
+            if (uploadResponse.transcription && !finalAnswer.trim()) {
+              finalAnswer = uploadResponse.transcription;
+              setAnswer(finalAnswer);
+            }
+          }
+        } finally {
+          setUploadingRecording(false);
+        }
       }
 
-    } catch (error: any) {
-      console.error('Recording upload failed:', error);
-      setError(`Recording upload failed: ${error.message}`);
-      throw error;
+      if (answerMode === 'text' && (finalAnswer || "").length < 5) { 
+        setHasSubmitted(false);
+        setSubmitting(false);
+        setError('INPUT DEFICIENT: MIN 5 CHARS'); 
+        return; 
+      }
+
+      const response = await apiService.post(`/interviews/${sessionId}/answers?question_id=${question.id}`, { answer_text: finalAnswer || "" });
+      const { all_questions_answered, session_completed } = response.data as { all_questions_answered: boolean; session_completed: boolean };
+      
+      // Critical check to prevent 404 on last question
+      const isLastQuestion = question.question_number >= (sessionInfo?.question_count || 5);
+      
+      if (all_questions_answered || session_completed || isLastQuestion) {
+        navigate(`/interviews/${sessionId}/summary`);
+      } else {
+        loadQuestion(question.question_number + 1);
+      }
+    } catch (err: any) {
+      setHasSubmitted(false);
+      setError(err.message || 'Submission failure.');
     } finally {
-      setUploadingRecording(false);
+      setSubmitting(false);
     }
   };
 
-  useEffect(() => {
-    if (timeRemaining > 0) {
-      countdownTimerRef.current = setInterval(() => {
-        setTimeRemaining((prev) => Math.max(0, prev - 1));
-      }, 1000);
-      
-      return () => {
-        if (countdownTimerRef.current) {
-          clearInterval(countdownTimerRef.current);
-        }
-      };
+  const handleStopAndSubmit = useCallback(async () => {
+    if (isRecording) {
+      await stopRecording();
+      // Wait for state to settle then submit
+      setTimeout(() => handleSubmit(), 1200);
+    } else {
+      handleSubmit();
     }
-  }, [timeRemaining]);
+  }, [isRecording, stopRecording, handleSubmit]);
+
+  useEffect(() => {
+    if (timeRemaining > 0 && !submitting && !hasSubmitted) {
+      countdownTimerRef.current = setInterval(() => setTimeRemaining((prev) => Math.max(0, prev - 1)), 1000);
+      return () => { if (countdownTimerRef.current) clearInterval(countdownTimerRef.current); };
+    } else if (timeRemaining === 0 && question && !loading && !submitting && !hasSubmitted) {
+      logger.log("Timer expired, triggering safe auto-submit");
+      handleStopAndSubmit();
+    }
+  }, [timeRemaining, question, loading, submitting, hasSubmitted, handleStopAndSubmit]);
 
   useEffect(() => {
     loadSessionInfo();
     loadQuestion(initialQuestionNumber);
-  }, [initialQuestionNumber, loadSessionInfo, loadQuestion]);
-
-  // Save draft on navigation/page unload
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (answer && answer !== draft && !hasSubmitted) {
-        // Save draft synchronously before unload
-        saveDraft(answer);
-        
-        // Show warning if there are unsaved changes
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      
-      // Save draft when component unmounts (navigation within app)
-      if (answer && answer !== draft && !hasSubmitted) {
-        saveDraft(answer);
-      }
-    };
-  }, [answer, draft, hasSubmitted, saveDraft]);
-
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current);
-      }
-    };
   }, []);
 
-  const formatTime = (seconds: number): string => {
+  const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const timeProgress = question
-    ? ((question.time_limit_seconds - timeRemaining) / question.time_limit_seconds) * 100
-    : 0;
-  
-  const getTimerColor = () => {
-    if (timeRemaining > 60) return 'success';
-    if (timeRemaining > 30) return 'warning';
-    return 'error';
-  };
-
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4, textAlign: 'center' }}>
-        <LoadingSpinner variant="fullPage" size="large" text="Loading question..." />
-      </Container>
-    );
-  }
-
-  if (!question) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <ErrorAlert
-          message={error || 'Failed to load question'}
-          onRetry={() => loadQuestion(1)}
-        />
-      </Container>
-    );
-  }
+  if (loading) return <LoadingSpinner variant="fullPage" />;
+  if (!question) return <Box sx={{ p: 4 }}><ErrorAlert message={error || 'Signal lost.'} onRetry={() => loadQuestion(1)} /></Box>;
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <FadeIn>
-        <motion.div
-          animate={timeRemaining < 30 ? { scale: [1, 1.05, 1] } : {}}
-          transition={{ duration: 1, repeat: timeRemaining < 30 ? Infinity : 0 }}
-        >
-          <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-            <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Question {question.question_number}{sessionInfo ? ` of ${sessionInfo.question_count}` : ''}
-                </Typography>
-                <LinearProgress
-                  variant="determinate"
-                  value={sessionInfo ? (question.question_number / sessionInfo.question_count) * 100 : 0}
-                  sx={{ height: 8, borderRadius: 4, mb: 1 }}
-                />
-                <LinearProgress
-                  variant="determinate"
-                  value={timeProgress}
-                  color={getTimerColor()}
-                  sx={{ height: 6, borderRadius: 3 }}
-                />
-              </Box>
-              <Chip
-                icon={<Timer />}
-                label={formatTime(timeRemaining)}
-                color={getTimerColor()}
-                variant="outlined"
-                sx={{ 
-                  fontSize: '1.1rem',
-                  fontWeight: 'bold',
-                  px: 2
-                }}
-              />
-            </Stack>
-          </Paper>
-        </motion.div>
-      </FadeIn>
-
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={question.id}
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -50 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Paper elevation={3} sx={{ p: 4, mb: 3 }}>
-            <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-              <Chip label={question.category.replace('_', ' ')} size="small" color="primary" />
-              <Chip label={question.difficulty} size="small" variant="outlined" />
-            </Stack>
-            
-            <Typography variant="h5" gutterBottom>
-              {question.question_text}
-            </Typography>
-          </Paper>
-        </motion.div>
-      </AnimatePresence>
-
-      <FadeIn delay={0.2}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h6">
-              Your Answer
-            </Typography>
-            
-            {/* Answer Mode Selector */}
-            <ToggleButtonGroup
-              value={answerMode}
-              exclusive
-              onChange={(_, newMode) => newMode && setAnswerMode(newMode)}
-              size="small"
-            >
-              <ToggleButton value="text" aria-label="text mode">
-                <Edit sx={{ mr: 1 }} />
-                Text
-              </ToggleButton>
-              <ToggleButton value="speech" aria-label="speech mode">
-                <Mic sx={{ mr: 1 }} />
-                Speech
-              </ToggleButton>
-            </ToggleButtonGroup>
-            
-            <AnimatePresence>
-              {saving && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                >
-                  <Chip
-                    icon={<Save />}
-                    label="Saving..."
-                    size="small"
-                    color="info"
-                  />
-                </motion.div>
-              )}
-              {saved && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                >
-                  <Chip
-                    icon={<CheckCircle />}
-                    label="Saved"
-                    size="small"
-                    color="success"
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </Box>
-          
-          {error && (
-            <Fade in={!!error}>
-              <Box sx={{ mb: 2 }}>
-                <ErrorAlert
-                  message={error}
-                  onRetry={handleSubmit}
-                  onDismiss={() => setError(null)}
-                />
-              </Box>
-            </Fade>
-          )}
-          
-          {/* Text Input - Show only in text mode */}
-          {answerMode === 'text' && (
-            <TextField
-              fullWidth
-              multiline
-              rows={12}
-              value={answer}
-              onChange={handleAnswerChange}
-              placeholder="Type your answer here... (minimum 10 characters)"
-              disabled={submitting}
-              sx={{ mb: 3 }}
-            />
-          )}
-
-          {/* Recording Controls - Show only in speech mode */}
-          {answerMode === 'speech' && (
-            <Box sx={{ mb: 3 }}>
-              <RecordingControls
-                onRecordingComplete={handleRecordingComplete}
-                disabled={submitting || hasSubmitted}
-                maxDuration={question?.time_limit_seconds || 600}
-                includeVideo={false}
-                showVideoToggle={true}
-              />
-              
-              {/* Show transcription in speech mode */}
-              {recordingUploaded && answer && (
-                <Paper 
-                  variant="outlined" 
-                  sx={{ 
-                    p: 2, 
-                    mt: 2,
-                    bgcolor: 'grey.50',
-                    border: '2px solid',
-                    borderColor: 'success.main'
-                  }}
-                >
-                  <Typography variant="subtitle2" color="success.main" gutterBottom>
-                    ✓ Speech converted to text:
-                  </Typography>
-                  <Typography variant="body2">
-                    {answer}
-                  </Typography>
-                </Paper>
-              )}
+    <Box sx={{ pb: 8 }}>
+      {/* Session HUD */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+         <Box>
+            <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'Orbitron', mb: 0.5 }}>MISSION LOG: {question.question_number} / {sessionInfo?.question_count || '?'}</Typography>
+            <Box sx={{ width: 250, height: 4, bgcolor: alpha(theme.palette.primary.main, 0.1), borderRadius: 2, overflow: 'hidden' }}>
+               <MotionBox 
+                 initial={{ width: 0 }}
+                 animate={{ width: `${(question.question_number / (sessionInfo?.question_count || 1)) * 100}%` }}
+                 sx={{ height: '100%', bgcolor: 'primary.main', transition: { duration: 0.5 } }} 
+               />
             </Box>
-          )}
-
-          {/* Recording Controls - Always show in text mode for hybrid answers */}
-          {answerMode === 'text' && (
-            <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Optional: Add Voice Recording
-              </Typography>
-              <RecordingControls
-                onRecordingComplete={handleRecordingComplete}
-                disabled={submitting || hasSubmitted}
-                maxDuration={question?.time_limit_seconds || 600}
-                includeVideo={false}
-                showVideoToggle={true}
-              />
-            </Box>
-          )}
-
-          {/* Recording Status */}
-          {recordingResult && (
-            <Alert 
-              severity={recordingUploaded ? "success" : "info"} 
-              sx={{ mb: 2 }}
-              action={
-                !recordingUploaded && !uploadingRecording && (
-                  <Button 
-                    size="small" 
-                    onClick={handleRecordingUpload}
-                    disabled={uploadingRecording}
-                  >
-                    Upload Recording
-                  </Button>
-                )
-              }
-            >
-              {uploadingRecording ? (
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <CircularProgress size={16} />
-                  <Typography variant="body2">Uploading recording...</Typography>
-                </Stack>
-              ) : recordingUploaded ? (
-                `Recording uploaded successfully! Duration: ${recordingService.formatDuration(recordingResult.duration)}`
-              ) : (
-                `Recording ready for upload. Duration: ${recordingService.formatDuration(recordingResult.duration)}`
-              )}
-            </Alert>
-          )}
-
-          {/* Submission Status Indicator */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {answerMode === 'text' ? 'Text Answer Mode' : 'Speech Answer Mode'}:
+         </Box>
+         <GlassCard sx={{ p: 1.5, px: 3, borderRadius: 3, display: 'flex', alignItems: 'center', gap: 2, border: timeRemaining < 30 ? `2px solid ${theme.palette.error.main}` : undefined }}>
+            <Timer sx={{ color: timeRemaining < 30 ? 'error.main' : 'primary.main' }} />
+            <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'Orbitron', color: timeRemaining < 30 ? 'error.main' : 'text.primary' }}>
+               {formatTime(timeRemaining)}
             </Typography>
-            <Stack direction="row" spacing={2} alignItems="center">
-              {answerMode === 'text' ? (
-                <>
-                  <Chip
-                    label={`Text: ${answer.length >= 10 ? 'Ready' : `${answer.length}/10 chars`}`}
-                    color={answer.length >= 10 ? 'success' : 'default'}
-                    size="small"
-                    variant={answer.length >= 10 ? 'filled' : 'outlined'}
-                  />
-                  {recordingResult && (
-                    <Chip
-                      label="+ Voice Recording"
-                      color="info"
-                      size="small"
-                      variant="outlined"
-                    />
+         </GlassCard>
+      </Box>
+
+      {/* Primary Question Grid */}
+      <Grid container spacing={4}>
+         <Grid size={{ xs: 12, lg: 7 }}>
+            <Stack spacing={4}>
+               {/* Question Section */}
+               <GlassCard sx={{ p: 4, minHeight: 180, position: 'relative', overflow: 'hidden' }}>
+                  <Box sx={{ position: 'absolute', top: -50, left: -50, width: 150, height: 150, bgcolor: 'primary.main', opacity: 0.05, filter: 'blur(50px)', borderRadius: '50%' }} />
+                  <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                     <Chip label={question.category.toUpperCase()} color="primary" size="small" sx={{ fontWeight: 800, borderRadius: 1 }} />
+                     <Chip label={question.difficulty.toUpperCase()} variant="outlined" size="small" sx={{ fontWeight: 800, borderRadius: 1 }} />
+                  </Stack>
+                  <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1.4 }}>
+                    {question.question_text}
+                  </Typography>
+               </GlassCard>
+
+               {/* Interaction Section */}
+               <GlassCard sx={{ p: 4 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                     <Typography variant="h6" sx={{ fontWeight: 900, fontFamily: 'Orbitron' }}>INPUT MODULE</Typography>
+                     {uploadingRecording ? (
+                      <Stack direction="row" spacing={2} alignItems="center">
+                         <CircularProgress size={20} />
+                         <Typography variant="body2" sx={{ fontWeight: 800, color: 'primary.main', fontFamily: 'Orbitron' }}>PROCESSING NEURAL AUDIO...</Typography>
+                      </Stack>
+                    ) : (
+                      <ToggleButtonGroup
+                        value={answerMode}
+                        exclusive
+                        onChange={(_, v) => v && setAnswerMode(v)}
+                        size="small"
+                      >
+                        <ToggleButton value="text" sx={{ px: 2, fontWeight: 800 }}>TEXT</ToggleButton>
+                        <ToggleButton value="speech" sx={{ px: 2, fontWeight: 800 }}>SPEECH</ToggleButton>
+                      </ToggleButtonGroup>
+                    )}
+                  </Box>
+
+                  {answerMode === 'text' ? (
+                     <TextField
+                        fullWidth
+                        multiline
+                        rows={12}
+                        value={answer}
+                        onChange={handleAnswerChange}
+                        placeholder="TERMINAL READY: AWAITING INPUT..."
+                        InputProps={{
+                           sx: { 
+                              borderRadius: 4, 
+                              bgcolor: alpha(theme.palette.background.paper, 0.4),
+                              fontFamily: 'Inter',
+                              fontWeight: 500,
+                              lineHeight: 1.6
+                           }
+                        }}
+                     />
+                  ) : (
+                     <Box sx={{ p: 4, textAlign: 'center', border: `2px dashed ${alpha(theme.palette.divider, 0.2)}`, borderRadius: 4 }}>
+                         <RecordingControls
+                           onRecordingComplete={handleRecordingComplete}
+                           onRecordingStart={() => {}} 
+                           onRecordingStop={() => {}}
+                           disabled={submitting}
+                           maxDuration={question.time_limit_seconds}
+                           includeVideo={true}
+                           showVideoToggle={true}
+                           recorder={{
+                             isRecording,
+                             isPaused,
+                             recordingTime,
+                             hasPermission,
+                             permissionError,
+                             recordingError,
+                             isSupported,
+                             formattedTime,
+                             stream,
+                             requestPermissions,
+                             startRecording,
+                             pauseRecording,
+                             resumeRecording,
+                             stopRecording
+                           }}
+                        />
+                        {recordingUploaded && answer && (
+                           <Box sx={{ mt: 3, textAlign: 'left', p: 2, bgcolor: alpha(theme.palette.success.main, 0.05), border: `1px solid ${alpha(theme.palette.success.main, 0.1)}`, borderRadius: 3 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 800, color: 'success.main', display: 'block', mb: 1 }}>TRANSCRIPTION SUCCEEDED</Typography>
+                              <Typography variant="body2">{answer}</Typography>
+                           </Box>
+                        )}
+                     </Box>
                   )}
-                </>
-              ) : (
-                <>
-                  <Chip
-                    label={`Recording: ${recordingResult ? 'Ready' : 'None'}`}
-                    color={recordingResult ? 'success' : 'default'}
-                    size="small"
-                    variant={recordingResult ? 'filled' : 'outlined'}
+
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mt: 4 }}>
+                     <Stack direction="row" spacing={1}>
+                        <Button variant="outlined" onClick={() => handleNavigateQuestion('prev')} disabled={question.question_number <= 1} startIcon={<NavigateBefore />}>PREVIOUS</Button>
+                        <Button variant="outlined" onClick={() => handleNavigateQuestion('next')} disabled={question.question_number >= (sessionInfo?.question_count || 1)} endIcon={<NavigateNext />}>NEXT</Button>
+                     </Stack>
+                     <Stack direction="row" spacing={2}>
+                        <IconButton onClick={() => saveDraft(answer)} disabled={saving || answer === draft} sx={{ bgcolor: alpha(theme.palette.primary.main, 0.05) }}><Save /></IconButton>
+                        <GradientButton onClick={handleSubmit} disabled={submitting} startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : <Send />}>
+                           {submitting ? 'PROCESSING...' : 'SUBMIT ANSWER'}
+                        </GradientButton>
+                     </Stack>
+                  </Stack>
+               </GlassCard>
+            </Stack>
+         </Grid>
+
+         {/* Secondary Assets Column */}
+         <Grid size={{ xs: 12, lg: 5 }}>
+            <Stack spacing={4}>
+               <GlassCard sx={{ p: 4, textAlign: 'center' }}>
+                  <Psychology sx={{ fontSize: 60, color: 'primary.main', mb: 2, opacity: 0.3 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>AI COACHING TIPS</Typography>
+                  <Typography variant="body2" color="text.secondary">Maintain steady eye contact and structured breathing. The AI identifies key metrics in your sentence structure and pauses.</Typography>
+               </GlassCard>
+
+                <GlassCard sx={{ p: 0, overflow: 'hidden', minHeight: 280, flex: 1, position: 'relative', border: isRecording ? `2px solid ${theme.palette.error.main}` : undefined }}>
+                  <Box sx={{ p: 2, bgcolor: alpha(theme.palette.background.paper, 0.8), position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1, display: 'flex', justifyContent: 'space-between' }}>
+                     <Typography variant="caption" sx={{ fontWeight: 900, fontFamily: 'Orbitron' }}>VISUAL TELEMETRY</Typography>
+                     {isRecording && <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: 'error.main', boxShadow: `0 0 10px ${theme.palette.error.main}`, animation: 'pulse 1s infinite' }} />}
+                  </Box>
+                  <VideoPreview 
+                    stream={stream} 
+                    isRecording={isRecording} 
+                    showControls={true}
+                    height="100%"
                   />
-                  {recordingUploaded && answer && (
-                    <Chip
-                      label="✓ Converted to Text"
-                      color="success"
-                      size="small"
-                      variant="filled"
-                    />
-                  )}
-                </>
-              )}
-              <Typography variant="caption" color="text.secondary">
-                {answerMode === 'text' 
-                  ? (answer.length >= 10 ? "✓ Ready to submit" : "Type at least 10 characters")
-                  : (recordingResult ? "✓ Ready to submit" : "Record your answer to continue")
-                }
-              </Typography>
+               </GlassCard>
             </Stack>
-          </Box>
-          
-          <Stack direction="row" spacing={2} justifyContent="space-between" alignItems="center">
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => handleNavigateQuestion('prev')}
-                disabled={!question || question.question_number <= 1 || submitting}
-                startIcon={<NavigateBefore />}
-              >
-                Previous
-              </Button>
-              
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => handleNavigateQuestion('next')}
-                disabled={!question || !sessionInfo || question.question_number >= sessionInfo.question_count || submitting}
-                endIcon={<NavigateNext />}
-              >
-                Next
-              </Button>
-              
-              <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-                {answer.length} / 5000 characters
-              </Typography>
-            </Stack>
-            
-            <Stack direction="row" spacing={2}>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  variant="outlined"
-                  size="large"
-                  onClick={() => saveDraft(answer)}
-                  disabled={saving || answer === draft || answer.length === 0}
-                  startIcon={<Save />}
-                >
-                  Save Draft
-                </Button>
-              </motion.div>
-              
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Button
-                  variant="contained"
-                  size="large"
-                  onClick={handleSubmit}
-                  disabled={
-                    submitting || 
-                    hasSubmitted || 
-                    (answerMode === 'text' && answer.length < 10) ||
-                    (answerMode === 'speech' && (!recordingResult || !recordingResult.audioBlob))
-                  }
-                  startIcon={submitting ? <LoadingSpinner size="small" /> : <Send />}
-                  endIcon={<NavigateNext />}
-                >
-                  {submitting ? 'Submitting...' : hasSubmitted ? 'Submitted' : 'Submit Answer'}
-                </Button>
-              </motion.div>
-            </Stack>
-          </Stack>
-        </Paper>
-      </FadeIn>
-    </Container>
+         </Grid>
+      </Grid>
+    </Box>
   );
 }
 
 export default InterviewSessionPage;
-

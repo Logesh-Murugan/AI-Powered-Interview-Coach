@@ -5,7 +5,7 @@ This model links questions to interview sessions with display order and timing.
 
 Requirements: 14.8, 14.9, 15.1-15.7
 """
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, String
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, func
 from sqlalchemy.orm import relationship, synonym
 from datetime import datetime
 
@@ -27,7 +27,7 @@ class SessionQuestion(Base):
     order = synonym('display_order')  # Backward-compatible alias for older code paths/tests
     
     # Timing
-    question_displayed_at = Column(DateTime, nullable=True)  # When question was first shown to user
+    question_displayed_at = Column(DateTime(timezone=True), nullable=True)  # When question was first shown to user
     
     # Answer tracking
     answer_id = Column(Integer, ForeignKey("answers.id", ondelete="SET NULL"), nullable=True)
@@ -39,9 +39,9 @@ class SessionQuestion(Base):
     answer = relationship("Answer", foreign_keys=[answer_id], post_update=True)
     
     # Timestamps from base
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    deleted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=func.now(), onupdate=func.now())
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     
     def __repr__(self):
         return f"<SessionQuestion(id={self.id}, session_id={self.session_id}, question_id={self.question_id}, order={self.display_order})>"

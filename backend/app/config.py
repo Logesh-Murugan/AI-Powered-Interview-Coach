@@ -45,29 +45,15 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
     
     # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"]
+    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174", "http://[::1]:5173", "http://127.0.0.1:5173"]
     
     # File Storage
     # Local storage - files saved to uploads/ directory
     # For production, consider AWS S3 or similar cloud storage
     
-    # AI Providers - Multi-provider (Gemini deprecated)
-    OPENROUTER_API_KEY: str = Field(default="", description="OpenRouter API key #1")
-    OPENROUTER_API_KEY_2: str = Field(default="", description="OpenRouter API key #2")
-    OPENROUTER_API_KEY_3: str = Field(default="", description="OpenRouter API key #3")
-
-    DEEPINFRA_API_KEY: str = Field(default="", description="DeepInfra API key #1")
-    DEEPINFRA_API_KEY_2: str = Field(default="", description="DeepInfra API key #2")
-    DEEPINFRA_API_KEY_3: str = Field(default="", description="DeepInfra API key #3")
-
     HUGGINGFACE_API_KEY: str = Field(default="", description="HuggingFace API token #1")
     HUGGINGFACE_API_KEY_2: str = Field(default="", description="HuggingFace API token #2")
     HUGGINGFACE_API_KEY_3: str = Field(default="", description="HuggingFace API token #3")
-
-    # Deprecated: retained for backward compatibility only
-    GEMINI_API_KEY: str = ""
-    GEMINI_API_KEY_2: str = ""
-    GEMINI_API_KEY_3: str = ""
     
     # Email
     EMAIL_ENABLED: bool = False
@@ -90,6 +76,16 @@ class Settings(BaseSettings):
         case_sensitive=True,
         extra="ignore"
     )
+
+    @field_validator("DEBUG", "RELOAD", mode="before")
+    @classmethod
+    def parse_bool_strings(cls, value):
+        """Convert string 'True'/'False' to boolean values."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.lower() in ("true", "1", "yes", "on")
+        return value
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod

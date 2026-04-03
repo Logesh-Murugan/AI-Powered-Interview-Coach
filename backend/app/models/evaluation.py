@@ -7,6 +7,7 @@ Requirements: 18.1-18.14
 """
 from sqlalchemy import Column, Integer, Float, Text, ForeignKey, DateTime, JSON, String
 from sqlalchemy.orm import relationship, synonym
+from sqlalchemy.sql import func
 from datetime import datetime
 
 from app.models.base import Base
@@ -41,7 +42,7 @@ class Evaluation(Base):
     evaluation_metadata = Column(JSON, nullable=True)  # Additional evaluation data
     
     # Timing
-    evaluated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    evaluated_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
     
     communication_clarity = synonym('clarity')
     problem_solving = synonym('technical_accuracy')
@@ -53,9 +54,9 @@ class Evaluation(Base):
     answer = relationship("Answer", back_populates="evaluation")
     
     # Timestamps from base
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
-    deleted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=func.now(), nullable=True)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
     
     def __repr__(self):
         return f"<Evaluation(id={self.id}, answer_id={self.answer_id}, overall_score={self.overall_score})>"

@@ -1,16 +1,11 @@
 /**
- * Voice Analysis Display Component
- * 
- * Displays voice analysis results from recording processing.
- * Shows speaking metrics, feedback, and improvement suggestions.
- * 
- * Requirements: Recording System Implementation
+ * Premium Voice Analysis Display
+ * High-end AI-driven acoustic telemetry interface
  */
 
 import React from 'react';
 import {
   Box,
-  Paper,
   Typography,
   Grid,
   Chip,
@@ -18,22 +13,25 @@ import {
   Stack,
   Alert,
   Divider,
-  Tooltip,
-  Card,
-  CardContent
+  alpha,
+  useTheme
 } from '@mui/material';
 import {
   Speed,
   VolumeUp,
-  Pause,
+  Pause as PauseIcon,
   RecordVoiceOver,
   TrendingUp,
   TrendingDown,
   CheckCircle,
-  Warning,
-  Info
+  GraphicEq,
+  HistoryEdu
 } from '@mui/icons-material';
-// Inline type to avoid import issues
+import { GlassCard, GradientText } from '../common/PremiumComponents';
+import { motion } from 'framer-motion';
+
+const MotionBox = motion.create(Box);
+
 interface VoiceAnalysis {
   speaking_pace_wpm: number;
   total_speaking_time: number;
@@ -65,262 +63,129 @@ export const VoiceAnalysisDisplay: React.FC<VoiceAnalysisDisplayProps> = ({
   transcription,
   showTranscription = true
 }) => {
-  // Helper function to get color based on score
+  const theme = useTheme();
+
   const getScoreColor = (score: number, optimal: [number, number]) => {
-    if (score >= optimal[0] && score <= optimal[1]) return 'success';
-    if (score >= optimal[0] * 0.8 && score <= optimal[1] * 1.2) return 'warning';
-    return 'error';
+    if (score >= optimal[0] && score <= optimal[1]) return theme.palette.success.main;
+    if (score >= optimal[0] * 0.8 && score <= optimal[1] * 1.2) return theme.palette.warning.main;
+    return theme.palette.error.main;
   };
 
-  // Helper function to get confidence color
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 0.8) return 'success';
-    if (confidence >= 0.6) return 'warning';
-    return 'error';
+    if (confidence >= 0.8) return theme.palette.success.main;
+    if (confidence >= 0.6) return theme.palette.warning.main;
+    return theme.palette.error.main;
   };
 
-  // Format speaking pace feedback
-  const getSpeakingPaceFeedback = () => {
+  const paceFeedback = (() => {
     const { speaking_pace_wpm } = analysis;
-    if (speaking_pace_wpm < 120) {
-      return { message: 'Consider speaking a bit faster', icon: <TrendingUp />, severity: 'info' as const };
-    } else if (speaking_pace_wpm > 180) {
-      return { message: 'Consider speaking a bit slower', icon: <TrendingDown />, severity: 'info' as const };
-    } else {
-      return { message: 'Excellent speaking pace', icon: <CheckCircle />, severity: 'success' as const };
-    }
-  };
+    if (speaking_pace_wpm < 120) return { m: 'RECEPTION SLOW: INCREASE VELOCITY', i: <TrendingUp />, c: 'info' as const };
+    if (speaking_pace_wpm > 180) return { m: 'RECEPTION FAST: MODULATE VELOCITY', i: <TrendingDown />, c: 'warning' as const };
+    return { m: 'OPTIMAL ACOUSTIC VELOCITY', i: <CheckCircle />, c: 'success' as const };
+  })();
 
-  // Format filler words feedback
-  const getFillerWordsFeedback = () => {
+  const fillerFeedback = (() => {
     const { filler_word_count } = analysis;
-    if (filler_word_count === 0) {
-      return { message: 'Perfect! No filler words detected', severity: 'success' as const };
-    } else if (filler_word_count <= 2) {
-      return { message: 'Very good - minimal filler words', severity: 'success' as const };
-    } else if (filler_word_count <= 5) {
-      return { message: 'Good - few filler words used', severity: 'warning' as const };
-    } else {
-      return { message: 'Try to reduce filler words', severity: 'error' as const };
-    }
-  };
-
-  const paceFeedback = getSpeakingPaceFeedback();
-  const fillerFeedback = getFillerWordsFeedback();
+    if (filler_word_count === 0) return { m: 'ZERO ARTIFACTS DETECTED', c: 'success' as const };
+    if (filler_word_count <= 2) return { m: 'MINIMAL ARTIFACT INTERFERENCE', c: 'success' as const };
+    if (filler_word_count <= 5) return { m: 'MODERATE ARTIFACT PRESENCE', c: 'warning' as const };
+    return { m: 'HIGH ARTIFACT DENSITY DETECTED', c: 'error' as const };
+  })();
 
   return (
-    <Paper elevation={2} sx={{ p: 3 }}>
-      <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <RecordVoiceOver color="primary" />
-        Voice Analysis Results
-      </Typography>
-
-      {/* Overall Confidence Score */}
-      <Card sx={{ mb: 3, bgcolor: 'background.default' }}>
-        <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="subtitle1" fontWeight="bold">
-              Overall Confidence Score
-            </Typography>
-            <Chip
-              label={`${Math.round(analysis.confidence_score * 100)}%`}
-              color={getConfidenceColor(analysis.confidence_score)}
-              size="medium"
-              sx={{ fontSize: '1rem', fontWeight: 'bold', px: 1 }}
-            />
-          </Box>
-          <LinearProgress
-            variant="determinate"
-            value={analysis.confidence_score * 100}
-            color={getConfidenceColor(analysis.confidence_score)}
-            sx={{ height: 8, borderRadius: 4 }}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Key Metrics Grid */}
-      <Box 
-        sx={{ 
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-          gap: 3,
-          mb: 3 
-        }}
-      >
-        {/* Speaking Pace */}
-        <Box>
-          <Card>
-            <CardContent sx={{ textAlign: 'center' }}>
-              <Speed color="primary" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h6" fontWeight="bold">
-                {Math.round(analysis.speaking_pace_wpm)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Words per minute
-              </Typography>
-              <Chip
-                size="small"
-                label="120-180 optimal"
-                color={getScoreColor(analysis.speaking_pace_wpm, [120, 180])}
-                sx={{ mt: 1 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Speaking Time */}
-        <Box>
-          <Card>
-            <CardContent sx={{ textAlign: 'center' }}>
-              <VolumeUp color="primary" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h6" fontWeight="bold">
-                {Math.round(analysis.total_speaking_time)}s
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Speaking time
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {Math.round((analysis.total_speaking_time / analysis.total_duration) * 100)}% of total
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Pauses */}
-        <Box>
-          <Card>
-            <CardContent sx={{ textAlign: 'center' }}>
-              <Pause color="primary" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h6" fontWeight="bold">
-                {analysis.pause_count}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Pauses
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Avg: {analysis.average_pause_duration.toFixed(1)}s
-              </Typography>
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Volume Consistency */}
-        <Box>
-          <Card>
-            <CardContent sx={{ textAlign: 'center' }}>
-              <VolumeUp color="primary" sx={{ fontSize: 40, mb: 1 }} />
-              <Typography variant="h6" fontWeight="bold">
-                {Math.round(analysis.volume_consistency * 100)}%
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Volume consistency
-              </Typography>
-              <Chip
-                size="small"
-                label={analysis.volume_consistency > 0.7 ? "Good" : "Needs work"}
-                color={analysis.volume_consistency > 0.7 ? "success" : "warning"}
-                sx={{ mt: 1 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
-      </Box>
-
-      <Divider sx={{ my: 3 }} />
-
-      {/* Feedback Section */}
-      <Typography variant="h6" gutterBottom>
-        Feedback & Suggestions
-      </Typography>
-
-      <Stack spacing={2} sx={{ mb: 3 }}>
-        {/* Speaking Pace Feedback */}
-        <Alert severity={paceFeedback.severity} icon={paceFeedback.icon}>
-          <Typography variant="body2">
-            <strong>Speaking Pace:</strong> {paceFeedback.message} 
-            ({Math.round(analysis.speaking_pace_wpm)} WPM)
-          </Typography>
-        </Alert>
-
-        {/* Filler Words Feedback */}
-        <Alert severity={fillerFeedback.severity}>
-          <Typography variant="body2">
-            <strong>Filler Words:</strong> {fillerFeedback.message}
-            {analysis.filler_word_count > 0 && (
-              <>
-                {' '}({analysis.filler_word_count} detected
-                {analysis.detected_fillers.length > 0 && 
-                  `: ${analysis.detected_fillers.join(', ')}`
-                })
-              </>
-            )}
-          </Typography>
-        </Alert>
-
-        {/* Volume Consistency Feedback */}
-        <Alert severity={analysis.volume_consistency > 0.7 ? "success" : "info"}>
-          <Typography variant="body2">
-            <strong>Volume Consistency:</strong> 
-            {analysis.volume_consistency > 0.8 
-              ? " Excellent volume control throughout your answer"
-              : analysis.volume_consistency > 0.6
-              ? " Good volume control with minor variations"
-              : " Consider maintaining more consistent volume levels"
-            }
-          </Typography>
-        </Alert>
-
-        {/* Pause Analysis */}
-        {analysis.pause_count > 0 && (
-          <Alert severity="info" icon={<Info />}>
-            <Typography variant="body2">
-              <strong>Pauses:</strong> You used {analysis.pause_count} strategic pauses
-              {analysis.average_pause_duration > 2 
-                ? " - consider shorter pauses for better flow"
-                : " - good use of pauses for emphasis"
-              }
-              {analysis.longest_pause > 5 && 
-                ` (longest: ${analysis.longest_pause.toFixed(1)}s)`
-              }
-            </Typography>
-          </Alert>
-        )}
+    <Box>
+      <Stack direction="row" spacing={1.5} alignItems="center" mb={3}>
+         <GraphicEq color="primary" />
+         <Typography variant="h6" sx={{ fontWeight: 1000, fontFamily: 'Orbitron', letterSpacing: '0.1em' }}>ACOUSTIC TELEMETRY</Typography>
       </Stack>
 
-      {/* Transcription Section */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+         {/* Confidence Vector */}
+         <Grid size={12}>
+            <GlassCard sx={{ p: 4, bgcolor: alpha(theme.palette.background.paper, 0.4) }}>
+               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 900, fontFamily: 'Orbitron', fontSize: '0.8rem' }}>CONFIDENCE VECTOR RATING</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 1000, color: getConfidenceColor(analysis.confidence_score), fontFamily: 'Orbitron' }}>
+                     {Math.round(analysis.confidence_score * 100)}%
+                  </Typography>
+               </Stack>
+               <LinearProgress 
+                 variant="determinate" 
+                 value={analysis.confidence_score * 100} 
+                 sx={{ 
+                    height: 8, 
+                    borderRadius: 4,
+                    bgcolor: alpha(theme.palette.divider, 0.1),
+                    '& .MuiLinearProgress-bar': { bgcolor: getConfidenceColor(analysis.confidence_score) }
+                 }} 
+               />
+            </GlassCard>
+         </Grid>
+
+         {/* Metric Bento */}
+         {[
+           { label: 'VELOCITY (WPM)', value: Math.round(analysis.speaking_pace_wpm), icon: <Speed />, color: getScoreColor(analysis.speaking_pace_wpm, [120, 180]) },
+           { label: 'UPLINK TIME', value: `${Math.round(analysis.total_speaking_time)}S`, icon: <RecordVoiceOver />, color: theme.palette.primary.main },
+           { label: 'PAUSE NODES', value: analysis.pause_count, icon: <PauseIcon />, color: theme.palette.secondary.main },
+           { label: 'SIGNAL STABILITY', value: `${Math.round(analysis.volume_consistency * 100)}%`, icon: <VolumeUp />, color: analysis.volume_consistency > 0.7 ? theme.palette.success.main : theme.palette.warning.main },
+         ].map((stat, i) => (
+           <Grid key={i} size={{ xs: 6, md: 3 }}>
+              <GlassCard sx={{ p: 3, textAlign: 'center', borderBottom: `3px solid ${stat.color}` }}>
+                 <Box sx={{ color: stat.color, mb: 1, opacity: 0.6 }}>{stat.icon}</Box>
+                 <Typography variant="h5" sx={{ fontWeight: 900, fontFamily: 'Orbitron' }}>{stat.value}</Typography>
+                 <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em' }}>{stat.label}</Typography>
+              </GlassCard>
+           </Grid>
+         ))}
+      </Grid>
+
+      {/* Diagnostics Alerts */}
+      <Stack spacing={2} sx={{ mb: 4 }}>
+         <Alert 
+           severity={paceFeedback.c} 
+           icon={paceFeedback.i}
+           sx={{ borderRadius: 3, fontWeight: 800, bgcolor: alpha(theme.palette[paceFeedback.c].main, 0.05), border: `1px solid ${alpha(theme.palette[paceFeedback.c].main, 0.2)}` }}
+         >
+            {paceFeedback.m}
+         </Alert>
+         <Alert 
+           severity={fillerFeedback.c}
+           sx={{ borderRadius: 3, fontWeight: 800, bgcolor: alpha(theme.palette[fillerFeedback.c].main, 0.05), border: `1px solid ${alpha(theme.palette[fillerFeedback.c].main, 0.2)}` }}
+         >
+            {fillerFeedback.m} {analysis.filler_word_count > 0 && `(${analysis.filler_word_count} ARTIFACTS)`}
+         </Alert>
+      </Stack>
+
+      {/* Transcription Archive */}
       {showTranscription && transcription && (
-        <>
-          <Divider sx={{ my: 3 }} />
-          <Typography variant="h6" gutterBottom>
-            Transcription
-          </Typography>
-          <Paper 
-            variant="outlined" 
+        <Box>
+          <Stack direction="row" spacing={1.5} alignItems="center" mb={2}>
+             <HistoryEdu color="primary" sx={{ fontSize: 18 }} />
+             <Typography variant="caption" sx={{ fontWeight: 900, fontFamily: 'Orbitron', letterSpacing: '0.1em' }}>TRANSCRIPTION ARCHIVE</Typography>
+          </Stack>
+          <GlassCard 
             sx={{ 
-              p: 2, 
-              bgcolor: 'grey.50', 
-              maxHeight: 200, 
-              overflow: 'auto',
-              fontStyle: transcription ? 'normal' : 'italic'
+               p: 3, 
+               bgcolor: alpha(theme.palette.background.paper, 0.2),
+               maxHeight: 200, 
+               overflow: 'auto',
+               '&::-webkit-scrollbar': { width: '4px' },
+               '&::-webkit-scrollbar-thumb': { bgcolor: alpha(theme.palette.primary.main, 0.2), borderRadius: '4px' }
             }}
           >
-            <Typography variant="body2">
-              {transcription || "Transcription not available"}
+            <Typography variant="body2" sx={{ lineHeight: 1.8, color: 'text.secondary', fontWeight: 500 }}>
+              {transcription}
             </Typography>
-          </Paper>
-        </>
-      )}
-
-      {/* Technical Details (Collapsible) */}
-      {analysis.analysis_metadata && (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="caption" color="text.secondary">
-            Technical details: {analysis.analysis_metadata.word_count} words, 
-            {' '}{Math.round(analysis.analysis_metadata.speech_ratio * 100)}% speech ratio,
-            {' '}{analysis.analysis_metadata.sample_rate}Hz sample rate
-          </Typography>
+          </GlassCard>
         </Box>
       )}
-    </Paper>
+
+      {/* Technical Metadata */}
+      <Box sx={{ mt: 3, opacity: 0.4 }}>
+         <Typography variant="caption" sx={{ fontWeight: 800, display: 'block', textAlign: 'right' }}>
+            METADATA: {analysis.analysis_metadata.word_count} WORDS | {(analysis.analysis_metadata.speech_ratio * 100).toFixed(1)}% RATIO | {analysis.analysis_metadata.sample_rate}HZ
+         </Typography>
+      </Box>
+    </Box>
   );
 };

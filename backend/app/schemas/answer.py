@@ -14,8 +14,9 @@ class AnswerSubmit(BaseModel):
     """Schema for answer submission"""
     answer_text: str = Field(
         default="",
+        min_length=0,
         max_length=5000,
-        description="User's answer text (0-5000 characters, can be empty for speech-only answers)"
+        description="User's answer text (0-5000 characters)"
     )
     
     @field_validator('answer_text')

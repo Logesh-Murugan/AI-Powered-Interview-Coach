@@ -192,7 +192,7 @@ def extract_skills_task(resume_id: int, retry_count: int = 0, max_retries: int =
                 analysis_result = analysis_service.analyze_resume(
                     resume_id=resume_id,
                     user_id=resume.user_id,
-                    target_role=None,  # Will use user's target role from profile
+                    target_role="Software Engineer",  # Default role for auto-triggered analysis
                     force_refresh=False
                 )
                 # Ensure the analysis is committed and visible

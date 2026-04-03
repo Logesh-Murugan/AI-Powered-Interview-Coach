@@ -4,8 +4,17 @@ import { logError } from '../utils/errorMessages';
 export interface ScoreOverTime {
   week: string;
   avg_score: number;
+  cohort_avg_score?: number;
   session_count: number;
 }
+
+export interface SessionScore {
+  session_id: number;
+  date: string;
+  score: number;
+}
+
+
 
 export interface CategoryPerformance {
   category: string;
@@ -29,7 +38,9 @@ export interface AnalyticsOverview {
   improvement_rate: number | null;
   total_practice_hours: number;
   score_over_time: ScoreOverTime[];
+  recent_session_scores: SessionScore[];
   category_performance: CategoryPerformance[];
+
   top_5_strengths: string[];
   top_5_weaknesses: string[];
   practice_recommendations: PracticeRecommendation[];
@@ -77,9 +88,11 @@ class AnalyticsService {
   /**
    * Get analytics overview for current user
    */
-  async getAnalyticsOverview(): Promise<AnalyticsOverview> {
+  async getAnalyticsOverview(forceRefresh = false): Promise<AnalyticsOverview> {
     try {
-      const response = await apiService.get<AnalyticsOverview>('/analytics/overview');
+      const response = await apiService.get<AnalyticsOverview>(
+        `/analytics/overview${forceRefresh ? '?force_refresh=true' : ''}`
+      );
       return response.data;
     } catch (error) {
       logError(error, 'analyticsService.getAnalyticsOverview');
@@ -90,12 +103,40 @@ class AnalyticsService {
   /**
    * Get performance comparison for current user
    */
-  async getPerformanceComparison(): Promise<PerformanceComparison> {
+  async getPerformanceComparison(forceRefresh = false): Promise<PerformanceComparison> {
     try {
-      const response = await apiService.get<PerformanceComparison>('/analytics/comparison');
+      const response = await apiService.get<PerformanceComparison>(
+        `/analytics/comparison${forceRefresh ? '?force_refresh=true' : ''}`
+      );
       return response.data;
     } catch (error) {
       logError(error, 'analyticsService.getPerformanceComparison');
+      throw error;
+    }
+  }
+
+  /**
+   * Get all interview sessions
+   */
+  async getInterviewSessions(): Promise<any[]> {
+    try {
+      const response = await apiService.get<any[]>('/interviews');
+      return response.data;
+    } catch (error) {
+      logError(error, 'analyticsService.getInterviewSessions');
+      throw error;
+    }
+  }
+
+  /**
+   * Get skill statistics
+   */
+  async getSkills(): Promise<any> {
+    try {
+      const response = await apiService.get<any>('/analytics/skills');
+      return response.data;
+    } catch (error) {
+      logError(error, 'analyticsService.getSkills');
       throw error;
     }
   }

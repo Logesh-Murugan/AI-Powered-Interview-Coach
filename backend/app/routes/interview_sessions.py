@@ -6,7 +6,8 @@ API endpoints for interview session management.
 Requirements: 14.1-14.10
 """
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -88,7 +89,8 @@ async def list_interview_sessions(
                     SessionSummary.session_id == session.id
                 ).first()
                 if summary:
-                    session_data['overall_score'] = summary.overall_score
+                    session_data['overall_score'] = summary.overall_session_score
+
             
             result.append(session_data)
         
@@ -376,9 +378,8 @@ async def get_question(
             )
         
         # Record question displayed timestamp (Req 15.4)
-        from datetime import datetime
         if not session_question.question_displayed_at:
-            session_question.question_displayed_at = datetime.utcnow()
+            session_question.question_displayed_at = datetime.now(timezone.utc)
             db.commit()
         
         # Get question details
@@ -418,6 +419,7 @@ async def get_question(
 async def submit_answer(
     session_id: int,
     answer_data: AnswerSubmit,
+    background_tasks: BackgroundTasks,
     question_id: int = Query(..., description="Question ID"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -484,8 +486,7 @@ async def submit_answer(
             # Update existing answer with new text if provided (for speech-to-text workflow)
             if answer_data.answer_text.strip():
                 existing_answer.answer_text = answer_data.answer_text
-                from datetime import datetime
-                existing_answer.updated_at = datetime.utcnow()
+                existing_answer.updated_at = datetime.now(timezone.utc)
                 logger.info(f"Updated existing answer {existing_answer.id} with new text")
             
             # Ensure session_question is linked to this answer
@@ -494,7 +495,24 @@ async def submit_answer(
                 session_question.status = 'answered'
                 logger.info(f"Linked session_question to existing answer {existing_answer.id}")
             
-            db.commit()
+                # Handle StaleDataError when answer was created in a different session
+                db.rollback()
+                update_values = {"updated_at": datetime.now(timezone.utc)}
+                if answer_data.answer_text.strip():
+                    update_values["answer_text"] = answer_data.answer_text
+                db.query(Answer).filter(Answer.id == existing_answer.id).update(update_values)
+                if session_question.answer_id != existing_answer.id:
+                    db.query(SessionQuestion).filter(
+                        SessionQuestion.session_id == session_id,
+                        SessionQuestion.question_id == question_id
+                    ).update({"answer_id": existing_answer.id, "status": "answered"})
+                db.commit()
+                # Re-query to get fresh state
+                existing_answer = db.query(Answer).filter(Answer.id == existing_answer.id).first()
+                session_question = db.query(SessionQuestion).filter(
+                    SessionQuestion.session_id == session_id,
+                    SessionQuestion.question_id == question_id
+                ).first()
             
             # Check if all questions are answered
             total_questions = db.query(SessionQuestion).filter(
@@ -512,8 +530,7 @@ async def submit_answer(
             # Update session status if all answered
             if all_questions_answered and not session_completed:
                 session.status = SessionStatus.COMPLETED
-                from datetime import datetime
-                session.end_time = datetime.utcnow()
+                session.end_time = datetime.now(timezone.utc)
                 session_completed = True
                 db.commit()
                 logger.info(f"Session {session_id} marked as completed")
@@ -534,13 +551,21 @@ async def submit_answer(
             return response
         
         # Calculate time_taken (Req 16.4)
-        from datetime import datetime
         if not session_question.question_displayed_at:
             # If question was never displayed, use current time
             time_taken = 0
         else:
-            time_delta = datetime.utcnow() - session_question.question_displayed_at
-            time_taken = int(time_delta.total_seconds())
+            # Safe subtraction of aware and potentially naive datetimes
+            now = datetime.now(timezone.utc)
+            displayed_at = session_question.question_displayed_at
+            
+            # If the database returns a naive datetime, assume it's UTC and make it aware
+            if displayed_at.tzinfo is None:
+                displayed_at = displayed_at.replace(tzinfo=timezone.utc)
+                
+            time_delta = now - displayed_at
+            # Ensure time taken is never negative due to potential clock drift (Req 16.4)
+            time_taken = max(0, int(time_delta.total_seconds()))
         
         # Create answer record (Req 16.5)
         from app.models.answer import Answer
@@ -550,7 +575,7 @@ async def submit_answer(
             user_id=user_id,
             answer_text=answer_data.answer_text,
             time_taken=time_taken,
-            submitted_at=datetime.utcnow()
+            submitted_at=datetime.now(timezone.utc)
         )
         db.add(answer)
         db.flush()  # Get answer ID without committing
@@ -584,21 +609,21 @@ async def submit_answer(
             SessionQuestion.status == 'answered'
         ).count()
         
-        all_questions_answered = (answered_questions == total_questions)
+        all_questions_answered = (answered_questions >= total_questions) or (session_question.display_order >= session.question_count)
         session_completed = False
         
         # Update session status if all answered (Req 16.10)
         if all_questions_answered:
             session.status = SessionStatus.COMPLETED
-            session.end_time = datetime.utcnow()
+            session.end_time = datetime.now(timezone.utc)
             session_completed = True
             db.commit()
-        
-        # Evaluation is handled by the dedicated evaluation flow.
-        # Keeping answer submission fast and deterministic avoids blocking on AI providers.
-        logger.info(
-            f"Answer {answer.id} submitted successfully for session {session_id}; evaluation deferred"
-        )
+            
+            # Trigger background evaluation and summary generation (Req 19.1)
+            # This ensures analytics are updated in real-time even if user doesn't visit summary page
+            background_tasks.add_task(synchronize_session_analytics, session_id, user_id)
+            
+            logger.info(f"✅ Session {session_id} finalized; background synchronization triggered")
         
         # Format response
         response = AnswerResponse(
@@ -607,7 +632,7 @@ async def submit_answer(
             question_id=question_id,
             time_taken=time_taken,
             submitted_at=answer.submitted_at,
-            status='submitted',  # Will be 'evaluating' once Celery is integrated
+            status='submitted',
             all_questions_answered=all_questions_answered,
             session_completed=session_completed
         )
@@ -623,6 +648,32 @@ async def submit_answer(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to submit answer"
         )
+
+
+async def synchronize_session_analytics(session_id: int, user_id: int):
+    """Background task to evaluate answers and generate summary."""
+    from app.database import SessionLocal
+    from app.services.session_summary_service import SessionSummaryService
+    from app.services.analytics_service import AnalyticsService
+    from app.services.cache_service import CacheService
+    
+    db = SessionLocal()
+    try:
+        logger.info(f"Background sync started for session {session_id}")
+        
+        # 1. Generate summary (triggers evaluations)
+        summary_service = SessionSummaryService(db)
+        summary_service.generate_summary(session_id, user_id)
+        
+        # 2. Invalidate analytics cache to ensure real-time update (Req 20.15)
+        analytics_service = AnalyticsService(db, CacheService())
+        analytics_service.invalidate_cache(user_id)
+        
+        logger.info(f"Background sync completed for session {session_id}")
+    except Exception as e:
+        logger.error(f"Background sync failed for session {session_id}: {e}", exc_info=True)
+    finally:
+        db.close()
 
 
 
@@ -687,8 +738,6 @@ async def save_answer_draft(
         
         # Upsert answer draft (Req 17.4)
         from app.models.answer_draft import AnswerDraft
-        from datetime import datetime
-        
         draft = db.query(AnswerDraft).filter(
             AnswerDraft.session_id == session_id,
             AnswerDraft.question_id == question_id
@@ -697,7 +746,7 @@ async def save_answer_draft(
         if draft:
             # Update existing draft
             draft.draft_text = draft_data.draft_text
-            draft.last_saved_at = datetime.utcnow()
+            draft.last_saved_at = datetime.now(timezone.utc)
         else:
             # Create new draft
             draft = AnswerDraft(
@@ -705,7 +754,7 @@ async def save_answer_draft(
                 question_id=question_id,
                 user_id=user_id,
                 draft_text=draft_data.draft_text,
-                last_saved_at=datetime.utcnow()
+                last_saved_at=datetime.now(timezone.utc)
             )
             db.add(draft)
         

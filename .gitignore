@@ -208,6 +208,7 @@ alembic.ini.bak
 
 # Redis
 redis.conf
+redis-windows/
 
 # SSL certificates
 *.pem

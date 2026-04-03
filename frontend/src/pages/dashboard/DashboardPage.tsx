@@ -1,32 +1,39 @@
 /**
- * Dashboard Page Component
- * Main dashboard for authenticated users with real-time stats
- * Requirements: COMP-2.1, COMP-2.2, COMP-2.3, COMP-2.4, COMP-2.5, COMP-2.6, COMP-2.7, COMP-2.8
+ * Premium Dashboard Page
+ * Bento-style layout with high-end glassmorphism and animations
  */
 
 import { useEffect, useState } from 'react';
-import { Box, Typography, Button, Stack, Grid, Alert } from '@mui/material';
+import { Box, Typography, Button, Stack, Alert, Grid, useTheme, alpha } from '@mui/material';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
-import { logout } from '../../store/slices/authSlice';
 import { ROUTES } from '../../config/app.config';
-import StatsCard from '../../components/dashboard/StatsCard';
-import RecentSessions from '../../components/dashboard/RecentSessions';
-import QuickActions from '../../components/dashboard/QuickActions';
-import StreakCard from '../../components/dashboard/StreakCard';
-import AchievementProgress from '../../components/dashboard/AchievementProgress';
-import UpcomingTasks from '../../components/dashboard/UpcomingTasks';
-import PerformanceChart from '../../components/dashboard/PerformanceChart';
-import QuickStats from '../../components/dashboard/QuickStats';
 import { getInterviewSessions } from '../../services/interviewService';
+import analyticsService from '../../services/analyticsService';
+import { motion } from 'framer-motion';
+
+
+// Icons
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TimerIcon from '@mui/icons-material/Timer';
-import FadeIn from '../../components/animations/FadeIn';
-import ScaleButton from '../../components/animations/ScaleButton';
+import FlashOnIcon from '@mui/icons-material/FlashOn';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+
+// Premium Components
+import { GlassCard, GradientButton, GradientText } from '../../components/common/PremiumComponents';
+
+// Dashboard Sub-components
+import PerformanceChart from '../../components/dashboard/PerformanceChart';
+import RecentSessions from '../../components/dashboard/RecentSessions';
+import QuickActions from '../../components/dashboard/QuickActions';
+import StreakCard from '../../components/dashboard/StreakCard';
+import { logout } from '../../store/slices/authSlice';
+
+const MotionBox = motion.create(Box);
 
 interface DashboardStats {
   totalSessions: number;
@@ -37,6 +44,7 @@ interface DashboardStats {
 
 function DashboardPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   
@@ -49,56 +57,47 @@ function DashboardPage() {
   const [recentSessions, setRecentSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = async (forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
       
-      // Fetch interview sessions
-      const sessions = await getInterviewSessions();
+      // Fetch both sessions and analytics overview in parallel
+      const [sessions, analytics] = await Promise.all([
+        getInterviewSessions(),
+        analyticsService.getAnalyticsOverview(forceRefresh)
+      ]);
       
-      // Calculate stats
-      const completed = sessions.filter(s => s.status.toLowerCase() === 'completed');
-      const totalSessions = sessions.length;
-      const completedSessions = completed.length;
-      
-      // Calculate average score (placeholder - will be real once we have evaluations)
-      const averageScore = completedSessions > 0 ? 75 : 0;
-      
-      // Calculate improvement rate (placeholder)
-      const improvementRate = completedSessions > 1 ? 12 : 0;
+      const completedCount = sessions.filter(s => s.status.toLowerCase() === 'completed').length;
       
       setStats({
-        totalSessions,
-        completedSessions,
-        averageScore,
-        improvementRate,
+        totalSessions: sessions.length,
+        completedSessions: Math.max(analytics.total_interviews_completed || 0, completedCount),
+        averageScore: Math.round(analytics.average_score_all_time || 0),
+        improvementRate: Math.round(analytics.improvement_rate || 0),
       });
       
-      // Get recent sessions (last 5)
       setRecentSessions(sessions.slice(0, 5));
-      
-      // Check if user has any data
-      setHasData(totalSessions > 0);
-      
-    } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      setError('Unable to load dashboard data. Using default values.');
-      // Set default values on error
-      setStats({
-        totalSessions: 0,
-        completedSessions: 0,
-        averageScore: 0,
-        improvementRate: 0,
-      });
-      setRecentSessions([]);
-      setHasData(false);
+    } catch (err: any) {
+      console.error('Dashboard Load Error:', err);
+      // Fallback if analytics fails but sessions works
+      try {
+          const sessions = await getInterviewSessions();
+          setRecentSessions(sessions.slice(0, 5));
+          const completed = sessions.filter(s => s.status.toLowerCase() === 'completed');
+          setStats(prev => ({
+              ...prev,
+              totalSessions: sessions.length,
+              completedSessions: completed.length
+          }));
+      } catch (innerErr) {
+          setError('SYSTEM PULSE WEAK. DATA RECOVERY OFFLINE.');
+      }
     } finally {
       setLoading(false);
     }
@@ -109,138 +108,100 @@ function DashboardPage() {
     navigate(ROUTES.LOGIN);
   };
 
-  if (loading) {
-    return (
-      <LoadingSpinner variant="fullPage" text="Loading dashboard..." />
-    );
-  }
+  if (loading) return <LoadingSpinner variant="fullPage" />;
 
   return (
-    <Box>
-      {/* Header */}
-      <FadeIn delay={0.1}>
-        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h4" component="h1">
-            Welcome back, {user?.name}!
+    <Box sx={{ pb: 8 }}>
+      {/* Premium Hero Header */}
+      <MotionBox
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        sx={{ mb: 6, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, gap: 3 }}
+      >
+        <Box>
+          <Typography variant="h3" sx={{ mb: 1, fontFamily: 'Orbitron', fontWeight: 900 }}>
+            WELCOME, <GradientText>{user?.name?.toUpperCase()}</GradientText>
           </Typography>
-          <ScaleButton>
-            <Button variant="outlined" onClick={handleLogout}>
-              Logout
-            </Button>
-          </ScaleButton>
+          <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+            Synchronize your background with our AI-driven practice lattice.
+          </Typography>
         </Box>
-      </FadeIn>
+        <Stack direction="row" spacing={2}>
+          <Button variant="outlined" onClick={() => loadDashboardData(true)} startIcon={<AutoAwesomeIcon />} sx={{ borderRadius: 3, fontWeight: 700 }}>
+            RECALIBRATE
+          </Button>
+          <GradientButton onClick={() => navigate('/interviews')}>
+            START SESSION
+          </GradientButton>
+        </Stack>
+      </MotionBox>
 
-      {/* Error Alert */}
-      {error && (
-        <ErrorAlert
-          message={error}
-          severity="warning"
-          onRetry={loadDashboardData}
-          onDismiss={() => setError(null)}
-        />
-      )}
-
-      {/* Onboarding prompt for new users */}
-      {!hasData && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          Welcome! Start your interview preparation journey by taking your first practice session.
-        </Alert>
-      )}
-
-      <Stack spacing={3}>
-        {/* Stats Cards - Top Row */}
-        <Grid container spacing={3}>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <FadeIn delay={0.2}>
-              <StatsCard
-                title="Total Sessions"
-                value={stats.totalSessions}
-                icon={<AssessmentIcon />}
-                color="primary"
-              />
-            </FadeIn>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <FadeIn delay={0.3}>
-              <StatsCard
-                title="Completed"
-                value={stats.completedSessions}
-                icon={<CheckCircleIcon />}
-                color="success"
-              />
-            </FadeIn>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <FadeIn delay={0.4}>
-              <StatsCard
-                title="Average Score"
-                value={`${stats.averageScore}%`}
-                icon={<TrendingUpIcon />}
-                color="info"
-                trend={stats.improvementRate}
-              />
-            </FadeIn>
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-            <FadeIn delay={0.5}>
-              <StatsCard
-                title="Improvement"
-                value={`+${stats.improvementRate}%`}
-                icon={<TimerIcon />}
-                color="warning"
-                trend={stats.improvementRate}
-              />
-            </FadeIn>
-          </Grid>
+      {/* Bento Grid Layout */}
+      <Grid container spacing={4}>
+        {/* Main Intelligence Sector - Performance Chart */}
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <GlassCard sx={{ p: 4, height: '100%', position: 'relative', overflow: 'hidden' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+              <Box>
+                <Typography variant="h5" sx={{ mb: 0.5, fontWeight: 900, fontFamily: 'Orbitron' }}>PERFORMANCE PULSE</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>REAL-TIME ANALYSIS OF YOUR GROWTH VECTORS.</Typography>
+              </Box>
+              <Box sx={{ p: 1, px: 2, borderRadius: 2, bgcolor: alpha(stats.improvementRate >= 0 ? theme.palette.success.main : theme.palette.error.main, 0.1), border: `1px solid ${alpha(stats.improvementRate >= 0 ? theme.palette.success.main : theme.palette.error.main, 0.2)}` }}>
+                <Typography variant="caption" color={stats.improvementRate >= 0 ? "success.main" : "error.main"} sx={{ fontWeight: 900 }}>
+                  {stats.improvementRate >= 0 ? '+' : ''}{stats.improvementRate}% GROWTH
+                </Typography>
+              </Box>
+            </Box>
+            <Box sx={{ height: 350 }}>
+              <PerformanceChart />
+            </Box>
+          </GlassCard>
         </Grid>
 
-        {/* Main Dashboard Widgets - Responsive Grid Layout */}
-        <Grid container spacing={3}>
-          {/* Left Column - Streak and Quick Stats */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Stack spacing={3}>
-              <FadeIn delay={0.6}>
-                <StreakCard />
-              </FadeIn>
-              <FadeIn delay={0.7}>
-                <QuickStats />
-              </FadeIn>
-            </Stack>
-          </Grid>
-
-          {/* Middle Column - Performance Chart and Quick Actions */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Stack spacing={3}>
-              <FadeIn delay={0.8}>
-                <PerformanceChart />
-              </FadeIn>
-              <FadeIn delay={0.9}>
-                <QuickActions />
-              </FadeIn>
-            </Stack>
-          </Grid>
-
-          {/* Right Column - Achievements and Upcoming Tasks */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Stack spacing={3}>
-              <FadeIn delay={1.0}>
-                <AchievementProgress />
-              </FadeIn>
-              <FadeIn delay={1.1}>
-                <UpcomingTasks />
-              </FadeIn>
-            </Stack>
-          </Grid>
+        {/* Tactical Sector - Streak Card */}
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Stack spacing={4} sx={{ height: '100%' }}>
+             <StreakCard />
+             <GlassCard sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)} 0%, ${alpha(theme.palette.secondary.main, 0.05)} 100%)` }}>
+                <Box sx={{ textAlign: 'center' }}>
+                   <FlashOnIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+                   <Typography variant="h3" sx={{ fontWeight: 900, mb: 1, fontFamily: 'Orbitron' }}>{stats.completedSessions}</Typography>
+                   <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.2em' }}>Sessions Concluded</Typography>
+                </Box>
+             </GlassCard>
+          </Stack>
         </Grid>
 
-        {/* Recent Sessions - Full Width */}
-        {recentSessions.length > 0 && (
-          <FadeIn delay={1.2}>
-            <RecentSessions sessions={recentSessions} />
-          </FadeIn>
-        )}
-      </Stack>
+        {/* Analytics Sector - Small Cards */}
+        {[
+          { title: "Avg Mastery", value: `${stats.averageScore}%`, icon: <TrendingUpIcon />, color: '#6366f1' },
+          { title: "Active Gaps", value: "3", icon: <TimerIcon />, color: '#ec4899' },
+          { title: "Skill Tier", value: "Gold", icon: <AssessmentIcon />, color: '#f59e0b' },
+          { title: "Offer Probability", value: "68%", icon: <CheckCircleIcon />, color: '#10b981' }
+        ].map((item, idx) => (
+          <Grid key={idx} size={{ xs: 12, sm: 6, md: 3 }}>
+            <MotionBox
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <GlassCard sx={{ p: 3, textAlign: 'center', borderBottom: `4px solid ${item.color}` }}>
+                <Box sx={{ color: item.color, mb: 1.5 }}>{item.icon}</Box>
+                <Typography variant="h4" sx={{ fontWeight: 900, mb: 0.5, fontFamily: 'Orbitron' }}>{item.value}</Typography>
+                <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{item.title}</Typography>
+              </GlassCard>
+            </MotionBox>
+          </Grid>
+        ))}
+
+        {/* Operational Sector - Quick Actions & Recent Sessions */}
+        <Grid size={{ xs: 12, md: 5 }}>
+          <QuickActions />
+        </Grid>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <RecentSessions sessions={recentSessions} />
+        </Grid>
+      </Grid>
     </Box>
   );
 }

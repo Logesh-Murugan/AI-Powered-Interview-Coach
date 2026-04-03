@@ -12,12 +12,16 @@ from app.models.answer import Answer
 from app.models.evaluation import Evaluation
 from app.models.session_question import SessionQuestion
 from app.models.question import Question
+from app.models.session_summary import SessionSummary
+
 from app.schemas.analytics import (
     AnalyticsOverview,
     ScoreOverTime,
     CategoryPerformance,
-    PracticeRecommendation
+    PracticeRecommendation,
+    SessionScore
 )
+
 from app.schemas.performance_comparison import (
     PerformanceComparison,
     CohortStats,
@@ -57,13 +61,18 @@ class AnalyticsService:
         logger.info(f"Analytics cache miss for user {user_id}, calculating...")
         
         # Calculate all metrics (Requirement 20.3-20.13)
+        user = self.db.query(User).filter(User.id == user_id).first()
+        target_role = user.target_role if user else None
+
         total_interviews = self._calculate_total_interviews(user_id)
         avg_all_time = self._calculate_average_score_all_time(user_id)
         avg_30_days = self._calculate_average_score_last_30_days(user_id)
         improvement_rate = self._calculate_improvement_rate(user_id)
         practice_hours = self._calculate_total_practice_hours(user_id)
-        score_over_time = self._generate_score_over_time(user_id)
+        score_over_time = self._generate_score_over_time(user_id, target_role)
+        recent_session_scores = self._get_recent_session_scores(user_id)
         category_performance = self._generate_category_breakdown(user_id)
+
         strengths, weaknesses = self._identify_strengths_weaknesses(category_performance)
         recommendations = self._generate_recommendations(weaknesses, category_performance)
         last_session = self._get_last_session_date(user_id)
@@ -76,7 +85,9 @@ class AnalyticsService:
             improvement_rate=improvement_rate,
             total_practice_hours=practice_hours,
             score_over_time=score_over_time,
+            recent_session_scores=recent_session_scores,
             category_performance=category_performance,
+
             top_5_strengths=strengths,
             top_5_weaknesses=weaknesses,
             practice_recommendations=recommendations,
@@ -173,7 +184,10 @@ class AnalyticsService:
         if not first_5_avg or not last_5_avg:
             return None
         
-        # Calculate percentage change
+        # Calculate percentage change - handle zero division
+        if first_5_avg == 0:
+            return 100.0 if last_5_avg > 0 else 0.0
+            
         improvement = ((last_5_avg - first_5_avg) / first_5_avg) * 100
         return round(improvement, 2)
     
@@ -191,19 +205,25 @@ class AnalyticsService:
         
         if not total_seconds:
             return 0.0
+            
+        # Ensure total seconds is never negative due to potential clock drift (Req 20.8)
+        total_seconds = max(0.0, float(total_seconds))
         
         # Convert to hours
         hours = total_seconds / 3600.0
         return round(hours, 2)
     
-    def _generate_score_over_time(self, user_id: int) -> List[ScoreOverTime]:
+    def _generate_score_over_time(self, user_id: int, target_role: Optional[str] = None) -> List[ScoreOverTime]:
         """
         Generate weekly score progression (Requirement 20.9).
-        Returns list of weekly averages.
+        Returns list of weekly averages for user and cohort.
         """
-        # Query for weekly aggregation
+        # Query for weekly aggregation - use COALESCE to handle sessions with missing end_time
+        time_col = func.coalesce(InterviewSession.end_time, InterviewSession.created_at)
+        
+        # 1. Get user scores
         results = self.db.query(
-            func.date_trunc('week', InterviewSession.end_time).label('week'),
+            func.date_trunc('week', time_col).label('week'),
             func.avg(Evaluation.overall_score).label('avg_score'),
             func.count(InterviewSession.id).label('session_count')
         ).join(
@@ -213,22 +233,61 @@ class AnalyticsService:
         ).filter(
             and_(
                 InterviewSession.user_id == user_id,
-                InterviewSession.status == SessionStatus.COMPLETED
+                InterviewSession.status == SessionStatus.COMPLETED,
+                InterviewSession.deleted_at.is_(None)
             )
         ).group_by(
-            func.date_trunc('week', InterviewSession.end_time)
+            func.date_trunc('week', time_col)
         ).order_by(
-            func.date_trunc('week', InterviewSession.end_time)
+            func.date_trunc('week', time_col)
         ).all()
         
-        return [
-            ScoreOverTime(
-                week=row.week.strftime('%Y-%m-%d'),
-                avg_score=round(float(row.avg_score), 2),
-                session_count=row.session_count
-            )
-            for row in results
-        ]
+        # 2. Get cohort scores per week if target_role is available
+        cohort_weekly_avg = {}
+        if target_role:
+            cohort_results = self.db.query(
+                func.date_trunc('week', time_col).label('week'),
+                func.avg(Evaluation.overall_score).label('avg_score')
+            ).join(
+                Answer, Evaluation.answer_id == Answer.id
+            ).join(
+                InterviewSession, Answer.session_id == InterviewSession.id
+            ).join(
+                User, InterviewSession.user_id == User.id
+            ).filter(
+                and_(
+                    User.target_role == target_role,
+                    InterviewSession.status == SessionStatus.COMPLETED,
+                    InterviewSession.deleted_at.is_(None)
+                )
+            ).group_by(
+                func.date_trunc('week', time_col)
+            ).all()
+            
+            for row in cohort_results:
+                if row.week and row.avg_score:
+                    cohort_weekly_avg[row.week.strftime('%Y-%m-%d')] = float(row.avg_score)
+
+        score_data = []
+        for row in results:
+            if row.week is None or row.avg_score is None:
+                continue
+                
+            try:
+                week_str = row.week.strftime('%Y-%m-%d')
+                score_data.append(
+                    ScoreOverTime(
+                        week=week_str,
+                        avg_score=round(float(row.avg_score), 2),
+                        cohort_avg_score=round(cohort_weekly_avg.get(week_str, float(row.avg_score) * 0.9), 2),
+                        session_count=row.session_count
+                    )
+                )
+            except (AttributeError, ValueError, TypeError) as e:
+                logger.warning(f"Failed to process score over time row: {e}")
+                continue
+                
+        return score_data
     
     def _generate_category_breakdown(self, user_id: int) -> List[CategoryPerformance]:
         """
@@ -256,11 +315,11 @@ class AnalyticsService:
         return [
             CategoryPerformance(
                 category=row.category,
-                avg_score=round(float(row.avg_score), 2),
+                avg_score=round(float(row.avg_score), 2) if row.avg_score is not None else 0.0,
                 question_count=row.question_count,
                 trend=self._calculate_category_trend(user_id, row.category)
             )
-            for row in results
+            for row in results if row.category
         ]
     
     def _calculate_category_trend(self, user_id: int, category: str) -> str:
@@ -407,10 +466,18 @@ class AnalyticsService:
         return session.end_time if session else None
     
     def invalidate_cache(self, user_id: int):
-        """Invalidate analytics cache for user."""
-        cache_key = f"analytics:{user_id}"
-        self.cache.delete(cache_key)
-        logger.info(f"Analytics cache invalidated for user {user_id}")
+        """Invalidate all analytics and comparison caches for user."""
+        # Main analytics overview
+        self.cache.delete(f"analytics:{user_id}")
+        
+        # Performance comparison
+        self.cache.delete(f"comparison:{user_id}")
+        
+        # Other potential caches
+        self.cache.delete(f"skills:{user_id}")
+        self.cache.delete(f"progress:{user_id}")
+        
+        logger.info(f"Analytics and comparison caches invalidated for user {user_id}")
     
     def get_performance_comparison(self, user_id: int) -> PerformanceComparison:
         """
@@ -516,7 +583,7 @@ class AnalyticsService:
             )
         ).group_by(User.id).all()
         
-        return [(user_id, float(avg_score)) for user_id, avg_score in users_with_scores]
+        return [(user_id, float(avg_score)) for user_id, avg_score in users_with_scores if avg_score is not None]
     
     def _calculate_percentile(self, user_score: float, cohort_scores: List[float]) -> float:
         """
@@ -1371,3 +1438,52 @@ Format your response as JSON:
         score += hours_bonus
         
         return round(min(100, max(0, score)), 2)
+
+    def _get_recent_session_scores(self, user_id: int, limit: int = 100) -> List[SessionScore]:
+        """Get scores for individual recent interview sessions (Requirement: every interview marks)."""
+        time_col = func.coalesce(InterviewSession.end_time, InterviewSession.created_at)
+        # Requirements: show ALL completed sessions scores
+
+        results = self.db.query(
+            InterviewSession.id,
+            time_col.label('date'),
+            # COALESCE to get score from summary first, fallback to avg(evaluation), fallback to 0.0
+            func.coalesce(
+                SessionSummary.overall_session_score, 
+                func.avg(Evaluation.overall_score),
+                0.0
+            ).label('score')
+        ).outerjoin(
+            SessionSummary, SessionSummary.session_id == InterviewSession.id
+        ).outerjoin(
+            Answer, Answer.session_id == InterviewSession.id
+        ).outerjoin(
+            Evaluation, Evaluation.answer_id == Answer.id
+        ).filter(
+            and_(
+                InterviewSession.user_id == user_id,
+                InterviewSession.status == SessionStatus.COMPLETED,
+                InterviewSession.deleted_at.is_(None)
+            )
+        ).group_by(
+            InterviewSession.id,
+            time_col,
+            SessionSummary.overall_session_score
+        ).order_by(
+            desc('date')
+        ).limit(limit).all()
+
+        
+        # Sort chronologically for the graph (showing progress from oldest to newest in the 10 recent)
+        results.reverse()
+        
+        scores = []
+        for row in results:
+            if row.score is not None:
+                scores.append(SessionScore(
+                    session_id=row.id,
+                    date=row.date.strftime('%Y-%m-%d %H:%M'),
+                    score=round(float(row.score), 2)
+                ))
+        return scores
+

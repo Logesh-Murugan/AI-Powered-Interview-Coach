@@ -10,7 +10,9 @@ class ScoreOverTime(BaseModel):
     """Score data point for time series."""
     week: str = Field(..., description="Week start date (YYYY-MM-DD)")
     avg_score: float = Field(..., ge=0, le=100, description="Average score for the week")
+    cohort_avg_score: Optional[float] = Field(None, ge=0, le=100, description="Average score for the cohort in the same week")
     session_count: int = Field(..., ge=0, description="Number of sessions in the week")
+
 
 
 class CategoryPerformance(BaseModel):
@@ -30,7 +32,15 @@ class PracticeRecommendation(BaseModel):
     target_score: float = Field(..., ge=0, le=100, description="Target score to achieve")
 
 
+class SessionScore(BaseModel):
+    """Score for an individual session."""
+    session_id: int = Field(..., description="Interview session ID")
+    date: str = Field(..., description="Session completion date")
+    score: float = Field(..., ge=0, le=100, description="Overall score for the session")
+
+
 class AnalyticsOverview(BaseModel):
+
     """Complete analytics dashboard data."""
     # Summary metrics
     total_interviews_completed: int = Field(..., ge=0, description="Total completed sessions")
@@ -41,6 +51,7 @@ class AnalyticsOverview(BaseModel):
     
     # Time series data
     score_over_time: List[ScoreOverTime] = Field(default_factory=list, description="Weekly score progression")
+    recent_session_scores: List[SessionScore] = Field(default_factory=list, description="Individual session performance")
     
     # Category breakdown
     category_performance: List[CategoryPerformance] = Field(default_factory=list, description="Performance by category")
