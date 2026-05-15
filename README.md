@@ -57,8 +57,9 @@ InterviewMaster AI is a full-stack interview preparation platform that uses **AI
 - **Role-Specific Strategies** — Different coaching paths for SDE, PM, Data Science, and more
 
 ### 🎤 Voice & Media Recording
-- **Dual-Mode Interviews** — Answer via text or record voice/video responses
-- **Speech-to-Text** — Whisper-powered transcription of voice recordings
+- **Interview Modes** — Choose flexible Practice sessions or strict Mock Interviews (requires video/audio)
+- **Dual-Mode Inputs** — Answer via text or record voice/video responses
+- **Speech-to-Text** — Whisper-powered transcription of voice recordings (CPU/GPU supported)
 - **Voice Analysis** — Speaking pace, pause detection, filler word tracking, and confidence scoring
 - **Audio/Video Playback** — Review your recordings with AI-annotated feedback
 
@@ -109,7 +110,7 @@ InterviewMaster AI is a full-stack interview preparation platform that uses **AI
 ┌──────▼──────┐   ┌───────▼───────┐   ┌───────▼───────┐
 │  AI / LLM   │   │  PostgreSQL   │   │    Redis      │
 │  Providers   │   │   Database    │   │    Cache      │
-│ (Gemini API) │   │  (port 5432)  │   │  (port 6379)  │
+│(Gemini, HF) │   │  (port 5432)  │   │  (port 6379)  │
 └─────────────┘   └───────────────┘   └───────────────┘
 ```
 
@@ -120,7 +121,7 @@ InterviewMaster AI is a full-stack interview preparation platform that uses **AI
 | **Frontend** | React 18, TypeScript, Material-UI (MUI), Framer Motion, Redux Toolkit, Vite |
 | **Backend** | Python 3.10+, FastAPI, SQLAlchemy 2.0, Alembic, Pydantic v2 |
 | **Database** | PostgreSQL 16, Redis 7 |
-| **AI/ML** | Google Gemini API, LangChain, Whisper (Speech-to-Text), Librosa |
+| **AI/ML** | Google Gemini API, HuggingFace Inference API (Llama-3), LangChain, Whisper (Speech-to-Text), Librosa |
 | **Media** | FFmpeg, PyAV, SoundFile |
 | **Auth** | JWT (Access + Refresh Tokens), Passlib/Bcrypt |
 | **DevOps** | Docker, Docker Compose, GitHub Actions CI/CD |
@@ -141,8 +142,8 @@ InterviewMaster AI is a full-stack interview preparation platform that uses **AI
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/ai-powered-interview-coach.git
-cd ai-powered-interview-coach
+git clone https://github.com/Logesh-Murugan/AI-Powered-Interview-Coach.git
+cd AI-Powered-Interview-Coach
 
 # Set up environment variables
 cp backend/.env.example backend/.env
@@ -224,7 +225,10 @@ Create a `backend/.env` file based on `backend/.env.example`:
 # Required
 DATABASE_URL=postgresql://user:password@localhost:5432/interviewmaster
 SECRET_KEY=your-secure-secret-key-minimum-32-characters
+
+# AI Providers (At least one is recommended)
 GEMINI_API_KEY=your-gemini-api-key
+HUGGINGFACE_API_KEY=your-huggingface-api-key
 
 # Optional (for additional features)
 REDIS_HOST=localhost
