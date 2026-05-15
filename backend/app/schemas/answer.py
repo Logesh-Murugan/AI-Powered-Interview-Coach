@@ -18,6 +18,7 @@ class AnswerSubmit(BaseModel):
         max_length=5000,
         description="User's answer text (0-5000 characters)"
     )
+    input_method: Optional[str] = Field(None, description="Method used to answer (text, voice, video)")
     
     @field_validator('answer_text')
     @classmethod
@@ -46,6 +47,7 @@ class AnswerResponse(BaseModel):
     status: str = Field(..., description="Answer status (submitted, evaluating, evaluated)")
     all_questions_answered: bool = Field(..., description="Whether all session questions are answered")
     session_completed: bool = Field(..., description="Whether the interview session is completed")
+    input_method: Optional[str] = Field(None, description="Method used to answer")
     
     model_config = ConfigDict(
         from_attributes=True,

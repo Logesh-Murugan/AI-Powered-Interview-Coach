@@ -205,15 +205,15 @@ const LandingPage = () => {
             </Stack>
             
             <Stack direction="row" spacing={{ xs: 1, md: 4 }} alignItems="center">
-               <Button color="inherit" sx={{ fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.1em', display: { xs: 'none', md: 'flex' } }}>TECHNOLOGY</Button>
-               <Button color="inherit" sx={{ fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.1em', display: { xs: 'none', md: 'flex' } }}>ECOSYSTEM</Button>
+               <Button sx={{ color: 'text.primary', fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.1em', display: { xs: 'none', md: 'flex' } }}>TECHNOLOGY</Button>
+               <Button sx={{ color: 'text.primary', fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.1em', display: { xs: 'none', md: 'flex' } }}>ECOSYSTEM</Button>
                
                {isAuthenticated ? (
-                 <GradientButton onClick={() => navigate(ROUTES.DASHBOARD)} sx={{ px: 4, borderRadius: 2.5, fontWeight: 900 }}>DASHBOARD</GradientButton>
+                 <GradientButton onClick={() => navigate(ROUTES.DASHBOARD)} sx={{ px: { xs: 2, sm: 4 }, borderRadius: 2.5, fontWeight: 900, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>DASHBOARD</GradientButton>
                ) : (
-                 <Stack direction="row" spacing={2}>
-                    <Button onClick={openLogin} sx={{ fontWeight: 900, color: 'text.primary', border: `1px solid ${alpha(theme.palette.text.primary, 0.1)}`, px: 3, borderRadius: 2.5 }}>SIGN IN</Button>
-                    <GradientButton onClick={openRegister} sx={{ px: 4, borderRadius: 2.5, fontWeight: 900 }}>GET STARTED</GradientButton>
+                 <Stack direction="row" spacing={{ xs: 1, sm: 2 }}>
+                    <Button onClick={openLogin} sx={{ fontWeight: 900, color: 'text.primary', border: `1px solid ${alpha(theme.palette.text.primary, 0.1)}`, px: { xs: 1.5, sm: 3 }, fontSize: { xs: '0.75rem', sm: '0.875rem' }, borderRadius: 2.5 }}>SIGN IN</Button>
+                    <GradientButton onClick={openRegister} sx={{ px: { xs: 2, sm: 4 }, fontSize: { xs: '0.75rem', sm: '0.875rem' }, borderRadius: 2.5, fontWeight: 900 }}>GET STARTED</GradientButton>
                  </Stack>
                )}
 
@@ -223,7 +223,7 @@ const LandingPage = () => {
       </AppBar>
 
       {/* Hero Section */}
-      <Container maxWidth="xl" sx={{ pt: { xs: 22, md: 30 }, pb: { xs: 10, md: 20 }, position: 'relative', zIndex: 1 }}>
+      <Container maxWidth="xl" sx={{ pt: { xs: 16, md: 30 }, pb: { xs: 10, md: 20 }, position: 'relative', zIndex: 1 }}>
          <Grid container spacing={10} alignItems="center">
             <Grid size={{ xs: 12, lg: 7 }}>
                <MotionBox
@@ -254,9 +254,9 @@ const LandingPage = () => {
                     fontWeight: 900, 
                     lineHeight: 0.95, 
                     mb: 3, 
-                    fontSize: { xs: '3.8rem', md: '5.5rem', lg: '6.5rem' }, 
+                    fontSize: { xs: '2.5rem', sm: '3.8rem', md: '5.5rem', lg: '6.5rem' }, 
                     fontFamily: 'Orbitron', 
-                    color: 'white',
+                    color: 'text.primary',
                     letterSpacing: '-0.02em'
                   }}>
                     EVOLVE YOUR <br />
@@ -312,7 +312,7 @@ const LandingPage = () => {
                          ))}
                        </AvatarGroup>
                        <Typography variant="caption" sx={{ fontWeight: 800, color: 'text.secondary', letterSpacing: '0.05em' }}>
-                        <span style={{ color: 'white', fontWeight: 1000 }}>50K+ CANDIDATES</span> JOINED THIS MONTH
+                        <span style={{ color: theme.palette.text.primary, fontWeight: 1000 }}>50K+ CANDIDATES</span> JOINED THIS MONTH
                        </Typography>
 
                     </Stack>
@@ -402,12 +402,12 @@ const LandingPage = () => {
       </Container>
 
       {/* How It Works Section */}
-      <Box sx={{ py: 25, position: 'relative' }}>
+      <Box sx={{ py: { xs: 10, md: 25 }, position: 'relative' }}>
          <Container maxWidth="xl">
-            <Box sx={{ textAlign: 'center', mb: 15 }}>
+            <Box sx={{ textAlign: 'center', mb: { xs: 8, md: 15 } }}>
                <Typography variant="overline" sx={{ fontWeight: 1000, color: 'primary.main', letterSpacing: '0.4em' }}>THE PROCESS</Typography>
-               <Typography variant="h2" sx={{ fontWeight: 900, mt: 2, mb: 3, fontFamily: 'Orbitron', color: 'white' }}>HOW TO <GradientText>GET STARTED</GradientText></Typography>
-               <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto', fontWeight: 500 }}>Improve your interview skills in three simple steps.</Typography>
+               <Typography variant="h2" sx={{ fontWeight: 900, mt: 2, mb: 3, fontFamily: 'Orbitron', color: 'text.primary', fontSize: { xs: '2rem', md: '3.75rem' } }}>HOW TO <GradientText>GET STARTED</GradientText></Typography>
+               <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 700, mx: 'auto', fontWeight: 500, fontSize: { xs: '1rem', md: '1.25rem' } }}>Improve your interview skills in three simple steps.</Typography>
 
             </Box>
             
@@ -460,13 +460,13 @@ const LandingPage = () => {
       </Box>
 
       {/* Capabilities Section */}
-      <Box id="features" sx={{ py: 25, bgcolor: alpha(theme.palette.background.paper, 0.3), position: 'relative' }}>
+      <Box id="features" sx={{ py: { xs: 10, md: 25 }, bgcolor: alpha(theme.palette.background.paper, 0.3), position: 'relative' }}>
          <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundImage: `linear-gradient(180deg, ${alpha(theme.palette.background.default, 0.8)} 0%, transparent 50%, ${alpha(theme.palette.background.default, 0.8)} 100%)`, zIndex: 0 }} />
          
          <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
-            <Box sx={{ textAlign: 'center', mb: 15 }}>
-               <Typography variant="h2" sx={{ fontWeight: 900, mb: 3, fontFamily: 'Orbitron', color: 'white' }}>AUGMENTED <GradientText>CAPABILITIES</GradientText></Typography>
-               <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 800, mx: 'auto', fontWeight: 500 }}>Our neural network is trained on 10M+ data points from high-performance career paths to provide elite-level coaching.</Typography>
+            <Box sx={{ textAlign: 'center', mb: { xs: 8, md: 15 } }}>
+               <Typography variant="h2" sx={{ fontWeight: 900, mb: 3, fontFamily: 'Orbitron', color: 'text.primary', fontSize: { xs: '2rem', md: '3.75rem' } }}>AUGMENTED <GradientText>CAPABILITIES</GradientText></Typography>
+               <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 800, mx: 'auto', fontWeight: 500, fontSize: { xs: '1rem', md: '1.25rem' } }}>Our neural network is trained on 10M+ data points from high-performance career paths to provide elite-level coaching.</Typography>
             </Box>
             
             <Grid container spacing={5}>
@@ -517,7 +517,7 @@ const LandingPage = () => {
       </Box>
 
       {/* Voice & Tone Analysis Feature Section */}
-      <Box sx={{ py: 25, position: 'relative', overflow: 'hidden' }}>
+      <Box sx={{ py: { xs: 10, md: 25 }, position: 'relative', overflow: 'hidden' }}>
          <Container maxWidth="xl">
             <Grid container spacing={10} alignItems="center">
                <Grid size={{ xs: 12, lg: 6 }}>
@@ -564,8 +564,8 @@ const LandingPage = () => {
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
                   >
-                     <Typography variant="h3" sx={{ fontWeight: 900, mb: 4, fontFamily: 'Orbitron' }}>VOICE & <GradientText shadow>TONE ANALYSIS</GradientText></Typography>
-                     <Typography variant="body1" color="text.secondary" sx={{ mb: 6, fontSize: '1.2rem', lineHeight: 1.8 }}>
+                     <Typography variant="h3" sx={{ fontWeight: 900, mb: 4, fontFamily: 'Orbitron', fontSize: { xs: '2rem', md: '3rem' } }}>VOICE & <GradientText shadow>TONE ANALYSIS</GradientText></Typography>
+                     <Typography variant="body1" color="text.secondary" sx={{ mb: 6, fontSize: { xs: '1rem', md: '1.2rem' }, lineHeight: 1.8 }}>
                         Our AI doesn't just evaluate what you say—it analyzes how you say it. 
                         Get feedback on your speaking pace, confidence levels, and tone of voice 
                         to ensure you sound as professional as you are across all simulations.
@@ -579,7 +579,7 @@ const LandingPage = () => {
 
       {/* Intelligence Preview Section */}
 
-      <Container maxWidth="xl" sx={{ py: 25 }}>
+      <Container maxWidth="xl" sx={{ py: { xs: 10, md: 25 } }}>
          <Grid container spacing={10} alignItems="center">
             <Grid size={{ xs: 12, lg: 6 }} sx={{ order: { xs: 2, lg: 1 } }}>
                <Box sx={{ position: 'relative' }}>
@@ -628,8 +628,8 @@ const LandingPage = () => {
                  viewport={{ once: true }}
                >
                   <Typography variant="overline" sx={{ fontWeight: 1000, color: 'primary.main', letterSpacing: '0.4em' }}>AUGMENTED REACH</Typography>
-                  <Typography variant="h3" sx={{ fontWeight: 900, my: 3, fontFamily: 'Orbitron', color: 'white' }}>ELITE <GradientText>DIAGNOSTICS</GradientText></Typography>
-                  <Typography variant="body1" color="text.secondary" sx={{ mb: 6, fontSize: '1.2rem', lineHeight: 2 }}>
+                  <Typography variant="h3" sx={{ fontWeight: 900, my: 3, fontFamily: 'Orbitron', color: 'text.primary', fontSize: { xs: '2rem', md: '3rem' } }}>ELITE <GradientText>DIAGNOSTICS</GradientText></Typography>
+                  <Typography variant="body1" color="text.secondary" sx={{ mb: 6, fontSize: { xs: '1rem', md: '1.2rem' }, lineHeight: 2 }}>
                     Unlike traditional boards, we utilize real-time structural analysis of your answers. 
                     Our AI doesn't just listen—it reasons through your logic to identify depth 
                     irregularities and content gaps in milliseconds.
@@ -653,7 +653,7 @@ const LandingPage = () => {
       </Container>
 
       {/* Final CTA */}
-      <Container maxWidth="lg" sx={{ py: 25 }}>
+      <Container maxWidth="lg" sx={{ py: { xs: 10, md: 25 } }}>
          <MotionBox
            initial={{ opacity: 0, scale: 0.95 }}
            whileInView={{ opacity: 1, scale: 1 }}
@@ -678,7 +678,7 @@ const LandingPage = () => {
                   background: 'radial-gradient(circle at center, white 1px, transparent 1px)', 
                   backgroundSize: '30px 30px' 
                }} />
-               <Typography variant="h2" sx={{ fontWeight: 900, mb: 4, fontFamily: 'Orbitron', color: 'white', fontSize: { xs: '2.5rem', md: '4rem' } }}>
+               <Typography variant="h2" sx={{ fontWeight: 900, mb: 4, fontFamily: 'Orbitron', color: 'text.primary', fontSize: { xs: '2.5rem', md: '4rem' } }}>
                 READY TO <GradientText shadow>LAND THE OFFER?</GradientText>
                </Typography>
                <Typography variant="h6" color="text.secondary" sx={{ mb: 8, fontWeight: 500, maxWidth: 800, mx: 'auto' }}>
@@ -689,9 +689,9 @@ const LandingPage = () => {
                   size="large" 
                   onClick={isAuthenticated ? () => navigate(ROUTES.DASHBOARD) : openRegister}  
                   sx={{ 
-                    py: 3, 
-                    px: { xs: 6, md: 10 }, 
-                    fontSize: '1.6rem', 
+                    py: { xs: 2, md: 3 }, 
+                    px: { xs: 4, md: 10 }, 
+                    fontSize: { xs: '1.2rem', md: '1.6rem' }, 
                     fontFamily: 'Orbitron',
                     borderRadius: 4,
                     boxShadow: `0 20px 60px ${alpha(theme.palette.primary.main, 0.3)}`
@@ -705,9 +705,9 @@ const LandingPage = () => {
       </Container>
 
       {/* Footer */}
-      <Box component="footer" sx={{ py: 15, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`, bgcolor: alpha(theme.palette.background.paper, 0.2) }}>
+      <Box component="footer" sx={{ py: { xs: 8, md: 15 }, borderTop: `1px solid ${alpha(theme.palette.divider, 0.1)}`, bgcolor: alpha(theme.palette.background.paper, 0.2) }}>
          <Container maxWidth="xl">
-            <Grid container spacing={8} sx={{ mb: 10 }}>
+            <Grid container spacing={{ xs: 4, md: 8 }} sx={{ mb: { xs: 6, md: 10 } }}>
                <Grid size={{ xs: 12, md: 4 }}>
                   <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 4 }}>
                     <Box sx={{ 

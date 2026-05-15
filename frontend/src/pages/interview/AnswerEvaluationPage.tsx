@@ -56,11 +56,26 @@ interface EvaluationFeedback {
   example_answer?: string;
 }
 
+interface VoiceFeedback {
+  pace: string;
+  fillers: string;
+  overall: string;
+}
+
+interface VideoFeedback {
+  eye_contact: string;
+  posture: string;
+  overall: string;
+}
+
 interface EvaluationData {
   evaluation_id: number;
   answer_id: number;
   scores: EvaluationScores;
   feedback: EvaluationFeedback;
+  evaluation_mode?: string;
+  voice_feedback?: VoiceFeedback;
+  video_feedback?: VideoFeedback;
   evaluated_at?: string;
   question_text?: string;
   answer_text?: string;
@@ -237,7 +252,33 @@ function AnswerEvaluationPage() {
                        </Grid>
                      )}
                   </Grid>
-               </GlassCard>
+                </GlassCard>
+
+               {/* Media Feedback Modules */}
+               {(evaluation.voice_feedback || evaluation.video_feedback) && (
+                  <Grid container spacing={4}>
+                     {evaluation.voice_feedback && (
+                     <Grid size={{ xs: 12, sm: evaluation.video_feedback ? 6 : 12 }}>
+                        <GlassCard sx={{ p: 4, height: '100%', borderLeft: `4px solid ${theme.palette.info.main}` }}>
+                           <Typography variant="caption" sx={{ fontWeight: 900, color: 'info.main', mb: 2, display: 'block' }}>VOICE TELEMETRY</Typography>
+                           <Typography variant="body2" sx={{ mb: 1 }}><strong>Pace:</strong> {evaluation.voice_feedback.pace}</Typography>
+                           <Typography variant="body2" sx={{ mb: 1 }}><strong>Fillers:</strong> {evaluation.voice_feedback.fillers}</Typography>
+                           <Typography variant="body2"><strong>Overall:</strong> {evaluation.voice_feedback.overall}</Typography>
+                        </GlassCard>
+                     </Grid>
+                     )}
+                     {evaluation.video_feedback && (
+                     <Grid size={{ xs: 12, sm: evaluation.voice_feedback ? 6 : 12 }}>
+                        <GlassCard sx={{ p: 4, height: '100%', borderLeft: `4px solid ${theme.palette.primary.main}` }}>
+                           <Typography variant="caption" sx={{ fontWeight: 900, color: 'primary.main', mb: 2, display: 'block' }}>VISUAL TELEMETRY</Typography>
+                           <Typography variant="body2" sx={{ mb: 1 }}><strong>Eye Contact:</strong> {evaluation.video_feedback.eye_contact}</Typography>
+                           <Typography variant="body2" sx={{ mb: 1 }}><strong>Posture:</strong> {evaluation.video_feedback.posture}</Typography>
+                           <Typography variant="body2"><strong>Overall:</strong> {evaluation.video_feedback.overall}</Typography>
+                        </GlassCard>
+                     </Grid>
+                     )}
+                  </Grid>
+               )}
             </Stack>
          </Grid>
       </Grid>

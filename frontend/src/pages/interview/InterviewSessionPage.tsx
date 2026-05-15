@@ -48,6 +48,9 @@ interface SessionInfo {
   question_count: number;
   role: string;
   difficulty: string;
+  interview_mode: string;
+  recording_mode: string;
+  timer_enabled: boolean;
 }
 
 function InterviewSessionPage() {
@@ -97,7 +100,11 @@ function InterviewSessionPage() {
     if (!sessionId) return;
     try {
       const response = await apiService.get(`/interviews/${sessionId}`);
-      setSessionInfo(response.data as SessionInfo);
+      const data = response.data as SessionInfo;
+      setSessionInfo(data);
+      if (data.interview_mode === 'mock') {
+         setAnswerMode('speech');
+      }
     } catch (err) {
       console.error('Info load fail:', err);
     }
@@ -313,8 +320,8 @@ function InterviewSessionPage() {
       </Box>
 
       {/* Primary Question Grid */}
-      <Grid container spacing={4}>
-         <Grid size={{ xs: 12, lg: 7 }}>
+      <Grid container spacing={4} sx={{ direction: sessionInfo?.interview_mode === 'mock' ? 'rtl' : 'ltr' }}>
+         <Grid size={{ xs: 12, lg: sessionInfo?.interview_mode === 'mock' ? 6 : 7 }} sx={{ direction: 'ltr' }}>
             <Stack spacing={4}>
                {/* Question Section */}
                <GlassCard sx={{ p: 4, minHeight: 180, position: 'relative', overflow: 'hidden' }}>
@@ -341,10 +348,12 @@ function InterviewSessionPage() {
                       <ToggleButtonGroup
                         value={answerMode}
                         exclusive
-                        onChange={(_, v) => v && setAnswerMode(v)}
+                        onChange={(_, v) => {
+                           if (v && sessionInfo?.interview_mode !== 'mock') setAnswerMode(v);
+                        }}
                         size="small"
                       >
-                        <ToggleButton value="text" sx={{ px: 2, fontWeight: 800 }}>TEXT</ToggleButton>
+                        <ToggleButton value="text" disabled={sessionInfo?.interview_mode === 'mock'} sx={{ px: 2, fontWeight: 800 }}>TEXT</ToggleButton>
                         <ToggleButton value="speech" sx={{ px: 2, fontWeight: 800 }}>SPEECH</ToggleButton>
                       </ToggleButtonGroup>
                     )}
@@ -376,8 +385,8 @@ function InterviewSessionPage() {
                            onRecordingStop={() => {}}
                            disabled={submitting}
                            maxDuration={question.time_limit_seconds}
-                           includeVideo={true}
-                           showVideoToggle={true}
+                           includeVideo={sessionInfo?.recording_mode === 'video_audio'}
+                           showVideoToggle={sessionInfo?.interview_mode !== 'mock'}
                            recorder={{
                              isRecording,
                              isPaused,
@@ -421,13 +430,15 @@ function InterviewSessionPage() {
          </Grid>
 
          {/* Secondary Assets Column */}
-         <Grid size={{ xs: 12, lg: 5 }}>
+         <Grid size={{ xs: 12, lg: sessionInfo?.interview_mode === 'mock' ? 6 : 5 }} sx={{ direction: 'ltr' }}>
             <Stack spacing={4}>
+               {sessionInfo?.interview_mode !== 'mock' && (
                <GlassCard sx={{ p: 4, textAlign: 'center' }}>
                   <Psychology sx={{ fontSize: 60, color: 'primary.main', mb: 2, opacity: 0.3 }} />
                   <Typography variant="h6" sx={{ fontWeight: 900, mb: 1 }}>AI COACHING TIPS</Typography>
                   <Typography variant="body2" color="text.secondary">Maintain steady eye contact and structured breathing. The AI identifies key metrics in your sentence structure and pauses.</Typography>
                </GlassCard>
+               )}
 
                 <GlassCard sx={{ p: 0, overflow: 'hidden', minHeight: 280, flex: 1, position: 'relative', border: isRecording ? `2px solid ${theme.palette.error.main}` : undefined }}>
                   <Box sx={{ p: 2, bgcolor: alpha(theme.palette.background.paper, 0.8), position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1, display: 'flex', justifyContent: 'space-between' }}>

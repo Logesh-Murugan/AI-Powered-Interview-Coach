@@ -37,6 +37,7 @@ class Answer(Base):
     transcription = Column(Text, nullable=True)
     voice_analysis = Column(JSON, nullable=True)  # Speaking pace, filler words, etc.
     video_analysis = Column(JSON, nullable=True)  # Video quality, lighting, stability, etc.
+    input_method = Column(String(20), nullable=True, comment="How answer was provided: text, voice, video")
     
     # Timing
     time_taken = Column(Integer, nullable=False)  # Time taken in seconds
@@ -76,6 +77,7 @@ class Answer(Base):
             'transcription': self.transcription,
             'voice_analysis': self.voice_analysis,
             'video_analysis': self.video_analysis,
+            'input_method': self.input_method,
             'time_taken': self.time_taken,
             'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,

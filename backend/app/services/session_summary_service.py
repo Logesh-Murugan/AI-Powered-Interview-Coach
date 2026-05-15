@@ -98,21 +98,27 @@ class SessionSummaryService:
             evaluation_service = EvaluationService(self.db)
             
             for answer in pending_answers:
+                answer_id = answer.id
                 try:
-                    logger.info(f"Generating evaluation for answer {answer.id}")
-                    evaluation_service.evaluate_answer(answer.id)
+                    logger.info(f"Generating evaluation for answer {answer_id}")
+                    evaluation_service.evaluate_answer(answer_id)
                     # Refresh answer to get the evaluation
                     self.db.refresh(answer)
                     if answer.evaluation:
                         evaluations.append(answer.evaluation)
-                except Exception as e:
-                    logger.error(f"Failed to generate evaluation for answer {answer.id}: {e}")
-                    # Rollback tainted transaction
+                except IntegrityError:
                     self.db.rollback()
+                    logger.info(f"Evaluation for answer {answer_id} already generated concurrently")
+                    existing_eval = self.db.query(Evaluation).filter(Evaluation.answer_id == answer_id).first()
+                    if existing_eval:
+                        evaluations.append(existing_eval)
+                except Exception as e:
+                    self.db.rollback()
+                    logger.error(f"Failed to generate evaluation for answer {answer_id}: {e}")
                     
                     # Create a default evaluation for demo purposes (Req 18.15 fallback)
                     default_eval = Evaluation(
-                        answer_id=answer.id,
+                        answer_id=answer_id,
                         content_quality=75.0,
                         clarity=75.0,
                         confidence=75.0,
@@ -127,6 +133,11 @@ class SessionSummaryService:
                     try:
                         self.db.flush()
                         evaluations.append(default_eval)
+                    except IntegrityError:
+                        self.db.rollback()
+                        existing_eval = self.db.query(Evaluation).filter(Evaluation.answer_id == answer_id).first()
+                        if existing_eval:
+                            evaluations.append(existing_eval)
                     except Exception:
                         self.db.rollback()
             

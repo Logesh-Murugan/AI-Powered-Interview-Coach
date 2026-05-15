@@ -7,7 +7,7 @@ Requirements: 14.1-14.10
 """
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 
@@ -37,7 +37,11 @@ class InterviewSessionService:
         role: str,
         difficulty: str,
         question_count: int,
-        categories: Optional[List[str]] = None
+        categories: Optional[List[str]] = None,
+        interview_mode: str = "practice",
+        recording_mode: str = "text_only",
+        timer_enabled: bool = True,
+        mode_settings: Optional[Dict[str, Any]] = None
     ) -> Dict:
         """
         Create a new interview session.
@@ -50,6 +54,10 @@ class InterviewSessionService:
             difficulty: Question difficulty level
             question_count: Number of questions to generate
             categories: Optional list of question categories
+            interview_mode: practice or mock
+            recording_mode: required media
+            timer_enabled: whether timer is enforced
+            mode_settings: additional settings
             
         Returns:
             Dictionary with session details and first question
@@ -77,6 +85,10 @@ class InterviewSessionService:
                 status=SessionStatus.IN_PROGRESS,
                 question_count=question_count,
                 categories=categories,
+                interview_mode=interview_mode,
+                recording_mode=recording_mode,
+                timer_enabled=timer_enabled,
+                mode_settings=mode_settings,
                 start_time=datetime.utcnow()
             )
             self.db.add(session)
@@ -110,6 +122,10 @@ class InterviewSessionService:
                     'difficulty': difficulty,
                     'question_count': question_count,
                     'categories': categories,
+                    'interview_mode': interview_mode,
+                    'recording_mode': recording_mode,
+                    'timer_enabled': timer_enabled,
+                    'mode_settings': mode_settings,
                     'start_time': session.start_time.isoformat(),
                     'status': session.status.value.lower()
                 })
@@ -128,6 +144,10 @@ class InterviewSessionService:
                 'status': session.status.value.lower(),
                 'question_count': session.question_count,
                 'categories': session.categories,
+                'interview_mode': session.interview_mode,
+                'recording_mode': session.recording_mode,
+                'timer_enabled': session.timer_enabled,
+                'mode_settings': session.mode_settings,
                 'start_time': session.start_time,
                 'first_question': first_question
             }

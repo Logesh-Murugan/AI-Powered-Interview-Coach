@@ -6,7 +6,7 @@ Pydantic schemas for answer evaluation requests and responses.
 Requirements: 18.1-18.14
 """
 from pydantic import BaseModel, ConfigDict, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 
 
@@ -33,6 +33,11 @@ class EvaluationResponse(BaseModel):
     answer_id: int = Field(..., description="Answer ID")
     scores: EvaluationScores = Field(..., description="Evaluation scores")
     feedback: EvaluationFeedback = Field(..., description="Evaluation feedback")
+    
+    evaluation_mode: Optional[str] = Field(None, description="Mode used for evaluation")
+    voice_feedback: Optional[Dict[str, Any]] = Field(None, description="Detailed voice analysis feedback")
+    video_feedback: Optional[Dict[str, Any]] = Field(None, description="Detailed video analysis feedback")
+    
     evaluated_at: Optional[str] = Field(None, description="Evaluation timestamp (ISO 8601)")
     
     model_config = ConfigDict(from_attributes=True)

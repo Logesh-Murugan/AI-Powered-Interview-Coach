@@ -59,7 +59,9 @@ class ApiService {
         const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
 
         // Handle 401 Unauthorized
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        const isAuthEndpoint = originalRequest.url?.includes('/auth/login') || originalRequest.url?.includes('/auth/register');
+        
+        if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
           if (this.isRefreshing) {
             return new Promise((resolve, reject) => {
               this.failedQueue.push({ resolve, reject });

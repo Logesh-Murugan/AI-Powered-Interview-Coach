@@ -63,7 +63,7 @@ def extract_text_from_pdf_pypdf2(file_content: bytes) -> Optional[str]:
         full_text = '\n\n'.join(text_parts)
         
         # Check if we got meaningful text (not just whitespace)
-        if full_text and len(full_text.strip()) > 50:
+        if full_text and len(full_text.strip()) > 200:
             return full_text
         
         return None
@@ -96,7 +96,7 @@ def extract_text_from_pdf_pdfplumber(file_content: bytes) -> Optional[str]:
         full_text = '\n\n'.join(text_parts)
         
         # Check if we got meaningful text
-        if full_text and len(full_text.strip()) > 50:
+        if full_text and len(full_text.strip()) > 200:
             return full_text
         
         return None
@@ -110,7 +110,7 @@ def extract_text_from_pdf(file_content: bytes) -> str:
     """
     Extract text from PDF with fallback strategy.
     
-    Tries PyPDF2 first, falls back to pdfplumber if needed.
+    Tries pdfplumber first (better for resumes with columns/layout), falls back to PyPDF2.
     
     Args:
         file_content: PDF file content as bytes
@@ -121,24 +121,24 @@ def extract_text_from_pdf(file_content: bytes) -> str:
     Raises:
         Exception: If both extraction methods fail
     """
-    # Try PyPDF2 first (faster)
-    logger.info("Attempting PDF extraction with PyPDF2")
-    text = extract_text_from_pdf_pypdf2(file_content)
-    
-    if text:
-        logger.info(f"PyPDF2 extraction successful: {len(text)} characters")
-        return text
-    
-    # Fallback to pdfplumber (more robust)
-    logger.info("PyPDF2 failed, trying pdfplumber")
+    # Try pdfplumber first (better layout extraction, critical for resumes)
+    logger.info("Attempting PDF extraction with pdfplumber")
     text = extract_text_from_pdf_pdfplumber(file_content)
     
     if text:
         logger.info(f"pdfplumber extraction successful: {len(text)} characters")
         return text
     
+    # Fallback to PyPDF2 (faster but less accurate formatting)
+    logger.info("pdfplumber failed or produced too little text, trying PyPDF2")
+    text = extract_text_from_pdf_pypdf2(file_content)
+    
+    if text:
+        logger.info(f"PyPDF2 extraction successful: {len(text)} characters")
+        return text
+    
     # Both methods failed
-    raise Exception("Failed to extract text from PDF using both PyPDF2 and pdfplumber")
+    raise Exception("Failed to extract text from PDF using both methods. Please ensure the PDF is not purely an image.")
 
 
 def extract_text_from_docx(file_content: bytes) -> str:
@@ -173,7 +173,7 @@ def extract_text_from_docx(file_content: bytes) -> str:
         
         full_text = '\n\n'.join(text_parts)
         
-        if not full_text or len(full_text.strip()) < 50:
+        if not full_text or len(full_text.strip()) < 200:
             raise Exception("Extracted text is too short or empty")
         
         logger.info(f"DOCX extraction successful: {len(full_text)} characters")
@@ -255,7 +255,7 @@ def extract_text_from_resume(file_url: str, file_extension: str) -> Tuple[str, b
         # Clean text
         cleaned_text = clean_text(raw_text)
         
-        if not cleaned_text or len(cleaned_text.strip()) < 50:
+        if not cleaned_text or len(cleaned_text.strip()) < 200:
             raise Exception("Extracted text is too short after cleaning")
         
         logger.info(f"Text extraction successful: {len(cleaned_text)} characters")

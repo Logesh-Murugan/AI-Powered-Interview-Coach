@@ -56,6 +56,9 @@ function InterviewStartPage() {
     difficulty: 'Medium',
     question_count: 5,
     categories: [] as string[],
+    interview_mode: 'practice',
+    recording_mode: 'text_only',
+    timer_enabled: true,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,10 +108,51 @@ function InterviewStartPage() {
 
         <form onSubmit={handleSubmit}>
           <Stack spacing={4}>
-            {/* Sector 1: Role Identification */}
             <Box>
               <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', mb: 2, display: 'block', letterSpacing: '0.2em' }}>
-                <Psychology sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 01: ROLE IDENTIFICATION
+                <Psychology sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 01: SIMULATION MODE
+              </Typography>
+              <Grid container spacing={4} sx={{ mb: 4 }}>
+                 <Grid size={{ xs: 12, md: 6 }}>
+                    <GlassCard 
+                       onClick={() => {
+                          handleChange('interview_mode', 'practice');
+                          handleChange('recording_mode', 'text_only');
+                       }}
+                       sx={{ 
+                          p: 3, 
+                          cursor: 'pointer', 
+                          border: formData.interview_mode === 'practice' ? `2px solid ${theme.palette.primary.main}` : '2px solid transparent',
+                          transition: 'all 0.2s ease-in-out',
+                          opacity: formData.interview_mode === 'practice' ? 1 : 0.6
+                       }}
+                    >
+                       <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, fontFamily: 'Orbitron' }}>PRACTICE MODE</Typography>
+                       <Typography variant="body2" color="text.secondary">Flexible training. Text or voice answers allowed. Timers can be disabled.</Typography>
+                    </GlassCard>
+                 </Grid>
+                 <Grid size={{ xs: 12, md: 6 }}>
+                    <GlassCard 
+                       onClick={() => {
+                          handleChange('interview_mode', 'mock');
+                          handleChange('recording_mode', 'video_audio');
+                       }}
+                       sx={{ 
+                          p: 3, 
+                          cursor: 'pointer', 
+                          border: formData.interview_mode === 'mock' ? `2px solid ${theme.palette.error.main}` : '2px solid transparent',
+                          transition: 'all 0.2s ease-in-out',
+                          opacity: formData.interview_mode === 'mock' ? 1 : 0.6
+                       }}
+                    >
+                       <Typography variant="h6" sx={{ fontWeight: 800, mb: 1, fontFamily: 'Orbitron', color: formData.interview_mode === 'mock' ? 'error.main' : 'inherit' }}>MOCK INTERVIEW</Typography>
+                       <Typography variant="body2" color="text.secondary">Strict simulation. Requires active webcam and microphone. Timed responses.</Typography>
+                    </GlassCard>
+                 </Grid>
+              </Grid>
+
+              <Typography variant="caption" sx={{ fontWeight: 800, color: 'primary.main', mb: 2, display: 'block', letterSpacing: '0.2em' }}>
+                <Psychology sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 02: ROLE IDENTIFICATION
               </Typography>
               <TextField
                 select
@@ -136,7 +180,7 @@ function InterviewStartPage() {
               {/* Sector 2: Calibration */}
               <Grid size={{ xs: 12, md: 6 }}>
                   <Typography variant="caption" sx={{ fontWeight: 800, color: 'secondary.main', mb: 2, display: 'block', letterSpacing: '0.2em' }}>
-                    <DifficultyIcon sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 02: CALIBRATION
+                    <DifficultyIcon sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 03: CALIBRATION
                   </Typography>
                   <TextField
                     select
@@ -175,7 +219,7 @@ function InterviewStartPage() {
             {/* Sector 4: Domain Specialization */}
             <Box>
               <Typography variant="caption" sx={{ fontWeight: 800, color: 'success.main', mb: 2, display: 'block', letterSpacing: '0.2em' }}>
-                <CategoryIcon sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 03: DOMAIN SPECIALIZATION
+                <CategoryIcon sx={{ fontSize: '1rem', verticalAlign: 'middle', mr: 1 }} /> PHASE 04: DOMAIN SPECIALIZATION
               </Typography>
               <FormControl fullWidth>
                 <InputLabel sx={{ fontWeight: 800 }}>MODULE CATEGORIES (OPTIONAL)</InputLabel>

@@ -95,8 +95,8 @@ class MediaService:
                         # Use faster-whisper (preferred)
                         cls._whisper_model = WhisperModel(
                             "small",
-                            device="auto",  # Automatically detect GPU/CPU
-                            compute_type="auto"
+                            device="cpu",  # Force CPU to avoid CUDA DLL missing errors on Windows
+                            compute_type="int8" # Recommended for CPU inference
                         )
                         logger.info("Faster-whisper model loaded successfully")
 

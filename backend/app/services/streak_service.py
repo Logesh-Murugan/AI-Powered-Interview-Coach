@@ -58,7 +58,9 @@ class StreakService:
             
             # Update streak history (Req 23.9)
             streak_history = user.streak_history or []
-            streak_history.append({
+            is_new_day = not last_practice or current_time.date() != last_practice.date()
+            if is_new_day:
+                streak_history.append({
                 'date': current_time.isoformat(),
                 'streak_count': new_streak
             })
@@ -135,6 +137,10 @@ class StreakService:
         if last_practice is None:
             return 1
         
+        # If practice is on the exact same calendar day, streak stays the same
+        if current_time.date() == last_practice.date():
+            return current_streak
+            
         # Calculate time difference
         time_diff = current_time - last_practice
         hours_diff = time_diff.total_seconds() / 3600
@@ -226,6 +232,49 @@ class StreakService:
         streak_history = user.streak_history or []
         
         # Calculate statistics
+        # SELF-HEALING: Deduplicate history and fix corrupted streaks
+        deduped = []
+        seen = set()
+        for entry in streak_history:
+            dt = entry.get('date', '')[:10]
+            if dt not in seen:
+                seen.add(dt)
+                deduped.append(entry)
+                
+        if len(deduped) < len(streak_history):
+            from sqlalchemy.orm.attributes import flag_modified
+            deduped.sort(key=lambda x: x.get('date', ''))
+            
+            real_current = 0
+            real_longest = 0
+            if deduped:
+                streak = 1
+                real_longest = 1
+                for i in range(1, len(deduped)):
+                    d1 = datetime.fromisoformat(deduped[i-1]['date'][:10]).date()
+                    d2 = datetime.fromisoformat(deduped[i]['date'][:10]).date()
+                    if (d2 - d1).days == 1:
+                        streak += 1
+                        real_longest = max(real_longest, streak)
+                    elif (d2 - d1).days > 1:
+                        streak = 1
+                real_current = streak
+                
+                # Check if current streak is still active
+                last_dt = datetime.fromisoformat(deduped[-1]['date'][:19])
+                time_diff = datetime.utcnow() - last_dt
+                if time_diff.total_seconds() / 3600 > 48:
+                    real_current = 0
+                    
+            user.streak_history = deduped
+            user.current_streak = real_current
+            user.longest_streak = real_longest
+            
+            flag_modified(user, "streak_history")
+            self.db.commit()
+            self.db.refresh(user)
+            streak_history = deduped
+
         total_practice_days = len(streak_history)
         
         # Calculate average streak from history

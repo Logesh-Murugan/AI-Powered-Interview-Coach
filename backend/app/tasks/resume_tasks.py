@@ -62,7 +62,7 @@ def extract_resume_text_task(resume_id: int, retry_count: int = 0, max_retries: 
                 file_extension
             )
             
-            if success and extracted_text and len(extracted_text.strip()) > 50:
+            if success and extracted_text and len(extracted_text.strip()) > 200:
                 # Get text statistics
                 stats = get_text_statistics(extracted_text)
                 logger.info(
@@ -149,7 +149,7 @@ def extract_skills_task(resume_id: int, retry_count: int = 0, max_retries: int =
             return
         
         # Check if text has been extracted
-        if not resume.extracted_text or len(resume.extracted_text.strip()) < 50:
+        if not resume.extracted_text or len(resume.extracted_text.strip()) < 200:
             logger.error(f"[BACKGROUND TASK] Resume {resume_id} has no extracted text or text too short")
             resume.status = ResumeStatus.EXTRACTION_FAILED.value
             db.commit()

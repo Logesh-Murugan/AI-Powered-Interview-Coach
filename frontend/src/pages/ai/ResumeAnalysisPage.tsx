@@ -103,7 +103,8 @@ function ResumeAnalysisPage() {
   }, [resumeId, dispatch]);
 
   useEffect(() => {
-    if (!resumeId || currentAnalysis || pollAttempts >= 12) return;
+    const isCompleted = currentAnalysis?.status === 'success' || currentAnalysis?.status === 'failed' || currentAnalysis?.status === 'fallback';
+    if (!resumeId || isCompleted || pollAttempts >= 30) return;
     if (isLoading) return;
 
     const id = parseInt(resumeId);

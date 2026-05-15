@@ -5,7 +5,7 @@ Pydantic schemas for interview session request/response validation.
 
 Requirements: 14.1-14.10
 """
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 from datetime import datetime
 
@@ -27,6 +27,11 @@ class InterviewSessionCreate(BaseModel):
     difficulty: str = Field(..., description="Question difficulty level")
     question_count: int = Field(..., ge=1, le=20, description="Number of questions (1-20)")
     categories: Optional[List[str]] = Field(None, description="Optional list of question categories")
+    
+    interview_mode: Literal["practice", "mock"] = Field(default="practice", description="Interview mode (practice or mock)")
+    recording_mode: Literal["text_only", "audio_only", "video_audio"] = Field(default="text_only", description="Recording requirement")
+    timer_enabled: bool = Field(default=True, description="Whether countdown timer is active")
+    mode_settings: Optional[Dict[str, Any]] = Field(default=None, description="Mode-specific configuration")
     
     @field_validator('difficulty')
     @classmethod
@@ -92,6 +97,10 @@ class InterviewSessionResponse(BaseModel):
     status: str
     question_count: int
     categories: Optional[List[str]]
+    interview_mode: str
+    recording_mode: str
+    timer_enabled: bool
+    mode_settings: Optional[Dict[str, Any]]
     start_time: datetime
     first_question: QuestionResponse
 
@@ -107,6 +116,10 @@ class InterviewSessionDetail(BaseModel):
     status: str
     question_count: int
     categories: Optional[List[str]]
+    interview_mode: str
+    recording_mode: str
+    timer_enabled: bool
+    mode_settings: Optional[Dict[str, Any]]
     start_time: datetime
     end_time: Optional[datetime]
     created_at: datetime

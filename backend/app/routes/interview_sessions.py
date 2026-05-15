@@ -70,6 +70,10 @@ async def list_interview_sessions(
                 'status': session.status.value.lower() if hasattr(session.status, 'value') else str(session.status).lower(),
                 'question_count': session.question_count,
                 'categories': session.categories,
+                'interview_mode': session.interview_mode.value if hasattr(session.interview_mode, 'value') else session.interview_mode,
+                'recording_mode': session.recording_mode.value if hasattr(session.recording_mode, 'value') else session.recording_mode,
+                'timer_enabled': session.timer_enabled,
+                'mode_settings': session.mode_settings,
                 'start_time': session.start_time.isoformat() if session.start_time else None,
                 'end_time': session.end_time.isoformat() if session.end_time else None,
                 'created_at': session.created_at.isoformat() if session.created_at else None
@@ -147,7 +151,11 @@ async def create_interview_session(
             role=session_data.role,
             difficulty=session_data.difficulty,
             question_count=session_data.question_count,
-            categories=session_data.categories
+            categories=session_data.categories,
+            interview_mode=session_data.interview_mode,
+            recording_mode=session_data.recording_mode,
+            timer_enabled=session_data.timer_enabled,
+            mode_settings=session_data.mode_settings
         )
         
         # Format response
@@ -158,6 +166,10 @@ async def create_interview_session(
             status=result['status'],
             question_count=result['question_count'],
             categories=result['categories'],
+            interview_mode=result['interview_mode'],
+            recording_mode=result['recording_mode'],
+            timer_enabled=result['timer_enabled'],
+            mode_settings=result['mode_settings'],
             start_time=result['start_time'],
             first_question=QuestionResponse(**result['first_question'])
         )
@@ -293,6 +305,10 @@ async def get_interview_session(
             'status': session.status.value.lower() if hasattr(session.status, 'value') else str(session.status).lower(),
             'question_count': session.question_count,
             'categories': session.categories,
+            'interview_mode': session.interview_mode.value if hasattr(session.interview_mode, 'value') else session.interview_mode,
+            'recording_mode': session.recording_mode.value if hasattr(session.recording_mode, 'value') else session.recording_mode,
+            'timer_enabled': session.timer_enabled,
+            'mode_settings': session.mode_settings,
             'start_time': session.start_time.isoformat() if session.start_time else None,
             'end_time': session.end_time.isoformat() if session.end_time else None,
             'created_at': session.created_at.isoformat() if session.created_at else None
@@ -484,10 +500,15 @@ async def submit_answer(
             logger.info(f"Answer already exists for session {session_id}, question {question_id}: answer_id={existing_answer.id}")
             
             # Update existing answer with new text if provided (for speech-to-text workflow)
-            if answer_data.answer_text.strip():
+            # We should update answer_text even if it's empty because a failed transcription might yield empty text
+            if answer_data.answer_text is not None:
                 existing_answer.answer_text = answer_data.answer_text
-                existing_answer.updated_at = datetime.now(timezone.utc)
-                logger.info(f"Updated existing answer {existing_answer.id} with new text")
+            
+            if answer_data.input_method:
+                existing_answer.input_method = answer_data.input_method
+                
+            existing_answer.updated_at = datetime.now(timezone.utc)
+            logger.info(f"Updated existing answer {existing_answer.id} with new text/input method")
             
             # Ensure session_question is linked to this answer
             if session_question.answer_id != existing_answer.id:
@@ -498,8 +519,10 @@ async def submit_answer(
                 # Handle StaleDataError when answer was created in a different session
                 db.rollback()
                 update_values = {"updated_at": datetime.now(timezone.utc)}
-                if answer_data.answer_text.strip():
+                if answer_data.answer_text is not None:
                     update_values["answer_text"] = answer_data.answer_text
+                if answer_data.input_method:
+                    update_values["input_method"] = answer_data.input_method
                 db.query(Answer).filter(Answer.id == existing_answer.id).update(update_values)
                 if session_question.answer_id != existing_answer.id:
                     db.query(SessionQuestion).filter(
@@ -527,6 +550,23 @@ async def submit_answer(
             all_questions_answered = (answered_questions == total_questions)
             session_completed = (session.status == SessionStatus.COMPLETED)
             
+            # Validate input method using ModeFactory
+            from app.services.mode_factory import ModeFactory
+            mode_handler = ModeFactory.get_handler(session.interview_mode)
+            # A video file inherently contains an audio track in this system
+            has_audio = bool(existing_answer.audio_url) or bool(existing_answer.video_url)
+            has_video = bool(existing_answer.video_url)
+            try:
+                mode_handler.validate_answer_submission(
+                    recording_mode=session.recording_mode,
+                    input_method=existing_answer.input_method,
+                    has_audio=has_audio,
+                    has_video=has_video
+                )
+            except ValueError as e:
+                # If validation fails, do not proceed with completion
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            
             # Update session status if all answered
             if all_questions_answered and not session_completed:
                 session.status = SessionStatus.COMPLETED
@@ -544,7 +584,8 @@ async def submit_answer(
                 submitted_at=existing_answer.submitted_at,
                 status='submitted',
                 all_questions_answered=all_questions_answered,
-                session_completed=session_completed
+                session_completed=session_completed,
+                input_method=existing_answer.input_method
             )
             
             logger.info(f"Returning existing answer {existing_answer.id} (updated and linked)")
@@ -574,9 +615,24 @@ async def submit_answer(
             question_id=question_id,
             user_id=user_id,
             answer_text=answer_data.answer_text,
+            input_method=answer_data.input_method,
             time_taken=time_taken,
             submitted_at=datetime.now(timezone.utc)
         )
+        
+        # Validate input method using ModeFactory (no existing answer so media=False)
+        from app.services.mode_factory import ModeFactory
+        mode_handler = ModeFactory.get_handler(session.interview_mode)
+        try:
+            mode_handler.validate_answer_submission(
+                recording_mode=session.recording_mode,
+                input_method=answer.input_method,
+                has_audio=False,
+                has_video=False
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            
         db.add(answer)
         db.flush()  # Get answer ID without committing
         
@@ -634,7 +690,8 @@ async def submit_answer(
             submitted_at=answer.submitted_at,
             status='submitted',
             all_questions_answered=all_questions_answered,
-            session_completed=session_completed
+            session_completed=session_completed,
+            input_method=answer.input_method
         )
         
         return response

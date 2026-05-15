@@ -40,6 +40,11 @@ class Evaluation(Base):
     # Metadata
     provider_name = Column(String(50), nullable=True)  # Which AI provider generated this
     evaluation_metadata = Column(JSON, nullable=True)  # Additional evaluation data
+
+    # Mode-specific evaluation fields (Phase 1 - Two-Mode System)
+    evaluation_mode = Column(String(50), nullable=True, comment="Mode used for evaluation: practice_text, practice_voice, mock_interview")
+    voice_feedback = Column(JSON, nullable=True, comment="Detailed voice analysis feedback (pace, fillers, confidence)")
+    video_feedback = Column(JSON, nullable=True, comment="Detailed video analysis feedback (eye contact, posture, expressions)")
     
     # Timing
     evaluated_at = Column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
@@ -76,6 +81,9 @@ class Evaluation(Base):
             'suggestions': self.suggestions,
             'example_answer': self.example_answer,
             'provider_name': self.provider_name,
+            'evaluation_mode': self.evaluation_mode,
+            'voice_feedback': self.voice_feedback,
+            'video_feedback': self.video_feedback,
             'evaluated_at': self.evaluated_at.isoformat() if self.evaluated_at else None,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

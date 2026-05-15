@@ -16,8 +16,10 @@ from app.models.answer import Answer
 from app.models.question import Question
 from app.models.evaluation import Evaluation
 from app.models.user import User
+from app.models.interview_session import InterviewSession
 from app.services.ai.orchestrator import AIOrchestrator
 from app.services.cache_service import CacheService
+from app.services.mode_factory import ModeFactory
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +68,15 @@ class EvaluationService:
         user = self.db.query(User).filter(User.id == answer.user_id).first()
         if not user:
             raise ValueError(f"User {answer.user_id} not found")
+            
+        session = self.db.query(InterviewSession).filter(InterviewSession.id == answer.session_id).first()
+        if not session:
+            raise ValueError(f"Session {answer.session_id} not found")
+            
+        mode_handler = ModeFactory.get_handler(session.interview_mode)
+        evaluation_mode = mode_handler.get_evaluation_mode()
         
-        logger.info(f"Evaluating answer {answer_id} for question {question.id}")
+        logger.info(f"Evaluating answer {answer_id} for question {question.id} in mode {evaluation_mode}")
         
         # Check cache for similar answer evaluation (Req 18.3, 18.4)
         answer_hash = self._generate_answer_hash(answer.answer_text, question.id)
@@ -91,7 +100,9 @@ class EvaluationService:
             question_text=question.question_text,
             expected_answer_points=question.expected_answer_points,
             role=user.target_role or "Software Engineer",
-            difficulty=question.difficulty
+            difficulty=question.difficulty,
+            voice_analysis=answer.voice_analysis,
+            video_analysis=answer.video_analysis
         )
         
         # Call AI provider (Req 18.6)
@@ -145,6 +156,9 @@ class EvaluationService:
             improvements=feedback['improvements'],
             suggestions=feedback['suggestions'],
             example_answer=feedback.get('example_answer'),
+            evaluation_mode=evaluation_mode,
+            voice_feedback=evaluation_data.get('voice_feedback'),
+            video_feedback=evaluation_data.get('video_feedback'),
             evaluated_at=datetime.utcnow()
         )
         
@@ -158,7 +172,10 @@ class EvaluationService:
             'confidence': evaluation_data['confidence'],
             'technical_accuracy': evaluation_data['technical_accuracy'],
             'overall_score': overall_score,
-            'feedback': feedback
+            'feedback': feedback,
+            'evaluation_mode': evaluation_mode,
+            'voice_feedback': evaluation_data.get('voice_feedback'),
+            'video_feedback': evaluation_data.get('video_feedback')
         }
         self.cache_service.set(cache_key, cache_data, ttl=timedelta(days=7))
         
@@ -182,7 +199,9 @@ class EvaluationService:
         question_text: str,
         expected_answer_points: list,
         role: str,
-        difficulty: str
+        difficulty: str,
+        voice_analysis: Optional[Dict[str, Any]] = None,
+        video_analysis: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         Construct evaluation prompt for AI.
@@ -200,25 +219,35 @@ Candidate's Answer:
 {answer_text}
 
 Difficulty Level: {difficulty}
+"""
+        if voice_analysis:
+            prompt += f"\nVoice Analysis Metrics:\n{json.dumps(voice_analysis, indent=2)}\n"
+        if video_analysis:
+            prompt += f"\nVideo Analysis Metrics:\n{json.dumps(video_analysis, indent=2)}\n"
 
+        prompt += """
 Evaluate the answer across these criteria and provide scores (0-100) and detailed feedback:
 
 1. Content Quality (0-100): How well does the answer address the question and cover expected points?
 2. Clarity (0-100): How clear, structured, and easy to understand is the answer?
-3. Confidence (0-100): Does the answer demonstrate confidence and conviction?
+3. Confidence (0-100): Does the answer demonstrate confidence and conviction? (Use voice/video metrics if provided)
 4. Technical Accuracy (0-100): Is the technical information correct and appropriate for the role?
 
 Provide your evaluation in the following JSON format (DO NOT include example_answer field):
-{{
+{
   "content_quality": <score 0-100>,
   "clarity": <score 0-100>,
   "confidence": <score 0-100>,
   "technical_accuracy": <score 0-100>,
   "strengths": ["strength 1", "strength 2", "strength 3"],
   "improvements": ["improvement 1", "improvement 2", "improvement 3"],
-  "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
-}}
+  "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"],
+  "voice_feedback": {"pace": "...", "fillers": "...", "overall": "..."},
+  "video_feedback": {"eye_contact": "...", "posture": "...", "overall": "..."}
+}
 
+Include 'voice_feedback' only if Voice Analysis Metrics were provided.
+Include 'video_feedback' only if Video Analysis Metrics were provided.
 IMPORTANT: Return ONLY valid JSON. Do not include any example answers or additional text that could break JSON formatting.
 
 Be constructive, specific, and actionable in your feedback."""
@@ -387,6 +416,9 @@ Be constructive, specific, and actionable in your feedback."""
             improvements=feedback['improvements'],
             suggestions=feedback['suggestions'],
             example_answer=feedback.get('example_answer'),
+            evaluation_mode=cached_data.get('evaluation_mode'),
+            voice_feedback=cached_data.get('voice_feedback'),
+            video_feedback=cached_data.get('video_feedback'),
             evaluated_at=datetime.utcnow()
         )
         
@@ -421,5 +453,8 @@ Be constructive, specific, and actionable in your feedback."""
                 'suggestions': evaluation.suggestions,
                 'example_answer': evaluation.example_answer
             },
+            'evaluation_mode': evaluation.evaluation_mode,
+            'voice_feedback': evaluation.voice_feedback,
+            'video_feedback': evaluation.video_feedback,
             'evaluated_at': evaluation.evaluated_at.isoformat() if evaluation.evaluated_at else None
         }
